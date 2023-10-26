@@ -442,45 +442,6 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
-		"error getting env version": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inProxy:       true,
-			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
-			},
-			wantedError: errors.New(`retrieve version of environment stack "testEnv" in application "testApp": some error`),
-		},
-		"error due to old env version": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inProxy:       true,
-			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
-			},
-			wantedError: errors.New(`environment "testEnv" is on version "v1.31.0" which does not support the "run local --proxy" feature`),
-		},
-		"error getting hosts to proxy to": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inProxy:       true,
-			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
-				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
-					return nil, fmt.Errorf("some error")
-				}
-			},
-			wantedError: errors.New(`find hosts to connect to: some error`),
-		},
 		"error reading workload manifest": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
@@ -516,6 +477,51 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 			},
 			wantedError: errors.New(`build images: some error`),
+		},
+		"error getting env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
+			},
+			wantedError: errors.New(`retrieve version of environment stack "testEnv" in application "testApp": some error`),
+		},
+		"error due to old env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
+			},
+			wantedError: errors.New(`environment "testEnv" is on version "v1.31.0" which does not support the "run local --proxy" feature`),
+		},
+		"error getting hosts to proxy to": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
+					return nil, fmt.Errorf("some error")
+				}
+			},
+			wantedError: errors.New(`find hosts to connect to: some error`),
 		},
 		"pulls errors from orchestrator": {
 			inputAppName:  testAppName,
