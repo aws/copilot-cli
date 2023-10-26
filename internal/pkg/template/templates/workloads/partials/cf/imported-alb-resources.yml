@@ -62,9 +62,18 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   {{- end}}
 {{- end}}
 {{- $isHTTPS := .ALBListener.IsHTTPS}}
-  {{- if ne $port80arn ""}}
-  {{- range $i, $rule := .ALBListener.Rules}}
-HTTPListenerRedirectRule:
+{{- if ne $port80arn ""}}
+HTTPRedirectRulePriorityAction:
+  Metadata:
+    'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    ListenerArn: {{$port80arn}}
+
+{{- range $i, $rule := .ALBListener.Rules}}
+HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'An HTTP listener rule that redirects port 80 to port 443'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -111,6 +120,6 @@ HTTPListenerRedirectRule:
             - {{ $rule.Path }}/*
             {{- end }}
     ListenerArn: {{$port80arn}}
-    Priority: !GetAtt HTTPRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+    Priority: !GetAtt HTTPRedirectRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
 {{- end}}
