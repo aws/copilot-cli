@@ -120,6 +120,6 @@ HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
             - {{ $rule.Path }}/*
             {{- end }}
     ListenerArn: {{$port80arn}}
-    Priority: !GetAtt HTTPRedirectRulePriorityAction{{ if ne $i 0 }}{{ $i }}{{ end }}
+    Priority: !GetAtt HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
 {{- end}}
