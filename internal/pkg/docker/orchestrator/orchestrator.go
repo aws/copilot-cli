@@ -5,14 +5,19 @@ package orchestrator
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 // Orchestrator manages running a Task. Only a single Task
@@ -43,6 +48,7 @@ type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
 }
 
 const (
@@ -50,9 +56,8 @@ const (
 	pauseCtrTaskID            = 0
 )
 
-const (
-	pauseContainerURI = "public.ecr.aws/amazonlinux/amazonlinux:2023"
-)
+//go:embed Pause-Dockerfile
+var pauseDockerfile string
 
 // New creates a new Orchestrator. idPrefix is a prefix used when
 // naming containers that are run by the Orchestrator.
@@ -105,18 +110,29 @@ func (o *Orchestrator) Start() <-chan error {
 	return errs
 }
 
+type RunTaskOption func(r *runTaskAction)
+
+func RunTaskWithPauseEnv(env map[string]string) RunTaskOption {
+	return func(r *runTaskAction) {
+	}
+}
+
 // RunTask stops the current running task and starts task.
-func (o *Orchestrator) RunTask(task Task) {
+func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
 	// this guarantees the following:
 	// - if runTaskAction{} is pulled by the Orchestrator, any errors
 	//   returned by it are reported by the Orchestrator.
 	// - if Stop() is called _before_ the Orchestrator picks up this
-	//   action, then this action is skipped.
+	//   r, then this r is skipped.
+	r := &runTaskAction{
+		task: task,
+	}
+	for _, opt := range opts {
+		opt(r)
+	}
 	select {
 	case <-o.stopped:
-	case o.actions <- &runTaskAction{
-		task: task,
-	}:
+	case o.actions <- r:
 	}
 }
 
@@ -143,6 +159,11 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	}()
 
 	if taskID == 1 {
+		err := o.buildPauseContainer(ctx)
+		if err != nil {
+			return fmt.Errorf("build pause container: %w", err)
+		}
+
 		// start the pause container
 		opts := o.pauseRunOptions(a.task)
 		o.run(pauseCtrTaskID, opts)
@@ -171,6 +192,18 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 
 	o.curTask = a.task
 	return nil
+}
+
+func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
+	err := o.docker.Build(ctx, &dockerengine.BuildArguments{
+		URI:               pauseContainerURI,
+		Tags:              []string{tag},
+		DockerfileContent: pauseDockerfile,
+	}, os.Stderr)
+	if err != nil {
+		return err
+	}
+	return "aws-copilot-pause:" + tag, nil
 }
 
 // Stop stops the current running task containers and the Orchestrator. Stop is
@@ -275,7 +308,7 @@ type ContainerDefinition struct {
 // pauseRunOptions returns RunOptions for the pause container for t.
 // The pause container owns the networking namespace that is shared
 // among all of the containers in the task.
-func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
+func (o *Orchestrator) pauseRunOptions(t Task, uri string) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
 		ImageURI:       pauseContainerURI,
 		ContainerName:  o.containerID("pause"),
@@ -291,6 +324,11 @@ func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	}
 	return opts
 }
+
+var pauseContainerURI = func() string {
+	tag := strings.Replace(version.Version, "+", "PLUS", -1)
+	return "aws-copilot-pause:" + tag
+}()
 
 // containerRunOptions returns RunOptions for the given container.
 func (o *Orchestrator) containerRunOptions(name string, ctr ContainerDefinition) dockerengine.RunOptions {

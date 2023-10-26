@@ -6,6 +6,7 @@ package exec
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -80,6 +81,7 @@ func (c *Cmd) Run(name string, args []string, opts ...CmdOption) error {
 // RunWithContext starts the named command with the given context.
 // Command execution process will be killed if the context becomes done before the command completes on its own.
 func (c *Cmd) RunWithContext(ctx context.Context, name string, args []string, opts ...CmdOption) error {
+	fmt.Printf("RunWithContext(): %s %s\n", name, args)
 	cmd := c.command(ctx, name, args, opts...)
 	return cmd.Run()
 }

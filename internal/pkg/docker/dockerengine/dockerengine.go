@@ -64,15 +64,16 @@ func New(cmd Cmd) DockerCmdClient {
 
 // BuildArguments holds the arguments that can be passed while building a container.
 type BuildArguments struct {
-	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	Tags       []string          // Required. List of tags to apply to the image.
-	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
-	Context    string            // Optional. Build context directory to pass to `docker build`.
-	Target     string            // Optional. The target build stage to pass to `docker build`.
-	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
-	Platform   string            // Optional. OS/Arch to pass to `docker build`.
-	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
-	Labels     map[string]string // Required. Set metadata for an image.
+	URI               string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
+	Tags              []string          // Required. List of tags to apply to the image.
+	Dockerfile        string            // Required. Dockerfile to pass to `docker build` via --file flag.
+	DockerfileContent string            // Optional. Mutually exclusive with Dockerfile.
+	Context           string            // Optional. Build context directory to pass to `docker build`.
+	Target            string            // Optional. The target build stage to pass to `docker build`.
+	CacheFrom         []string          // Optional. Images to consider as cache sources to pass to `docker build`
+	Platform          string            // Optional. OS/Arch to pass to `docker build`.
+	Args              map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+	Labels            map[string]string // Required. Set metadata for an image.
 }
 
 // RunOptions holds the options for running a Docker container.
@@ -158,7 +159,11 @@ func (in *BuildArguments) GenerateDockerBuildArgs(c DockerCmdClient) ([]string, 
 		args = append(args, "--label", fmt.Sprintf("%s=%s", k, in.Labels[k]))
 	}
 
-	args = append(args, dfDir, "-f", in.Dockerfile)
+	if in.DockerfileContent != "" {
+		args = append(args, "-")
+	} else {
+		args = append(args, dfDir, "-f", in.Dockerfile)
+	}
 	return args, nil
 }
 
@@ -173,7 +178,15 @@ func (c DockerCmdClient) Build(ctx context.Context, in *BuildArguments, w io.Wri
 	if err != nil {
 		return fmt.Errorf("generate docker build args: %w", err)
 	}
-	if err := c.runner.RunWithContext(ctx, "docker", args, exec.Stdout(w), exec.Stderr(w)); err != nil {
+	opts := []exec.CmdOption{
+		exec.Stdout(w),
+		exec.Stderr(w),
+	}
+	if in.DockerfileContent != "" {
+		fmt.Printf("adding dockerfile content as stdin\n")
+		opts = append(opts, exec.Stdin(strings.NewReader(in.DockerfileContent)))
+	}
+	if err := c.runner.RunWithContext(ctx, "docker", args, opts...); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 	return nil
