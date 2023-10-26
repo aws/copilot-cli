@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -28,6 +29,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/cli/file"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -47,6 +49,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -66,12 +69,20 @@ type hostFinder interface {
 	Hosts(context.Context) ([]host, error)
 }
 
+type recursiveWatcher interface {
+	Add(path string) error
+	Close() error
+	Events() <-chan fsnotify.Event
+	Errors() <-chan error
+}
+
 type runLocalVars struct {
 	wkldName      string
 	wkldType      string
 	appName       string
 	envName       string
 	envOverrides  map[string]string
+	watch         bool
 	portOverrides portOverrides
 	proxy         bool
 }
@@ -79,24 +90,26 @@ type runLocalVars struct {
 type runLocalOpts struct {
 	runLocalVars
 
-	sel            deploySelector
-	ecsClient      ecsClient
-	ssm            secretGetter
-	secretsManager secretGetter
-	sessProvider   sessionProvider
-	sess           *session.Session
-	envManagerSess *session.Session
-	targetEnv      *config.Environment
-	targetApp      *config.Application
-	store          store
-	ws             wsWlDirReader
-	cmd            execRunner
-	dockerEngine   dockerEngineRunner
-	repository     repositoryService
-	prog           progress
-	orchestrator   containerOrchestrator
-	hostFinder     hostFinder
-	envChecker     versionCompatibilityChecker
+	sel                 deploySelector
+	ecsClient           ecsClient
+	ssm                 secretGetter
+	secretsManager      secretGetter
+	sessProvider        sessionProvider
+	sess                *session.Session
+	envManagerSess      *session.Session
+	targetEnv           *config.Environment
+	targetApp           *config.Application
+	store               store
+	ws                  wsWlDirReader
+	cmd                 execRunner
+	dockerEngine        dockerEngineRunner
+	repository          repositoryService
+	prog                progress
+	orchestrator        containerOrchestrator
+	hostFinder          hostFinder
+	envChecker          versionCompatibilityChecker
+	newRecursiveWatcher func(path string) (recursiveWatcher, error)
+	newDebounceTimer    func() <-chan time.Time
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
@@ -220,6 +233,12 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		return containerURIs, nil
 	}
+	o.newRecursiveWatcher = func(path string) (recursiveWatcher, error) {
+		return file.NewRecursiveWatcher(path)
+	}
+	o.newDebounceTimer = func() <-chan time.Time {
+		return time.After(5 * time.Second)
+	}
 	return o, nil
 }
 
@@ -282,9 +301,9 @@ func (o *runLocalOpts) Execute() error {
 
 	ctx := context.Background()
 
-	task, err := o.getTask(ctx)
+	task, err := o.prepareTask(ctx)
 	if err != nil {
-		return fmt.Errorf("get task: %w", err)
+		return err
 	}
 
 	if o.proxy {
@@ -301,40 +320,20 @@ func (o *runLocalOpts) Execute() error {
 		fmt.Printf("hosts: %+v\n", hosts)
 	}
 
-	mft, _, err := workloadManifest(&workloadManifestInput{
-		name:         o.wkldName,
-		appName:      o.appName,
-		envName:      o.envName,
-		ws:           o.ws,
-		interpolator: o.newInterpolator(o.appName, o.envName),
-		unmarshal:    o.unmarshal,
-		sess:         o.envManagerSess,
-	})
-	if err != nil {
-		return err
-	}
-
-	containerURIs, err := o.buildContainerImages(mft)
-	if err != nil {
-		return fmt.Errorf("build images: %w", err)
-	}
-
-	// replace built images with the local built URI
-	for name, uri := range containerURIs {
-		ctr, ok := task.Containers[name]
-		if !ok {
-			return fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
-		}
-
-		ctr.ImageURI = uri
-		task.Containers[name] = ctr
-	}
-
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
 	o.orchestrator.RunTask(task)
+
+	stopCh := make(chan struct{})
+	watchCh := make(chan interface{})
+	watchErrCh := make(chan error)
+	if o.watch {
+		if err := o.watchLocalFiles(watchCh, watchErrCh, stopCh); err != nil {
+			return fmt.Errorf("setup watch: %s", err)
+		}
+	}
 
 	for {
 		select {
@@ -342,6 +341,7 @@ func (o *runLocalOpts) Execute() error {
 			// we loop until errCh closes, since Start()
 			// closes errCh when the orchestrator is completely done.
 			if !ok {
+				close(stopCh)
 				return nil
 			}
 
@@ -350,6 +350,17 @@ func (o *runLocalOpts) Execute() error {
 		case <-sigCh:
 			signal.Stop(sigCh)
 			o.orchestrator.Stop()
+		case <-watchErrCh:
+			fmt.Printf("watch: %s\n", err)
+			o.orchestrator.Stop()
+		case <-watchCh:
+			task, err = o.prepareTask(ctx)
+			if err != nil {
+				fmt.Printf("rerun task: %s\n", err)
+				o.orchestrator.Stop()
+				break
+			}
+			o.orchestrator.RunTask(task)
 		}
 	}
 }
@@ -399,6 +410,100 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	return task, nil
+}
+
+func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, error) {
+	task, err := o.getTask(ctx)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("get task: %w", err)
+	}
+
+	mft, _, err := workloadManifest(&workloadManifestInput{
+		name:         o.wkldName,
+		appName:      o.appName,
+		envName:      o.envName,
+		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		unmarshal:    o.unmarshal,
+		sess:         o.envManagerSess,
+	})
+	if err != nil {
+		return orchestrator.Task{}, err
+	}
+
+	containerURIs, err := o.buildContainerImages(mft)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("build images: %w", err)
+	}
+
+	// replace built images with the local built URI
+	for name, uri := range containerURIs {
+		ctr, ok := task.Containers[name]
+		if !ok {
+			return orchestrator.Task{}, fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
+		}
+
+		ctr.ImageURI = uri
+		task.Containers[name] = ctr
+	}
+
+	return task, nil
+}
+
+func (o *runLocalOpts) watchLocalFiles(watchCh chan<- interface{}, watchErrCh chan<- error, stopCh <-chan struct{}) error {
+	copilotDir := o.ws.Path()
+
+	watcher, err := o.newRecursiveWatcher(copilotDir)
+	if err != nil {
+		return err
+	}
+
+	if err = watcher.Add(copilotDir); err != nil {
+		return err
+	}
+
+	watcherEvents := watcher.Events()
+	watcherErrors := watcher.Errors()
+
+	go func() {
+		debounceTimerActive := false
+		for {
+			select {
+			case <-stopCh:
+				watcher.Close()
+				return
+			case err, ok := <-watcherErrors:
+				watchErrCh <- err
+				if !ok {
+					watcher.Close()
+					return
+				}
+			case event, ok := <-watcherEvents:
+				if !ok {
+					watcher.Close()
+					return
+				}
+
+				isHidden, err := file.IsHiddenFile(event.Name)
+				if err != nil {
+					break
+				}
+				// TODO(Aiden): implement dockerignore blacklist for update
+				// Only update on Write operations to non-hidden files
+				if event.Has(fsnotify.Write) && !isHidden {
+					debounceTimerActive = true
+				}
+			case <-o.newDebounceTimer():
+				// If debounce timer is active latest update was 5 seconds ago so send rebuild signal
+				if debounceTimerActive {
+					debounceTimerActive = false
+					watchCh <- nil
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 type containerEnv map[string]envVarValue
@@ -660,6 +765,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
