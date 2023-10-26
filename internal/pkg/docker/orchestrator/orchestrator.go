@@ -315,6 +315,7 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
+
 		if err := o.docker.Run(context.Background(), &opts); err != nil {
 			curTaskID := o.curTaskID.Load()
 			if curTaskID == orchestratorStoppedTaskID {
