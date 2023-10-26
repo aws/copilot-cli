@@ -293,7 +293,9 @@ func (o *runLocalOpts) Execute() error {
 	watchCh := make(chan interface{})
 	watchErrCh := make(chan error)
 	if o.watch {
-		o.watchLocalFiles(watchCh, watchErrCh, stopCh)
+		if err := o.watchLocalFiles(watchCh, watchErrCh, stopCh); err != nil {
+			return fmt.Errorf("setup watch: %s", err)
+		}
 	}
 
 	for {

@@ -106,9 +106,15 @@ func (rw *RecursiveWatcher) start() {
 			if info.IsDir() {
 				switch event.Op {
 				case fsnotify.Create:
-					rw.Add(event.Name)
+					err := rw.Add(event.Name)
+					if err != nil {
+						rw.errors <- err
+					}
 				case fsnotify.Remove:
-					rw.Remove(event.Name)
+					err := rw.Remove(event.Name)
+					if err != nil {
+						rw.errors <- err
+					}
 				}
 			} else {
 				rw.events <- event
