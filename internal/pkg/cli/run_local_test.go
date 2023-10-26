@@ -9,18 +9,21 @@ import (
 	"fmt"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/cli/file/filetest"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator/orchestratortest"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/fsnotify/fsnotify"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -206,6 +209,7 @@ type runLocalExecuteMocks struct {
 	secretsManager *mocks.MocksecretGetter
 	prog           *mocks.Mockprogress
 	orchestrator   *orchestratortest.Double
+	watcher        *filetest.Double
 }
 
 type mockProvider struct {
@@ -298,6 +302,58 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 		},
 	}
+	alteredTaskDef := &ecs.TaskDefinition{
+		ContainerDefinitions: []*sdkecs.ContainerDefinition{
+			{
+				Name: aws.String("foo"),
+				Environment: []*sdkecs.KeyValuePair{
+					{
+						Name:  aws.String("FOO_VAR"),
+						Value: aws.String("foo-value"),
+					},
+				},
+				Secrets: []*sdkecs.Secret{
+					{
+						Name:      aws.String("SHARED_SECRET"),
+						ValueFrom: aws.String("mysecret"),
+					},
+				},
+				PortMappings: []*sdkecs.PortMapping{
+					{
+						HostPort:      aws.Int64(80),
+						ContainerPort: aws.Int64(8081),
+					},
+					{
+						HostPort: aws.Int64(9999),
+					},
+				},
+			},
+			{
+				Name: aws.String("bar"),
+				Environment: []*sdkecs.KeyValuePair{
+					{
+						Name:  aws.String("BAR_VAR"),
+						Value: aws.String("bar-value"),
+					},
+				},
+				Secrets: []*sdkecs.Secret{
+					{
+						Name:      aws.String("SHARED_SECRET"),
+						ValueFrom: aws.String("mysecret"),
+					},
+				},
+				PortMappings: []*sdkecs.PortMapping{
+					{
+						HostPort: aws.Int64(10000),
+					},
+					{
+						HostPort:      aws.Int64(77),
+						ContainerPort: aws.Int64(7777),
+					},
+				},
+			},
+		},
+	}
 	expectedTask := orchestrator.Task{
 		Containers: map[string]orchestrator.ContainerDefinition{
 			"foo": {
@@ -341,6 +397,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		inputWkldName      string
 		inputEnvOverrides  map[string]string
 		inputPortOverrides []string
+		inputWatch         bool
 		buildImagesError   error
 
 		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
@@ -465,6 +522,136 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				}
 			},
 		},
+		"watch flag restarts, error for pause container definition update": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil).Times(2)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
+				m.ws.EXPECT().Path().Return("")
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(alteredTaskDef, nil)
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					eventCh <- fsnotify.Event{
+						Name: "mockFilename",
+						Op:   fsnotify.Write,
+					}
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+
+				count := 1
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					switch count {
+					case 1:
+						require.Equal(t, expectedTask, task)
+					case 2:
+						require.NotEqual(t, expectedTask, task)
+						errCh <- errors.New("new task requires recreating pause container")
+					}
+					count++
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
+		"watcher error succesfully stops all goroutines": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.ws.EXPECT().Path().Return("")
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					watcherErrCh <- errors.New("some error")
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					require.Equal(t, expectedTask, task)
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
+		"watch flag restarts and finishes successfully": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil).Times(2)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil).Times(2)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
+				m.ws.EXPECT().Path().Return("")
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					eventCh <- fsnotify.Event{
+						Name: "mockFilename",
+						Op:   fsnotify.Write,
+					}
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+				runCount := 1
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					require.Equal(t, expectedTask, task)
+					if runCount > 1 {
+						syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+					}
+					runCount++
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -483,6 +670,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				repository:     mocks.NewMockrepositoryService(ctrl),
 				prog:           mocks.NewMockprogress(ctrl),
 				orchestrator:   &orchestratortest.Double{},
+				watcher:        &filetest.Double{},
 			}
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
@@ -491,6 +679,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					wkldName:     tc.inputWkldName,
 					envName:      tc.inputEnvName,
 					envOverrides: tc.inputEnvOverrides,
+					watch:        tc.inputWatch,
 					portOverrides: portOverrides{
 						{
 							host:      "777",
@@ -532,6 +721,12 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				prog:         m.prog,
 				newOrchestrator: func() containerOrchestrator {
 					return m.orchestrator
+				},
+				newRecursiveWatcher: func(string) (recursiveWatcher, error) {
+					return m.watcher, nil
+				},
+				newDebounceTimer: func() <-chan time.Time {
+					return time.After(10 * time.Millisecond)
 				},
 			}
 			// WHEN

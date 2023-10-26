@@ -162,6 +162,10 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		if err := o.stopTask(ctx, o.curTask); err != nil {
 			return fmt.Errorf("stop existing task: %w", err)
 		}
+
+		// ensure that containers are fully stopped after o.stopTask finishes blocking
+		// TODO(Aiden): Implement a container ID system or use `docker ps` to ensure containers are stopped
+		time.Sleep(1 * time.Second)
 	}
 
 	for name, ctr := range a.task.Containers {
@@ -311,7 +315,6 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
-
 		if err := o.docker.Run(context.Background(), &opts); err != nil {
 			curTaskID := o.curTaskID.Load()
 			if curTaskID == orchestratorStoppedTaskID {
