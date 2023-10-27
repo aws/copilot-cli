@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const {
+  CloudFormation,
+  waitUntilStackUpdateComplete
+} = require("@aws-sdk/client-cloudformation");
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -96,15 +99,14 @@ const controlEnv = async function (
   aliases,
   envControllerParameters
 ) {
-  var cfn = new aws.CloudFormation();
+  var cfn = new CloudFormation();
   aliases = aliases || [];
   envControllerParameters = envControllerParameters || [];
   while (true) {
     var describeStackResp = await cfn
       .describeStacks({
         StackName: stackName,
-      })
-      .promise();
+      });
     if (describeStackResp.Stacks.length !== 1) {
       throw new Error(`Cannot find environment stack ${stackName}`);
     }
@@ -171,8 +173,7 @@ const controlEnv = async function (
           UsePreviousTemplate: true,
           RoleARN: exportedValues["CFNExecutionRoleARN"],
           Capabilities: updatedEnvStack.Capabilities,
-        })
-        .promise();
+        });
     } catch (err) {
       if (
         !err.message.match(
@@ -182,26 +183,25 @@ const controlEnv = async function (
         throw err;
       }
       // If the other workload is updating the env stack, wait until update completes.
-      await cfn
-        .waitFor("stackUpdateComplete", {
-          StackName: stackName,
-          $waiter: updateStackWaiter,
-        })
-        .promise();
+      await waitUntilStackUpdateComplete({
+        client: cfn,
+        maxWaitTime: 200
+      }, {
+        StackName: stackName
+      });
       continue;
     }
     // Wait until update complete, then return the updated env stack output.
-    await cfn
-      .waitFor("stackUpdateComplete", {
-        StackName: stackName,
-        $waiter: updateStackWaiter,
-      })
-      .promise();
+    await waitUntilStackUpdateComplete({
+      client: cfn,
+      maxWaitTime: 200
+    }, {
+      StackName: stackName
+    });
     describeStackResp = await cfn
       .describeStacks({
         StackName: stackName,
-      })
-      .promise();
+      });
     if (describeStackResp.Stacks.length !== 1) {
       throw new Error(`Cannot find environment stack ${stackName}`);
     }

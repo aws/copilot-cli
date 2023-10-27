@@ -1,8 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-"use strict";
+"use strict";;
+const {
+  fromEnv,
+  fromTemporaryCredentials
+} = require("@aws-sdk/credential-providers");
 
-const aws = require("aws-sdk");
+const {
+  Route53,
+  waitUntilResourceRecordSetsChanged
+} = require("@aws-sdk/client-route-53");
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -93,18 +100,23 @@ const createSubdomainInRoot = async function (
   rootDnsRole,
   hostedZoneId
 ) {
-  const route53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const route53 = new Route53({
+    credentials: // JS SDK v3 switched credential providers from classes to functions.
+    // This is the closest approximation from codemod of what your application needs.
+    // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
+    fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
-    }),
+      masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
+      // This is the closest approximation from codemod of what your application needs.
+      // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
+      fromEnv("AWS"),
+    })
   });
   if (!hostedZoneId) {
   const hostedZones = await route53
     .listHostedZonesByName({
       DNSName: domainName,
-    })
-    .promise();
+    });
 
   if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
     throw new Error(
@@ -135,8 +147,7 @@ const createSubdomainInRoot = async function (
         ],
       },
       HostedZoneId: hostedZoneId,
-    })
-    .promise();
+    });
 
   console.log(
     `Created recordset in hostedzone ${hostedZoneId} for ${subDomain}`
@@ -162,18 +173,23 @@ const deleteSubdomainInRoot = async function (
   rootDnsRole,
   hostedZoneId
 ) {
-  const route53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const route53 = new Route53({
+    credentials: // JS SDK v3 switched credential providers from classes to functions.
+    // This is the closest approximation from codemod of what your application needs.
+    // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
+    fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
-    }),
+      masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
+      // This is the closest approximation from codemod of what your application needs.
+      // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
+      fromEnv("AWS"),
+    })
   });
   if (!hostedZoneId) {
   const hostedZones = await route53
     .listHostedZonesByName({
       DNSName: domainName,
-    })
-    .promise();
+    });
 
   if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
     throw new Error(
@@ -195,8 +211,7 @@ const deleteSubdomainInRoot = async function (
       MaxItems: "1",
       StartRecordName: subDomain,
       StartRecordType: "NS",
-    })
-    .promise();
+    });
 
   // If the records have already been deleted, return early.
   if (!recordSets.ResourceRecordSets || recordSets.ResourceRecordSets == 0) {
@@ -227,8 +242,7 @@ const deleteSubdomainInRoot = async function (
         ],
       },
       HostedZoneId: hostedZoneId,
-    })
-    .promise();
+    });
 
   await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
   return subDomain;
@@ -252,16 +266,13 @@ const recordChangeAction = function (
 };
 
 const waitForRecordSetChange = function (route53, changeId) {
-  return route53
-    .waitFor("resourceRecordSetsChanged", {
-      // Wait up to 5 minutes
-      $waiter: {
-        delay: 30,
-        maxAttempts: 10,
-      },
-      Id: changeId,
-    })
-    .promise();
+  return waitUntilResourceRecordSetsChanged({
+    client: route53,
+    minDelay: 30,
+    maxWaitTime: 600
+  }, {
+    Id: changeId
+  });
 };
 
 exports.domainDelegationHandler = async function (event, context) {

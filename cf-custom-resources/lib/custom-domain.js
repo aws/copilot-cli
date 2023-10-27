@@ -1,8 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-"use strict";
+"use strict";;
+const {
+  fromEnv,
+  fromTemporaryCredentials
+} = require("@aws-sdk/credential-providers");
 
-const aws = require("aws-sdk");
+const {
+  Route53
+} = require("@aws-sdk/client-route-53");
 
 const changeRecordAction = {
   Upsert: "UPSERT",
@@ -217,12 +223,18 @@ exports.handler = async function (event, context) {
     },
     OtherDomainZone: { regex: new RegExp(`.*`) },
   };
-  const envRoute53 = new aws.Route53();
-  const appRoute53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const envRoute53 = new Route53();
+  const appRoute53 = new Route53({
+    credentials: // JS SDK v3 switched credential providers from classes to functions.
+    // This is the closest approximation from codemod of what your application needs.
+    // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
+    fromTemporaryCredentials({
       params: { RoleArn: props.AppDNSRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
-    }),
+      masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
+      // This is the closest approximation from codemod of what your application needs.
+      // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
+      fromEnv("AWS"),
+    })
   });
   if (waiter) {
     // Used by the test suite, since waiters aren't mockable yet
