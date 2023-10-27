@@ -56,8 +56,15 @@ const (
 	pauseCtrTaskID            = 0
 )
 
-//go:embed Pause-Dockerfile
-var pauseDockerfile string
+const pauseContainerURI = "aws-copilot-pause"
+
+var (
+	// '+' is not a valid character in an image tag
+	pauseContainerTag = strings.Replace(version.Version, "+", "PLUS", -1)
+
+	//go:embed Pause-Dockerfile
+	pauseDockerfile string
+)
 
 // New creates a new Orchestrator. idPrefix is a prefix used when
 // naming containers that are run by the Orchestrator.
@@ -110,29 +117,18 @@ func (o *Orchestrator) Start() <-chan error {
 	return errs
 }
 
-type RunTaskOption func(r *runTaskAction)
-
-func RunTaskWithPauseEnv(env map[string]string) RunTaskOption {
-	return func(r *runTaskAction) {
-	}
-}
-
 // RunTask stops the current running task and starts task.
-func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
+func (o *Orchestrator) RunTask(task Task) {
 	// this guarantees the following:
 	// - if runTaskAction{} is pulled by the Orchestrator, any errors
 	//   returned by it are reported by the Orchestrator.
 	// - if Stop() is called _before_ the Orchestrator picks up this
-	//   r, then this r is skipped.
-	r := &runTaskAction{
-		task: task,
-	}
-	for _, opt := range opts {
-		opt(r)
-	}
+	//   action, then this action is skipped.
 	select {
 	case <-o.stopped:
-	case o.actions <- r:
+	case o.actions <- &runTaskAction{
+		task: task,
+	}:
 	}
 }
 
@@ -159,8 +155,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	}()
 
 	if taskID == 1 {
-		err := o.buildPauseContainer(ctx)
-		if err != nil {
+		if err := o.buildPauseContainer(ctx); err != nil {
 			return fmt.Errorf("build pause container: %w", err)
 		}
 
@@ -195,15 +190,11 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 }
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
-	err := o.docker.Build(ctx, &dockerengine.BuildArguments{
+	return o.docker.Build(ctx, &dockerengine.BuildArguments{
 		URI:               pauseContainerURI,
-		Tags:              []string{tag},
+		Tags:              []string{pauseContainerTag},
 		DockerfileContent: pauseDockerfile,
 	}, os.Stderr)
-	if err != nil {
-		return err
-	}
-	return "aws-copilot-pause:" + tag, nil
 }
 
 // Stop stops the current running task containers and the Orchestrator. Stop is
@@ -308,9 +299,9 @@ type ContainerDefinition struct {
 // pauseRunOptions returns RunOptions for the pause container for t.
 // The pause container owns the networking namespace that is shared
 // among all of the containers in the task.
-func (o *Orchestrator) pauseRunOptions(t Task, uri string) dockerengine.RunOptions {
+func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
-		ImageURI:       pauseContainerURI,
+		ImageURI:       fmt.Sprintf("%s:%s", pauseContainerURI, pauseContainerTag),
 		ContainerName:  o.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
@@ -324,11 +315,6 @@ func (o *Orchestrator) pauseRunOptions(t Task, uri string) dockerengine.RunOptio
 	}
 	return opts
 }
-
-var pauseContainerURI = func() string {
-	tag := strings.Replace(version.Version, "+", "PLUS", -1)
-	return "aws-copilot-pause:" + tag
-}()
 
 // containerRunOptions returns RunOptions for the given container.
 func (o *Orchestrator) containerRunOptions(name string, ctr ContainerDefinition) dockerengine.RunOptions {
