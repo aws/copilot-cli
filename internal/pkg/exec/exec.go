@@ -6,7 +6,6 @@ package exec
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
