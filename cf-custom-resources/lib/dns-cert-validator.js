@@ -5,19 +5,9 @@
 /* jshint esversion: 8 */
 
 "use strict";;
-const {
-  fromEnv,
-  fromTemporaryCredentials
-} = require("@aws-sdk/credential-providers");
-
-const {
-  ACM,
-  waitUntilCertificateValidated
-} = require("@aws-sdk/client-acm");
-
-const {
-  Route53
-} = require("@aws-sdk/client-route-53");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { ACM, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
+const { Route53 } = require("@aws-sdk/client-route-53");
 
 const defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -583,15 +573,9 @@ const clients = function (region, rootDnsRole) {
   });
   const envRoute53 = new Route53();
   const appRoute53 = new Route53({
-    credentials: // JS SDK v3 switched credential providers from classes to functions.
-    // This is the closest approximation from codemod of what your application needs.
-    // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-    fromTemporaryCredentials({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole, },
-      masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
-      // This is the closest approximation from codemod of what your application needs.
-      // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-      fromEnv("AWS"),
+      masterCredentials: fromEnv("AWS"),
     })
   });
   if (waiter) {

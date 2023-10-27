@@ -1,13 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";;
-const {
-  ECS
-} = require("@aws-sdk/client-ecs");
-
-const {
-  ResourceGroupsTaggingAPI
-} = require("@aws-sdk/client-resource-groups-tagging-api");
+const { ECS } = require("@aws-sdk/client-ecs");
+const { ResourceGroupsTaggingAPI } = require("@aws-sdk/client-resource-groups-tagging-api");
 
 // These are used for test purposes only
 let defaultResponseURL;

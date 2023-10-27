@@ -1,24 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-
-
-const {
-  fromEnv,
-  fromTemporaryCredentials
-} = require("@aws-sdk/credential-providers");
-
-const {
-  ACM
-} = require("@aws-sdk/client-acm");
-
-const {
-  ResourceGroupsTaggingAPI
-} = require("@aws-sdk/client-resource-groups-tagging-api");
-
-const {
-  Route53
-} = require("@aws-sdk/client-route-53");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { ACM } = require("@aws-sdk/client-acm");
+const { ResourceGroupsTaggingAPI } = require("@aws-sdk/client-resource-groups-tagging-api");
+const { Route53 } = require("@aws-sdk/client-route-53");
 
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
@@ -35,15 +21,9 @@ const appRoute53Context = () => {
   return () => {
     if (!client) {
       client = new Route53({
-        credentials: // JS SDK v3 switched credential providers from classes to functions.
-        // This is the closest approximation from codemod of what your application needs.
-        // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-        fromTemporaryCredentials({
+        credentials: fromTemporaryCredentials({
           params: { RoleArn: rootDNSRole },
-          masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
-          // This is the closest approximation from codemod of what your application needs.
-          // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-          fromEnv("AWS"),
+          masterCredentials: fromEnv("AWS"),
         })
       });
     }

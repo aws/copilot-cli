@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const {
-  ElasticLoadBalancingV2
-} = require("@aws-sdk/client-elastic-load-balancing-v2");
+const { ElasticLoadBalancingV2 } = require("@aws-sdk/client-elastic-load-balancing-v2");
 
 // minPriorityForRootRule is the min priority number for the the root path "/".
 const minPriorityForRootRule = 48000;

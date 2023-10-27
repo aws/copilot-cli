@@ -1,15 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";;
-const {
-  fromEnv,
-  fromTemporaryCredentials
-} = require("@aws-sdk/credential-providers");
-
-const {
-  Route53,
-  waitUntilResourceRecordSetsChanged
-} = require("@aws-sdk/client-route-53");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { Route53, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -101,15 +94,9 @@ const createSubdomainInRoot = async function (
   hostedZoneId
 ) {
   const route53 = new Route53({
-    credentials: // JS SDK v3 switched credential providers from classes to functions.
-    // This is the closest approximation from codemod of what your application needs.
-    // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-    fromTemporaryCredentials({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole },
-      masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
-      // This is the closest approximation from codemod of what your application needs.
-      // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-      fromEnv("AWS"),
+      masterCredentials: fromEnv("AWS"),
     })
   });
   if (!hostedZoneId) {
@@ -174,15 +161,9 @@ const deleteSubdomainInRoot = async function (
   hostedZoneId
 ) {
   const route53 = new Route53({
-    credentials: // JS SDK v3 switched credential providers from classes to functions.
-    // This is the closest approximation from codemod of what your application needs.
-    // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-    fromTemporaryCredentials({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole },
-      masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
-      // This is the closest approximation from codemod of what your application needs.
-      // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-      fromEnv("AWS"),
+      masterCredentials: fromEnv("AWS"),
     })
   });
   if (!hostedZoneId) {

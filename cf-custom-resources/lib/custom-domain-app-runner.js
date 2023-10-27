@@ -5,18 +5,9 @@
 /*jshint esversion: 8 */
 
 "use strict";;
-const {
-    fromEnv,
-    fromTemporaryCredentials
-} = require("@aws-sdk/credential-providers");
-
-const {
-    AppRunner
-} = require("@aws-sdk/client-apprunner");
-
-const {
-    Route53
-} = require("@aws-sdk/client-route-53");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { AppRunner } = require("@aws-sdk/client-apprunner");
+const { Route53 } = require("@aws-sdk/client-route-53");
 
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
@@ -99,15 +90,9 @@ exports.handler = async function (event, context) {
     let handler = async function () {
         // Configure clients.
         appRoute53Client = new Route53({
-            credentials: // JS SDK v3 switched credential providers from classes to functions.
-            // This is the closest approximation from codemod of what your application needs.
-            // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-            fromTemporaryCredentials({
+            credentials: fromTemporaryCredentials({
                 params: { RoleArn: appDNSRole, },
-                masterCredentials: // JS SDK v3 switched credential providers from classes to functions.
-                // This is the closest approximation from codemod of what your application needs.
-                // Reference: https://www.npmjs.com/package/@aws-sdk/credential-providers
-                fromEnv("AWS"),
+                masterCredentials: fromEnv("AWS"),
             })
         });
         appRunnerClient = new AppRunner();

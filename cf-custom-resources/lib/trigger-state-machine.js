@@ -3,9 +3,7 @@
 
 "use strict";
 
-const {
-  SFN
-} = require("@aws-sdk/client-sfn");
+const { SFN } = require("@aws-sdk/client-sfn");
 
 /**
  * Main handler, invoked by Lambda

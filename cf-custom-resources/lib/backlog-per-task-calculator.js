@@ -1,13 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";;
-const {
-  ECS
-} = require("@aws-sdk/client-ecs");
-
-const {
-  SQS
-} = require("@aws-sdk/client-sqs");
+const { ECS } = require("@aws-sdk/client-ecs");
+const { SQS } = require("@aws-sdk/client-sqs");
 
 // AWS Clients that are overriden in tests.
 let ecs, sqs;

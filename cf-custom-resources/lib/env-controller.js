@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const {
-  CloudFormation,
-  waitUntilStackUpdateComplete
-} = require("@aws-sdk/client-cloudformation");
+const { CloudFormation, waitUntilStackUpdateComplete } = require("@aws-sdk/client-cloudformation");
 
 // These are used for test purposes only
 let defaultResponseURL;
