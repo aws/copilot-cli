@@ -789,7 +789,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return m.watcher, nil
 				},
 				newDebounceTimer: func() <-chan time.Time {
-					return time.After(10 * time.Millisecond)
+					ch := make(chan time.Time, 1)
+					ch <- time.Now()
+					return ch
 				},
 			}
 			// WHEN

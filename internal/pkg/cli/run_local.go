@@ -465,8 +465,9 @@ func (o *runLocalOpts) watchLocalFiles(watchCh chan<- interface{}, watchErrCh ch
 	watcherEvents := watcher.Events()
 	watcherErrors := watcher.Errors()
 
+	var debounceCh <-chan time.Time
+
 	go func() {
-		debounceTimerActive := false
 		for {
 			select {
 			case <-stopCh:
@@ -491,14 +492,10 @@ func (o *runLocalOpts) watchLocalFiles(watchCh chan<- interface{}, watchErrCh ch
 				// TODO(Aiden): implement dockerignore blacklist for update
 				// Only update on Write operations to non-hidden files
 				if event.Has(fsnotify.Write) && !isHidden {
-					debounceTimerActive = true
+					debounceCh = o.newDebounceTimer()
 				}
-			case <-o.newDebounceTimer():
-				// If debounce timer is active latest update was 5 seconds ago so send rebuild signal
-				if debounceTimerActive {
-					debounceTimerActive = false
-					watchCh <- nil
-				}
+			case <-debounceCh:
+				watchCh <- nil
 			}
 		}
 	}()
