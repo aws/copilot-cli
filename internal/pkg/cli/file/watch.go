@@ -21,7 +21,7 @@ type RecursiveWatcher struct {
 }
 
 // NewRecursiveWatcher returns a RecursiveWatcher which notifies when changes are made to files inside a recursive directory tree.
-func NewRecursiveWatcher(dir string) (*RecursiveWatcher, error) {
+func NewRecursiveWatcher() (*RecursiveWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err

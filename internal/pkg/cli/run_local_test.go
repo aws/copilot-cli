@@ -785,7 +785,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				orchestrator: m.orchestrator,
 				hostFinder:   m.hostFinder,
 				envChecker:   m.envChecker,
-				newRecursiveWatcher: func(string) (recursiveWatcher, error) {
+				newRecursiveWatcher: func() (recursiveWatcher, error) {
 					return m.watcher, nil
 				},
 				newDebounceTimer: func() <-chan time.Time {

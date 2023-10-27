@@ -108,7 +108,7 @@ type runLocalOpts struct {
 	orchestrator        containerOrchestrator
 	hostFinder          hostFinder
 	envChecker          versionCompatibilityChecker
-	newRecursiveWatcher func(path string) (recursiveWatcher, error)
+	newRecursiveWatcher func() (recursiveWatcher, error)
 	newDebounceTimer    func() <-chan time.Time
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
@@ -233,8 +233,8 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		return containerURIs, nil
 	}
-	o.newRecursiveWatcher = func(path string) (recursiveWatcher, error) {
-		return file.NewRecursiveWatcher(path)
+	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
+		return file.NewRecursiveWatcher()
 	}
 	o.newDebounceTimer = func() <-chan time.Time {
 		return time.After(5 * time.Second)
@@ -453,7 +453,7 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 func (o *runLocalOpts) watchLocalFiles(watchCh chan<- interface{}, watchErrCh chan<- error, stopCh <-chan struct{}) error {
 	copilotDir := o.ws.Path()
 
-	watcher, err := o.newRecursiveWatcher(copilotDir)
+	watcher, err := o.newRecursiveWatcher()
 	if err != nil {
 		return err
 	}
