@@ -66,8 +66,8 @@ func New(cmd Cmd) DockerCmdClient {
 type BuildArguments struct {
 	URI               string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
 	Tags              []string          // Required. List of tags to apply to the image.
-	Dockerfile        string            // Required. Dockerfile to pass to `docker build` via --file flag.
-	DockerfileContent string            // Optional. Mutually exclusive with Dockerfile.
+	Dockerfile        string            // Optional. One of Dockerfile or Dockerfile Content is required. Dockerfile to pass to `docker build` via --file flag.
+	DockerfileContent string            // Optional. One of Dockerfile or Dockerfile Content is required. Dockerfile content to pass to `docker build` via stdin.
 	Context           string            // Optional. Build context directory to pass to `docker build`.
 	Target            string            // Optional. The target build stage to pass to `docker build`.
 	CacheFrom         []string          // Optional. Images to consider as cache sources to pass to `docker build`
@@ -183,7 +183,6 @@ func (c DockerCmdClient) Build(ctx context.Context, in *BuildArguments, w io.Wri
 		exec.Stderr(w),
 	}
 	if in.DockerfileContent != "" {
-		fmt.Printf("adding dockerfile content as stdin\n")
 		opts = append(opts, exec.Stdin(strings.NewReader(in.DockerfileContent)))
 	}
 	if err := c.runner.RunWithContext(ctx, "docker", args, opts...); err != nil {
