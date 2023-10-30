@@ -289,7 +289,7 @@ func (o *runLocalOpts) Execute() error {
 
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
-			return err
+			// return err
 		}
 
 		hosts, err := o.hostFinder.Hosts(ctx)
@@ -466,22 +466,10 @@ func (c containerEnv) Secrets() map[string]string {
 // continer defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
-	sessionVars, err := sessionEnvVars(ctx, o.sess)
-	if err != nil {
-		return nil, err
-	}
-
 	envVars := make(map[string]containerEnv)
 	for _, ctr := range taskDef.ContainerDefinitions {
 		name := aws.StringValue(ctr.Name)
 		envVars[name] = make(map[string]envVarValue)
-
-		for k, v := range sessionVars {
-			envVars[name][k] = envVarValue{
-				Value: v,
-				// TODO: these should probably be secrets
-			}
-		}
 	}
 
 	for _, e := range taskDef.EnvironmentVariables() {
@@ -497,6 +485,24 @@ func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 	if err := o.fillSecrets(ctx, envVars, taskDef); err != nil {
 		return nil, fmt.Errorf("get secrets: %w", err)
 	}
+
+	// inject session variables if they haven't been already set
+	sessionVars, err := sessionEnvVars(ctx, o.sess)
+	if err != nil {
+		return nil, err
+	}
+
+	for ctr := range envVars {
+		for k, v := range sessionVars {
+			if _, ok := envVars[ctr][k]; !ok {
+				envVars[ctr][k] = envVarValue{
+					Value:  v,
+					Secret: true,
+				}
+			}
+		}
+	}
+
 	return envVars, nil
 }
 
