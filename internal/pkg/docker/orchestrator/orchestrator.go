@@ -56,15 +56,13 @@ const (
 	pauseCtrTaskID            = 0
 )
 
-const pauseContainerURI = "aws-copilot-pause"
-
-var (
-	// '+' is not a valid character in an image tag
-	pauseContainerTag = strings.Replace(version.Version, "+", "PLUS", -1)
-
-	//go:embed Pause-Dockerfile
-	pauseDockerfile string
+const (
+	pauseCtrURI = "aws-copilot-pause"
+	pauseCtrTag = "latest"
 )
+
+//go:embed Pause-Dockerfile
+var pauseDockerfile string
 
 // New creates a new Orchestrator. idPrefix is a prefix used when
 // naming containers that are run by the Orchestrator.
@@ -191,8 +189,8 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
 	return o.docker.Build(ctx, &dockerengine.BuildArguments{
-		URI:               pauseContainerURI,
-		Tags:              []string{pauseContainerTag},
+		URI:               pauseCtrURI,
+		Tags:              []string{pauseCtrTag},
 		DockerfileContent: pauseDockerfile,
 	}, os.Stderr)
 }
@@ -301,7 +299,7 @@ type ContainerDefinition struct {
 // among all of the containers in the task.
 func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
-		ImageURI:       fmt.Sprintf("%s:%s", pauseContainerURI, pauseContainerTag),
+		ImageURI:       fmt.Sprintf("%s:%s", pauseCtrURI, pauseCtrTag),
 		ContainerName:  o.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
