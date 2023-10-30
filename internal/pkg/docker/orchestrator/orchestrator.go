@@ -281,7 +281,8 @@ func (o *Orchestrator) containerID(name string) string {
 // Containers within a Task can talk to each other on localhost
 // and are stopped and started as a group.
 type Task struct {
-	Containers map[string]ContainerDefinition
+	Containers   map[string]ContainerDefinition
+	PauseSecrets map[string]string
 }
 
 // ContainerDefinition defines information necessary to run a container.
@@ -301,6 +302,7 @@ func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 		ContainerName:  o.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
+		Secrets:        t.PauseSecrets,
 	}
 
 	for _, ctr := range t.Containers {

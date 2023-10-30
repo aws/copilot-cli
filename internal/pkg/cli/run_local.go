@@ -365,8 +365,14 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
+	pauseSecrets, err := sessionEnvVars(ctx, o.sess)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("get pause container secrets: %w", err)
+	}
+
 	task := orchestrator.Task{
-		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
+		Containers:   make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
+		PauseSecrets: pauseSecrets,
 	}
 
 	for _, ctr := range td.ContainerDefinitions {
@@ -399,6 +405,24 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	return task, nil
+}
+
+func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]string, error) {
+	creds, err := sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get IAM credentials: %w", err)
+	}
+
+	env := map[string]string{
+		"AWS_ACCESS_KEY_ID":     creds.AccessKeyID,
+		"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
+		"AWS_SESSION_TOKEN":     creds.SessionToken,
+	}
+	if sess.Config.Region != nil {
+		env["AWS_DEFAULT_REGION"] = aws.StringValue(sess.Config.Region)
+		env["AWS_REGION"] = aws.StringValue(sess.Config.Region)
+	}
+	return env, nil
 }
 
 type containerEnv map[string]envVarValue
@@ -442,31 +466,21 @@ func (c containerEnv) Secrets() map[string]string {
 // continer defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
-	creds, err := o.sess.Config.Credentials.GetWithContext(ctx)
+	sessionVars, err := sessionEnvVars(ctx, o.sess)
 	if err != nil {
-		return nil, fmt.Errorf("get IAM credentials: %w", err)
+		return nil, err
 	}
 
 	envVars := make(map[string]containerEnv)
 	for _, ctr := range taskDef.ContainerDefinitions {
 		name := aws.StringValue(ctr.Name)
-		envVars[name] = map[string]envVarValue{
-			"AWS_ACCESS_KEY_ID": {
-				Value: creds.AccessKeyID,
-			},
-			"AWS_SECRET_ACCESS_KEY": {
-				Value: creds.SecretAccessKey,
-			},
-			"AWS_SESSION_TOKEN": {
-				Value: creds.SessionToken,
-			},
-		}
-		if o.sess.Config.Region != nil {
-			val := envVarValue{
-				Value: aws.StringValue(o.sess.Config.Region),
+		envVars[name] = make(map[string]envVarValue)
+
+		for k, v := range sessionVars {
+			envVars[name][k] = envVarValue{
+				Value: v,
+				// TODO: these should probably be secrets
 			}
-			envVars[name]["AWS_DEFAULT_REGION"] = val
-			envVars[name]["AWS_REGION"] = val
 		}
 	}
 
