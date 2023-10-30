@@ -136,12 +136,15 @@ func TestOrchestrator(t *testing.T) {
 						return true, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
-						// validate pause container has correct ports
+						// validate pause container has correct ports and secrets
 						if opts.ContainerName == "prefix-pause" {
 							require.Equal(t, map[string]string{
 								"8080": "80",
 								"9000": "90",
 							}, opts.ContainerPorts)
+							require.Equal(t, map[string]string{
+								"A_SECRET": "very secret",
+							}, opts.Secrets)
 						}
 						return nil
 					},
@@ -150,6 +153,9 @@ func TestOrchestrator(t *testing.T) {
 			logOptions: noLogs,
 			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
 				o.RunTask(Task{
+					PauseSecrets: map[string]string{
+						"A_SECRET": "very secret",
+					},
 					Containers: map[string]ContainerDefinition{
 						"foo": {
 							Ports: map[string]string{
