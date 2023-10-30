@@ -365,14 +365,16 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
-	pauseSecrets, err := sessionEnvVars(ctx, o.sess)
-	if err != nil {
-		return orchestrator.Task{}, fmt.Errorf("get pause container secrets: %w", err)
+	task := orchestrator.Task{
+		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
 
-	task := orchestrator.Task{
-		Containers:   make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
-		PauseSecrets: pauseSecrets,
+	if o.proxy {
+		pauseSecrets, err := sessionEnvVars(ctx, o.sess)
+		if err != nil {
+			return orchestrator.Task{}, fmt.Errorf("get pause container secrets: %w", err)
+		}
+		task.PauseSecrets = pauseSecrets
 	}
 
 	for _, ctr := range td.ContainerDefinitions {

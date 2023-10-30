@@ -347,6 +347,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				},
 			},
 		},
+	}
+	expectedProxyTask := orchestrator.Task{
+		Containers: expectedTask.Containers,
 		PauseSecrets: map[string]string{
 			"AWS_ACCESS_KEY_ID":     "myID",
 			"AWS_SECRET_ACCESS_KEY": "mySecret",
@@ -465,7 +468,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`build images: some error`),
 		},
-		"pulls errors from orchestrator": {
+		"success, one run task call": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
@@ -482,6 +485,40 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				}
 				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
 					require.Equal(t, expectedTask, task)
+				}
+				m.orchestrator.StopFn = func() {
+					require.Len(t, errCh, 0)
+					close(errCh)
+				}
+			},
+		},
+		"success, one run task call, proxy": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
+					return []host{
+						{
+							host: "a-different-service",
+							port: "80",
+						},
+					}, nil
+				}
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					errCh <- errors.New("some error")
+					return errCh
+				}
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					require.Equal(t, expectedProxyTask, task)
 				}
 				m.orchestrator.StopFn = func() {
 					require.Len(t, errCh, 0)
