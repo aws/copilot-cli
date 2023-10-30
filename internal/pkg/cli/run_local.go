@@ -108,8 +108,8 @@ type runLocalOpts struct {
 	orchestrator        containerOrchestrator
 	hostFinder          hostFinder
 	envChecker          versionCompatibilityChecker
+	debounceTime        time.Duration
 	newRecursiveWatcher func() (recursiveWatcher, error)
-	newDebounceTimer    func() <-chan time.Time
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
@@ -233,11 +233,9 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		return containerURIs, nil
 	}
+	o.debounceTime = 5 * time.Second
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
 		return file.NewRecursiveWatcher()
-	}
-	o.newDebounceTimer = func() <-chan time.Time {
-		return time.After(5 * time.Second)
 	}
 	return o, nil
 }
@@ -326,11 +324,12 @@ func (o *runLocalOpts) Execute() error {
 	errCh := o.orchestrator.Start()
 	o.orchestrator.RunTask(task)
 
+	var watchCh <-chan interface{}
+	var watchErrCh <-chan error
 	stopCh := make(chan struct{})
-	watchCh := make(chan interface{})
-	watchErrCh := make(chan error)
 	if o.watch {
-		if err := o.watchLocalFiles(watchCh, watchErrCh, stopCh); err != nil {
+		watchCh, watchErrCh, err = o.watchLocalFiles(stopCh)
+		if err != nil {
 			return fmt.Errorf("setup watch: %s", err)
 		}
 	}
@@ -450,22 +449,26 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 	return task, nil
 }
 
-func (o *runLocalOpts) watchLocalFiles(watchCh chan<- interface{}, watchErrCh chan<- error, stopCh <-chan struct{}) error {
+func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
 	copilotDir := o.ws.Path()
+
+	watchCh := make(chan interface{})
+	watchErrCh := make(chan error)
 
 	watcher, err := o.newRecursiveWatcher()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	if err = watcher.Add(copilotDir); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	watcherEvents := watcher.Events()
 	watcherErrors := watcher.Errors()
 
-	var debounceCh <-chan time.Time
+	debounceTimer := time.NewTimer(0)
+	<-debounceTimer.C // flush channel to create timer for later use with Reset()
 
 	go func() {
 		for {
@@ -485,22 +488,27 @@ func (o *runLocalOpts) watchLocalFiles(watchCh chan<- interface{}, watchErrCh ch
 					return
 				}
 
+				// skip chmod events
+				if event.Has(fsnotify.Chmod) {
+					break
+				}
+
 				isHidden, err := file.IsHiddenFile(event.Name)
 				if err != nil {
 					break
 				}
+
 				// TODO(Aiden): implement dockerignore blacklist for update
-				// Only update on Write operations to non-hidden files
-				if event.Has(fsnotify.Write) && !isHidden {
-					debounceCh = o.newDebounceTimer()
+				if !isHidden {
+					debounceTimer.Reset(o.debounceTime)
 				}
-			case <-debounceCh:
+			case <-debounceTimer.C:
 				watchCh <- nil
 			}
 		}
 	}()
 
-	return nil
+	return watchCh, watchErrCh, nil
 }
 
 type containerEnv map[string]envVarValue

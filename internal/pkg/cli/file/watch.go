@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -99,17 +100,28 @@ func (rw *RecursiveWatcher) start() {
 	for {
 		select {
 		case event := <-rw.fsnotifyWatcher.Events:
+			if event.Has(fsnotify.Write) {
+				// cannot be a directory, skip call to os.Stat
+				rw.events <- event
+				return
+			}
+
 			info, err := os.Stat(event.Name)
 			if err != nil {
+				log.Error(err)
 				break
 			}
+
 			if info.IsDir() {
+				// handle recursive watch
 				switch event.Op {
 				case fsnotify.Create:
 					err := rw.Add(event.Name)
 					if err != nil {
 						rw.errors <- err
 					}
+				case fsnotify.Rename:
+					fallthrough
 				case fsnotify.Remove:
 					err := rw.Remove(event.Name)
 					if err != nil {
@@ -117,6 +129,7 @@ func (rw *RecursiveWatcher) start() {
 					}
 				}
 			} else {
+				// not a directory, pass event
 				rw.events <- event
 			}
 		case err := <-rw.fsnotifyWatcher.Errors:

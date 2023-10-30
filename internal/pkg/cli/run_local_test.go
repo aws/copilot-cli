@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -785,13 +784,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				orchestrator: m.orchestrator,
 				hostFinder:   m.hostFinder,
 				envChecker:   m.envChecker,
+				debounceTime: 0, // disable debounce during testing
 				newRecursiveWatcher: func() (recursiveWatcher, error) {
 					return m.watcher, nil
-				},
-				newDebounceTimer: func() <-chan time.Time {
-					ch := make(chan time.Time, 1)
-					ch <- time.Now()
-					return ch
 				},
 			}
 			// WHEN
