@@ -11,13 +11,11 @@ import (
 	"io"
 	"maps"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 // Orchestrator manages running a Task. Only a single Task
