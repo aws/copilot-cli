@@ -709,6 +709,7 @@ type dockerEngineRunner interface {
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
 	Rm(string) error
+	Build(context.Context, *dockerengine.BuildArguments, io.Writer) error
 }
 
 type workloadStackGenerator interface {

@@ -58,7 +58,7 @@ const (
 
 type containerOrchestrator interface {
 	Start() <-chan error
-	RunTask(task orchestrator.Task)
+	RunTask(orchestrator.Task)
 	Stop()
 }
 
