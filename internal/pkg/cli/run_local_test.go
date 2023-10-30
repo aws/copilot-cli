@@ -317,13 +317,13 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			"foo": {
 				ImageURI: "image1",
 				EnvVars: map[string]string{
-					"FOO_VAR":               "foo-value",
+					"FOO_VAR": "foo-value",
+				},
+				Secrets: map[string]string{
+					"SHARED_SECRET":         "secretvalue",
 					"AWS_ACCESS_KEY_ID":     "myID",
 					"AWS_SECRET_ACCESS_KEY": "mySecret",
 					"AWS_SESSION_TOKEN":     "myToken",
-				},
-				Secrets: map[string]string{
-					"SHARED_SECRET": "secretvalue",
 				},
 				Ports: map[string]string{
 					"80":  "8080",
@@ -333,19 +333,24 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			"bar": {
 				ImageURI: "image2",
 				EnvVars: map[string]string{
-					"BAR_VAR":               "bar-value",
+					"BAR_VAR": "bar-value",
+				},
+				Secrets: map[string]string{
+					"SHARED_SECRET":         "secretvalue",
 					"AWS_ACCESS_KEY_ID":     "myID",
 					"AWS_SECRET_ACCESS_KEY": "mySecret",
 					"AWS_SESSION_TOKEN":     "myToken",
-				},
-				Secrets: map[string]string{
-					"SHARED_SECRET": "secretvalue",
 				},
 				Ports: map[string]string{
 					"777":   "7777",
 					"10000": "10000",
 				},
 			},
+		},
+		PauseSecrets: map[string]string{
+			"AWS_ACCESS_KEY_ID":     "myID",
+			"AWS_SECRET_ACCESS_KEY": "mySecret",
+			"AWS_SESSION_TOKEN":     "myToken",
 		},
 	}
 
