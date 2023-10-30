@@ -466,10 +466,9 @@ func (c containerEnv) Secrets() map[string]string {
 // continer defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
-	envVars := make(map[string]containerEnv)
+	envVars := make(map[string]containerEnv, len(taskDef.ContainerDefinitions))
 	for _, ctr := range taskDef.ContainerDefinitions {
-		name := aws.StringValue(ctr.Name)
-		envVars[name] = make(map[string]envVarValue)
+		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
 	}
 
 	for _, e := range taskDef.EnvironmentVariables() {
