@@ -141,7 +141,7 @@ Resources:
     Properties:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
       Timeout: 900
       MemorySize: 512
 

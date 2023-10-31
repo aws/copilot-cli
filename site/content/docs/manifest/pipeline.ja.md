@@ -17,7 +17,7 @@
             # connection_name: a-connection
     
         build:
-          image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+          image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
           # additional_policy: # コンテナイメージやテンプレートを構築する際に、権限を追加することができます。
     
         stages: 
@@ -136,7 +136,7 @@ Pipeline をトリガーするリポジトリのブランチ名。 Copilot は�
 CodeBuild プロジェクトに関する設定。
 
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
-CodeBuild のビルドプロジェクトで利用する Docker イメージの URI。`aws/codebuild/amazonlinux2-x86_64-standard:5.0` がデフォルトで利用されます。
+CodeBuild のビルドプロジェクトで利用する Docker イメージの URI。`aws/codebuild/amazonlinux2-x86_64-standard:4.0` がデフォルトで利用されます。
 
 <span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
 任意項目。このビルドプロジェクトで使用する、buildspec ファイルへのプロジェクトルートからの相対パスを指定します。デフォルトでは、作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
