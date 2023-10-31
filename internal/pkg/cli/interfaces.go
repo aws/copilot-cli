@@ -183,8 +183,9 @@ type repositoryService interface {
 	imageBuilderPusher
 }
 
-type ecsLocalClient interface {
+type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	ServiceConnectServices(app, env, svc string) ([]*awsecs.Service, error)
 }
 
 type logEventsWriter interface {
@@ -708,6 +709,7 @@ type dockerEngineRunner interface {
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
 	Rm(string) error
+	Build(context.Context, *dockerengine.BuildArguments, io.Writer) error
 }
 
 type workloadStackGenerator interface {

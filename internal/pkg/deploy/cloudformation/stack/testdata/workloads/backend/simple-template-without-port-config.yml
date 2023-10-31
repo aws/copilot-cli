@@ -341,7 +341,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "EnvControllerRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
   EnvControllerRole:
     Metadata:
       "aws:copilot:description": "An IAM role to update your environment stack"

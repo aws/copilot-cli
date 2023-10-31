@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
@@ -193,7 +194,7 @@ func TestRunLocalOpts_Ask(t *testing.T) {
 }
 
 type runLocalExecuteMocks struct {
-	ecsLocalClient *mocks.MockecsLocalClient
+	ecsClient      *mocks.MockecsClient
 	store          *mocks.Mockstore
 	sessCreds      credentials.Provider
 	interpolator   *mocks.Mockinterpolator
@@ -206,6 +207,8 @@ type runLocalExecuteMocks struct {
 	secretsManager *mocks.MocksecretGetter
 	prog           *mocks.Mockprogress
 	orchestrator   *orchestratortest.Double
+	hostFinder     *hostFinderDouble
+	envChecker     *mocks.MockversionCompatibilityChecker
 }
 
 type mockProvider struct {
@@ -218,6 +221,17 @@ func (m *mockProvider) Retrieve() (credentials.Value, error) {
 
 func (m *mockProvider) IsExpired() bool {
 	return false
+}
+
+type hostFinderDouble struct {
+	HostsFn func(context.Context) ([]host, error)
+}
+
+func (d *hostFinderDouble) Hosts(ctx context.Context) ([]host, error) {
+	if d.HostsFn == nil {
+		return nil, nil
+	}
+	return d.HostsFn(ctx)
 }
 
 func TestRunLocalOpts_Execute(t *testing.T) {
@@ -342,6 +356,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		inputEnvOverrides  map[string]string
 		inputPortOverrides []string
 		buildImagesError   error
+		inProxy            bool
 
 		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
 		wantedWkldName string
@@ -354,7 +369,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(nil, testError)
 			},
 			wantedError: fmt.Errorf("get task: get task definition: %w", testError),
 		},
@@ -366,16 +381,55 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				"bad:OVERRIDE": "i fail",
 			},
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
+		},
+		"error getting env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
+			},
+			wantedError: errors.New(`retrieve version of environment stack "testEnv" in application "testApp": some error`),
+		},
+		"error due to old env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
+			},
+			wantedError: errors.New(`environment "testEnv" is on version "v1.31.0" which does not support the "run local --proxy" feature`),
+		},
+		"error getting hosts to proxy to": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inProxy:       true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
+					return nil, fmt.Errorf("some error")
+				}
+			},
+			wantedError: errors.New(`find hosts to connect to: some error`),
 		},
 		"error reading workload manifest": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return(nil, errors.New("some error"))
 			},
@@ -386,7 +440,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", errors.New("some error"))
@@ -399,7 +453,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputEnvName:     testEnvName,
 			buildImagesError: errors.New("some error"),
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
@@ -411,7 +465,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
@@ -435,7 +489,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsLocalClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
@@ -472,7 +526,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &runLocalExecuteMocks{
-				ecsLocalClient: mocks.NewMockecsLocalClient(ctrl),
+				ecsClient:      mocks.NewMockecsClient(ctrl),
 				ssm:            mocks.NewMocksecretGetter(ctrl),
 				secretsManager: mocks.NewMocksecretGetter(ctrl),
 				store:          mocks.NewMockstore(ctrl),
@@ -483,6 +537,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				repository:     mocks.NewMockrepositoryService(ctrl),
 				prog:           mocks.NewMockprogress(ctrl),
 				orchestrator:   &orchestratortest.Double{},
+				hostFinder:     &hostFinderDouble{},
+				envChecker:     mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
@@ -501,6 +557,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 							container: "9999",
 						},
 					},
+					proxy: tc.inProxy,
 				},
 				newInterpolator: func(app, env string) interpolator {
 					return m.interpolator
@@ -508,14 +565,14 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
-				configureClients: func(o *runLocalOpts) error {
+				configureClients: func() error {
 					return nil
 				},
 				buildContainerImages: func(mft manifest.DynamicWorkload) (map[string]string, error) {
 					return mockContainerURIs, tc.buildImagesError
 				},
 				ws:             m.ws,
-				ecsLocalClient: m.ecsLocalClient,
+				ecsClient:      m.ecsClient,
 				ssm:            m.ssm,
 				secretsManager: m.secretsManager,
 				store:          m.store,
@@ -530,9 +587,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				targetEnv:    &mockEnv,
 				targetApp:    &mockApp,
 				prog:         m.prog,
-				newOrchestrator: func() containerOrchestrator {
-					return m.orchestrator
-				},
+				orchestrator: m.orchestrator,
+				hostFinder:   m.hostFinder,
+				envChecker:   m.envChecker,
 			}
 			// WHEN
 			err := opts.Execute()
@@ -941,6 +998,116 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestRunLocal_HostDiscovery(t *testing.T) {
+	type testMocks struct {
+		ecs *mocks.MockecsClient
+	}
+
+	tests := map[string]struct {
+		setupMocks func(t *testing.T, m *testMocks)
+
+		wantHosts []host
+		wantError string
+	}{
+		"error getting services": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantError: "get service connect services: some error",
+		},
+		"ignores non-primary deployments": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*awsecs.Service{
+					{
+						Deployments: []*sdkecs.Deployment{
+							{
+								Status: aws.String("ACTIVE"),
+								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+									Enabled: aws.Bool(true),
+									Services: []*sdkecs.ServiceConnectService{
+										{
+											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+												{
+													DnsName: aws.String("old"),
+													Port:    aws.Int64(80),
+												},
+											},
+										},
+									},
+								},
+							},
+							{
+								Status: aws.String("PRIMARY"),
+								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+									Enabled: aws.Bool(true),
+									Services: []*sdkecs.ServiceConnectService{
+										{
+											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+												{
+													DnsName: aws.String("primary"),
+													Port:    aws.Int64(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Deployments: []*sdkecs.Deployment{
+							{
+								Status: aws.String("INACTIVE"),
+								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+									Enabled: aws.Bool(true),
+									Services: []*sdkecs.ServiceConnectService{
+										{
+											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+												{
+													DnsName: aws.String("inactive"),
+													Port:    aws.Int64(80),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			wantHosts: []host{
+				{
+					host: "primary",
+					port: "80",
+				},
+			},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &testMocks{
+				ecs: mocks.NewMockecsClient(ctrl),
+			}
+			tc.setupMocks(t, m)
+
+			h := &hostDiscoverer{
+				ecs: m.ecs,
+			}
+
+			hosts, err := h.Hosts(context.Background())
+			if tc.wantError != "" {
+				require.EqualError(t, err, tc.wantError)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantHosts, hosts)
+			}
 		})
 	}
 }

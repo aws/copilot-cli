@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,9 +17,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/cmd/copilot/template"
+	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -30,12 +32,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -54,8 +58,12 @@ const (
 
 type containerOrchestrator interface {
 	Start() <-chan error
-	RunTask(task orchestrator.Task)
+	RunTask(orchestrator.Task)
 	Stop()
+}
+
+type hostFinder interface {
+	Hosts(context.Context) ([]host, error)
 }
 
 type runLocalVars struct {
@@ -65,30 +73,33 @@ type runLocalVars struct {
 	envName       string
 	envOverrides  map[string]string
 	portOverrides portOverrides
+	proxy         bool
 }
 
 type runLocalOpts struct {
 	runLocalVars
 
-	sel             deploySelector
-	ecsLocalClient  ecsLocalClient
-	ssm             secretGetter
-	secretsManager  secretGetter
-	sessProvider    sessionProvider
-	sess            *session.Session
-	envSess         *session.Session
-	targetEnv       *config.Environment
-	targetApp       *config.Application
-	store           store
-	ws              wsWlDirReader
-	cmd             execRunner
-	dockerEngine    dockerEngineRunner
-	repository      repositoryService
-	prog            progress
-	newOrchestrator func() containerOrchestrator
+	sel            deploySelector
+	ecsClient      ecsClient
+	ssm            secretGetter
+	secretsManager secretGetter
+	sessProvider   sessionProvider
+	sess           *session.Session
+	envManagerSess *session.Session
+	targetEnv      *config.Environment
+	targetApp      *config.Application
+	store          store
+	ws             wsWlDirReader
+	cmd            execRunner
+	dockerEngine   dockerEngineRunner
+	repository     repositoryService
+	prog           progress
+	orchestrator   containerOrchestrator
+	hostFinder     hostFinder
+	envChecker     versionCompatibilityChecker
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
-	configureClients     func(o *runLocalOpts) error
+	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
@@ -114,7 +125,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	labeledTermPrinter := func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter {
 		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
 	}
-	opts := &runLocalOpts{
+	o := &runLocalOpts{
 		runLocalVars:       vars,
 		sel:                selector.NewDeploySelect(prompt.New(), store, deployStore),
 		store:              store,
@@ -128,21 +139,21 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		labeledTermPrinter: labeledTermPrinter,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 	}
-	opts.configureClients = func(o *runLocalOpts) error {
+	o.configureClients = func() error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
 		if err != nil {
 			return fmt.Errorf("create default session with region %s: %w", o.targetEnv.Region, err)
 		}
-		o.envSess, err = o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
+		o.envManagerSess, err = o.sessProvider.FromRole(o.targetEnv.ManagerRoleARN, o.targetEnv.Region)
 		if err != nil {
-			return fmt.Errorf("create env session %s: %w", o.targetEnv.Region, err)
+			return fmt.Errorf("create env manager session %s: %w", o.targetEnv.Region, err)
 		}
 
 		// EnvManagerRole has permissions to get task def and get SSM values.
 		// However, it doesn't have permissions to get secrets from secrets manager,
 		// so use the default sess and *hope* they have permissions.
-		o.ecsLocalClient = ecs.New(o.envSess)
-		o.ssm = ssm.New(o.envSess)
+		o.ecsClient = ecs.New(o.envManagerSess)
+		o.ssm = ssm.New(o.envManagerSess)
 		o.secretsManager = secretsmanager.New(defaultSessEnvRegion)
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
@@ -151,24 +162,50 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		repoName := clideploy.RepoName(o.appName, o.wkldName)
 		o.repository = repository.NewWithURI(ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[o.wkldName])
+
+		idPrefix := fmt.Sprintf("%s-%s-%s-", o.appName, o.envName, o.wkldName)
+		colorGen := termcolor.ColorGenerator()
+		o.orchestrator = orchestrator.New(o.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
+			return dockerengine.RunLogOptions{
+				Color:      colorGen(),
+				Output:     os.Stderr,
+				LinePrefix: fmt.Sprintf("[%s] ", name),
+			}
+		})
+
+		o.hostFinder = &hostDiscoverer{
+			app:  o.appName,
+			env:  o.envName,
+			wkld: o.wkldName,
+			ecs:  ecs.New(o.envManagerSess),
+		}
+		envDesc, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         o.appName,
+			Env:         o.envName,
+			ConfigStore: store,
+		})
+		if err != nil {
+			return fmt.Errorf("create env describer: %w", err)
+		}
+		o.envChecker = envDesc
 		return nil
 	}
-	opts.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
-		gitShortCommit := imageTagFromGit(opts.cmd)
+	o.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
+		gitShortCommit := imageTagFromGit(o.cmd)
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
 		}
 		out := &clideploy.UploadArtifactsOutput{}
 		if err := clideploy.BuildContainerImages(&clideploy.ImageActionInput{
-			Name:               opts.wkldName,
-			WorkspacePath:      opts.ws.Path(),
+			Name:               o.wkldName,
+			WorkspacePath:      o.ws.Path(),
 			Image:              image,
 			Mft:                mft.Manifest(),
 			GitShortCommitTag:  gitShortCommit,
-			Builder:            opts.repository,
-			Login:              opts.repository.Login,
-			CheckDockerEngine:  opts.dockerEngine.CheckDockerEngineRunning,
-			LabeledTermPrinter: opts.labeledTermPrinter,
+			Builder:            o.repository,
+			Login:              o.repository.Login,
+			CheckDockerEngine:  o.dockerEngine.CheckDockerEngineRunning,
+			LabeledTermPrinter: o.labeledTermPrinter,
 		}, out); err != nil {
 			return nil, err
 		}
@@ -183,19 +220,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		return containerURIs, nil
 	}
-	opts.newOrchestrator = func() containerOrchestrator {
-		idPrefix := fmt.Sprintf("%s-%s-%s-", opts.appName, opts.envName, opts.wkldName)
-		colorGen := termcolor.ColorGenerator()
-
-		return orchestrator.New(opts.dockerEngine, idPrefix, func(name string, ctr orchestrator.ContainerDefinition) dockerengine.RunLogOptions {
-			return dockerengine.RunLogOptions{
-				Color:      colorGen(),
-				Output:     os.Stderr,
-				LinePrefix: fmt.Sprintf("[%s] ", name),
-			}
-		})
-	}
-	return opts, nil
+	return o, nil
 }
 
 // Validate returns an error for any invalid optional flags.
@@ -251,7 +276,7 @@ func (o *runLocalOpts) validateAndAskWkldEnvName() error {
 
 // Execute builds and runs the workload images locally.
 func (o *runLocalOpts) Execute() error {
-	if err := o.configureClients(o); err != nil {
+	if err := o.configureClients(); err != nil {
 		return err
 	}
 
@@ -262,6 +287,20 @@ func (o *runLocalOpts) Execute() error {
 		return fmt.Errorf("get task: %w", err)
 	}
 
+	if o.proxy {
+		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
+			return err
+		}
+
+		hosts, err := o.hostFinder.Hosts(ctx)
+		if err != nil {
+			return fmt.Errorf("find hosts to connect to: %w", err)
+		}
+
+		// TODO(dannyrandall): inject into orchestrator and use in pause container
+		fmt.Printf("hosts: %+v\n", hosts)
+	}
+
 	mft, _, err := workloadManifest(&workloadManifestInput{
 		name:         o.wkldName,
 		appName:      o.appName,
@@ -269,7 +308,7 @@ func (o *runLocalOpts) Execute() error {
 		ws:           o.ws,
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		unmarshal:    o.unmarshal,
-		sess:         o.envSess,
+		sess:         o.envManagerSess,
 	})
 	if err != nil {
 		return err
@@ -291,13 +330,11 @@ func (o *runLocalOpts) Execute() error {
 		task.Containers[name] = ctr
 	}
 
-	orch := o.newOrchestrator()
-
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	errCh := orch.Start()
-	orch.RunTask(task)
+	errCh := o.orchestrator.Start()
+	o.orchestrator.RunTask(task)
 
 	for {
 		select {
@@ -309,16 +346,16 @@ func (o *runLocalOpts) Execute() error {
 			}
 
 			fmt.Printf("error: %s\n", err)
-			orch.Stop()
+			o.orchestrator.Stop()
 		case <-sigCh:
 			signal.Stop(sigCh)
-			orch.Stop()
+			o.orchestrator.Stop()
 		}
 	}
 }
 
 func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
-	td, err := o.ecsLocalClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+	td, err := o.ecsClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 	if err != nil {
 		return orchestrator.Task{}, fmt.Errorf("get task definition: %w", err)
 	}
@@ -559,6 +596,47 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	return getter.GetSecretValue(ctx, valueFrom)
 }
 
+type host struct {
+	host string
+	port string
+}
+
+type hostDiscoverer struct {
+	ecs  ecsClient
+	app  string
+	env  string
+	wkld string
+}
+
+func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
+	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
+	if err != nil {
+		return nil, fmt.Errorf("get service connect services: %w", err)
+	}
+
+	var hosts []host
+	for _, svc := range svcs {
+		// find the primary deployment with service connect enabled
+		idx := slices.IndexFunc(svc.Deployments, func(dep *sdkecs.Deployment) bool {
+			return aws.StringValue(dep.Status) == "PRIMARY" && aws.BoolValue(dep.ServiceConnectConfiguration.Enabled)
+		})
+		if idx == -1 {
+			continue
+		}
+
+		for _, sc := range svc.Deployments[idx].ServiceConnectConfiguration.Services {
+			for _, alias := range sc.ClientAliases {
+				hosts = append(hosts, host{
+					host: aws.StringValue(alias.DnsName),
+					port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+				})
+			}
+		}
+	}
+
+	return hosts, nil
+}
+
 // BuildRunLocalCmd builds the command for running a workload locally
 func BuildRunLocalCmd() *cobra.Command {
 	vars := runLocalVars{}
@@ -577,12 +655,13 @@ func BuildRunLocalCmd() *cobra.Command {
 			"group": group.Develop,
 		},
 	}
-	cmd.SetUsageTemplate(template.Usage)
+	cmd.SetUsageTemplate(cmdtemplate.Usage)
 
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
+	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
 	return cmd
 }
