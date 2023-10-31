@@ -925,7 +925,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   
   CustomDomainFunction:
     Condition: ManagedAliases
@@ -935,7 +935,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs18.x 
+      Runtime: nodejs16.x 
   
   DNSDelegationFunction:
     Type: AWS::Lambda::Function
@@ -945,7 +945,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   
   DelegateDNSAction:
     Metadata:

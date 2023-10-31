@@ -224,7 +224,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt CustomResourceRole.Arn
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
       Layers:
         - {{ .AWSSDKLayer }}
 

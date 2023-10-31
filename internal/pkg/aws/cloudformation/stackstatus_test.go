@@ -16,7 +16,7 @@ func TestStackStatus_InProgress(t *testing.T) {
 
 		wanted bool
 	}{
-		"should be false if stack is created succesfully": {
+		"should be false if stack is created Successfully": {
 			status: cloudformation.StackStatusCreateComplete,
 			wanted: false,
 		},

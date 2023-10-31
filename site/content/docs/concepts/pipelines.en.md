@@ -198,7 +198,7 @@ warrant wiring up a separate buildspec, utilize the `test_commands` field.
     The `post_deployments` and `test_commands` fields within a stage are mutually exclusive.
 
 
-Pre-deployments, post-deployments, and test commands generate CodeBuild projects with the [aws/codebuild/amazonlinux2-x86_64-standard:5.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image, so most commands from Amazon Linux 2 (including `make`) are available for use. 
+Pre-deployments, post-deployments, and test commands generate CodeBuild projects with the [aws/codebuild/amazonlinux2-x86_64-standard:4.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image, so most commands from Amazon Linux 2 (including `make`) are available for use. 
 Are your tests configured to run inside a Docker container? Copilot's test commands CodeBuild project supports Docker, so `docker build` commands are available as well.
 
 In the example below, the pipeline will run the `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully.
