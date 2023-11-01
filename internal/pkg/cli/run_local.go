@@ -58,12 +58,12 @@ const (
 
 type containerOrchestrator interface {
 	Start() <-chan error
-	RunTask(orchestrator.Task)
+	RunTask(orchestrator.Task, ...orchestrator.RunTaskOption)
 	Stop()
 }
 
 type hostFinder interface {
-	Hosts(context.Context) ([]host, error)
+	Hosts(context.Context) ([]orchestrator.Host, error)
 }
 
 type runLocalVars struct {
@@ -287,18 +287,16 @@ func (o *runLocalOpts) Execute() error {
 		return fmt.Errorf("get task: %w", err)
 	}
 
+	var hosts []orchestrator.Host
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
-			return err
+			// return err
 		}
 
-		hosts, err := o.hostFinder.Hosts(ctx)
+		hosts, err = o.hostFinder.Hosts(ctx)
 		if err != nil {
 			return fmt.Errorf("find hosts to connect to: %w", err)
 		}
-
-		// TODO(dannyrandall): inject into orchestrator and use in pause container
-		fmt.Printf("hosts: %+v\n", hosts)
 	}
 
 	mft, _, err := workloadManifest(&workloadManifestInput{
@@ -334,7 +332,7 @@ func (o *runLocalOpts) Execute() error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
-	o.orchestrator.RunTask(task)
+	o.orchestrator.RunTask(task, orchestrator.RunTaskWithHosts(hosts...))
 
 	for {
 		select {
@@ -617,11 +615,6 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	return getter.GetSecretValue(ctx, valueFrom)
 }
 
-type host struct {
-	host string
-	port string
-}
-
 type hostDiscoverer struct {
 	ecs  ecsClient
 	app  string
@@ -629,13 +622,13 @@ type hostDiscoverer struct {
 	wkld string
 }
 
-func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
+func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error) {
 	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
 	if err != nil {
 		return nil, fmt.Errorf("get service connect services: %w", err)
 	}
 
-	var hosts []host
+	var hosts []orchestrator.Host
 	for _, svc := range svcs {
 		// find the primary deployment with service connect enabled
 		idx := slices.IndexFunc(svc.Deployments, func(dep *sdkecs.Deployment) bool {
@@ -647,9 +640,9 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
 
 		for _, sc := range svc.Deployments[idx].ServiceConnectConfiguration.Services {
 			for _, alias := range sc.ClientAliases {
-				hosts = append(hosts, host{
-					host: aws.StringValue(alias.DnsName),
-					port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+				hosts = append(hosts, orchestrator.Host{
+					Host: aws.StringValue(alias.DnsName),
+					Port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
 				})
 			}
 		}

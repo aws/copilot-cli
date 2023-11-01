@@ -47,6 +47,7 @@ type DockerEngine interface {
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
+	Exec(ctx context.Context, container string, cmd string, args ...string) (string, error)
 }
 
 const (
@@ -114,22 +115,41 @@ func (o *Orchestrator) Start() <-chan error {
 }
 
 // RunTask stops the current running task and starts task.
-func (o *Orchestrator) RunTask(task Task) {
+func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
+	r := &runTaskAction{
+		task: task,
+	}
+	for _, opt := range opts {
+		opt(r)
+	}
+
 	// this guarantees the following:
-	// - if runTaskAction{} is pulled by the Orchestrator, any errors
+	// - if r is pulled by the Orchestrator, any errors
 	//   returned by it are reported by the Orchestrator.
 	// - if Stop() is called _before_ the Orchestrator picks up this
 	//   action, then this action is skipped.
 	select {
 	case <-o.stopped:
-	case o.actions <- &runTaskAction{
-		task: task,
-	}:
+	case o.actions <- r:
+	}
+}
+
+type RunTaskOption func(*runTaskAction)
+
+type Host struct {
+	Host string
+	Port string
+}
+
+func RunTaskWithHosts(hosts ...Host) RunTaskOption {
+	return func(r *runTaskAction) {
+		r.hosts = hosts
 	}
 }
 
 type runTaskAction struct {
-	task Task
+	task  Task
+	hosts []Host
 }
 
 func (a *runTaskAction) Do(o *Orchestrator) error {
@@ -161,6 +181,11 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		if err := o.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
+
+		// run commands to set up proxy connections
+		if err := o.setupProxyConnections(ctx, opts.ContainerName, a.hosts); err != nil {
+			return fmt.Errorf("setup proxy connections: %w", err)
+		}
 	} else {
 		// ensure no pause container changes
 		curOpts := o.pauseRunOptions(o.curTask)
@@ -182,6 +207,18 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	}
 
 	o.curTask = a.task
+	return nil
+}
+
+func (o *Orchestrator) setupProxyConnections(ctx context.Context, container string, hosts []Host) error {
+	fmt.Printf("setupProxyConnections(%q, %q)\n", container, hosts)
+	defer fmt.Printf("exiting setupProxyConnections()\n")
+	out, err := o.docker.Exec(ctx, container, "echo", "hello world")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("output from exec:\n%v\n", out)
 	return nil
 }
 

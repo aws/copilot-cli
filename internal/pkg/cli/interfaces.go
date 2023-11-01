@@ -710,6 +710,7 @@ type dockerEngineRunner interface {
 	Stop(context.Context, string) error
 	Rm(string) error
 	Build(context.Context, *dockerengine.BuildArguments, io.Writer) error
+	Exec(ctx context.Context, container string, cmd string, args ...string) (string, error)
 }
 
 type workloadStackGenerator interface {

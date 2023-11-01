@@ -204,6 +204,20 @@ func (c DockerCmdClient) Login(uri, username, password string) error {
 	return nil
 }
 
+func (c DockerCmdClient) Exec(ctx context.Context, container string, cmd string, args ...string) (string, error) {
+	buf := &bytes.Buffer{}
+	fullArgs := append([]string{
+		"exec",
+		container,
+		cmd,
+	}, args...)
+	if err := c.runner.RunWithContext(ctx, "docker", fullArgs, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
+		return "", fmt.Errorf("%s: %w", strings.TrimSpace(buf.String()), err)
+	}
+
+	return buf.String(), nil
+}
+
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
 func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags ...string) (digest string, err error) {
 	images := []string{}
