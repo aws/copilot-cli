@@ -1,4 +1,4 @@
-# for one listener or the port 443 listener if two
+# For one listener or the port 443 listener if two.
 {{- $arn := ""}}
 {{- if not $.ImportedALB.HasTwoListeners }}
   {{- range $listener := $.ImportedALB.Listeners}}
@@ -22,6 +22,7 @@ HTTPRulePriorityAction:
     RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
     ListenerArn: {{$arn}}
 
+{{- $isHTTPS := .ALBListener.IsHTTPS}}
 {{- range $i, $rule := .ALBListener.Rules}}
 HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
@@ -40,6 +41,20 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
           - {{$sourceIP}}
           {{- end}}
       {{- end}}
+      {{- if $rule.Aliases}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{fmtSlice (quoteSlice $rule.Aliases)}}
+      {{- else if $isHTTPS}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values:
+            - Fn::Join:
+                - '.'
+                - - !Ref WorkloadName
+                  - Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-SubDomain"
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
@@ -54,7 +69,8 @@ HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
   {{- end}}
 {{- end }}
 
-# redirect port 80 to 443
+# If two listeners, redirect port 80 to 443.
+{{- if $.ImportedALB.HasTwoListeners }}
 {{- $port80arn := ""}}
 {{- range $listener := $.ImportedALB.Listeners}}
   {{- if eq $listener.Port 80}}
@@ -122,4 +138,5 @@ HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
     ListenerArn: {{$port80arn}}
     Priority: !GetAtt HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
+{{- end}}
 {{- end}}
