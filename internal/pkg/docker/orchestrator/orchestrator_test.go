@@ -36,6 +36,21 @@ func TestOrchestrator(t *testing.T) {
 			},
 			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {},
 		},
+		"error if fail to build pause container": {
+			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
+				return &dockerenginetest.Double{
+					BuildFn: func(ctx context.Context, ba *dockerengine.BuildArguments, w io.Writer) error {
+						return errors.New("some error")
+					},
+				}
+			},
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				o.RunTask(Task{})
+			},
+			errs: []string{
+				`build pause container: some error`,
+			},
+		},
 		"error if unable to check if pause container is running": {
 			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
 				return &dockerenginetest.Double{

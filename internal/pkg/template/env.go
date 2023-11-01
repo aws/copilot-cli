@@ -18,6 +18,13 @@ const (
 	envBootstrapCFTemplatePath = "environment/bootstrap-cf.yml"
 )
 
+// The minimum required environment template version for various features.
+const (
+	SecretInitMinEnvVersion    = "v1.4.0"
+	JobRunMinEnvVersion        = "v1.12.0"
+	RunLocalProxyMinEnvVersion = "v1.32.0"
+)
+
 // Available env-controller managed feature names.
 const (
 	ALBFeatureName                     = "ALBWorkloads"

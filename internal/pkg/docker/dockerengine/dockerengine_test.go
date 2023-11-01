@@ -36,15 +36,16 @@ func TestDockerCommand_Build(t *testing.T) {
 	var mockCmd *MockCmd
 
 	tests := map[string]struct {
-		path       string
-		context    string
-		tags       []string
-		args       map[string]string
-		target     string
-		cacheFrom  []string
-		envVars    map[string]string
-		labels     map[string]string
-		setupMocks func(controller *gomock.Controller)
+		path              string
+		dockerfileContent string
+		context           string
+		tags              []string
+		args              map[string]string
+		target            string
+		cacheFrom         []string
+		envVars           map[string]string
+		labels            map[string]string
+		setupMocks        func(controller *gomock.Controller)
 
 		wantedError error
 	}{
@@ -123,7 +124,6 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-
 		"success with additional tags": {
 			path: mockPath,
 			tags: []string{mockTag1, mockTag2, mockTag3},
@@ -156,7 +156,6 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-
 		"success with labels": {
 			path: mockPath,
 			tags: []string{"latest"},
@@ -176,7 +175,6 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-
 		"runs with cache_from and target fields": {
 			path:      mockPath,
 			tags:      []string{"latest"},
@@ -191,6 +189,16 @@ func TestDockerCommand_Build(t *testing.T) {
 					"--target", "foobar",
 					filepath.FromSlash("mockPath/to"),
 					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		"success with dockerfile content": {
+			dockerfileContent: "FROM scratch",
+			tags:              []string{"latest"},
+			setupMocks: func(c *gomock.Controller) {
+				mockCmd = NewMockCmd(c)
+				mockCmd.EXPECT().RunWithContext(ctx, "docker", []string{"build",
+					"-t", fmt.Sprintf("%s:%s", mockURI, "latest"),
+					"-"}, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
@@ -209,14 +217,15 @@ func TestDockerCommand_Build(t *testing.T) {
 				},
 			}
 			buildInput := BuildArguments{
-				Context:    tc.context,
-				Dockerfile: tc.path,
-				URI:        mockURI,
-				Args:       tc.args,
-				Target:     tc.target,
-				CacheFrom:  tc.cacheFrom,
-				Tags:       tc.tags,
-				Labels:     tc.labels,
+				Context:           tc.context,
+				Dockerfile:        tc.path,
+				DockerfileContent: tc.dockerfileContent,
+				URI:               mockURI,
+				Args:              tc.args,
+				Target:            tc.target,
+				CacheFrom:         tc.cacheFrom,
+				Tags:              tc.tags,
+				Labels:            tc.labels,
 			}
 			buf := new(strings.Builder)
 			got := s.Build(ctx, &buildInput, buf)
