@@ -202,7 +202,7 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 
 func TestPipelineBuild_Init(t *testing.T) {
 	const (
-		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
 		defaultEnvType = "LINUX_CONTAINER"
 	)
 	yamlNode := yaml.Node{}

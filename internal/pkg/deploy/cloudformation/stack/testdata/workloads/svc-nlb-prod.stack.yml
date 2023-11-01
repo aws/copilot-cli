@@ -293,21 +293,13 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: 'DenyIAMExceptTaggedRoles'
+        - PolicyName: 'DenyIAM'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: 'Deny'
                 Action: 'iam:*'
                 Resource: '*'
-              - Effect: 'Allow'
-                Action: 'sts:AssumeRole'
-                Resource:
-                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
-                Condition:
-                  StringEquals:
-                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
   DiscoveryService:
     Metadata:
       'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
@@ -343,7 +335,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   EnvControllerRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update your environment stack"
@@ -642,7 +634,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'NLBCustomDomainRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   NLBCustomDomainRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update the environment Route 53 hosted zone"
@@ -709,7 +701,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'NLBCertValidatorRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   NLBCertValidatorRole:
     Metadata:
       'aws:copilot:description': "An IAM role to request and validate a certificate for your service"

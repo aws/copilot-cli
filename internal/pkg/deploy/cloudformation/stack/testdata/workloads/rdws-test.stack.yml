@@ -92,21 +92,13 @@ Resources:
                 - tasks.apprunner.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: 'DenyIAMExceptTaggedRoles'
+        - PolicyName: 'DenyIAM'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: 'Deny'
                 Action: 'iam:*'
                 Resource: '*'
-              - Effect: 'Allow'
-                Action: 'sts:AssumeRole'
-                Resource:
-                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
-                Condition:
-                  StringEquals:
-                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
         - PolicyName: 'AccessCopilotTaggedSecrets'
           PolicyDocument:
             Version: '2012-10-17'
@@ -288,7 +280,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   
   EnvControllerRole:
     Metadata:

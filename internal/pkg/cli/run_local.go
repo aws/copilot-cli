@@ -369,6 +369,14 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
 
+	if o.proxy {
+		pauseSecrets, err := sessionEnvVars(ctx, o.sess)
+		if err != nil {
+			return orchestrator.Task{}, fmt.Errorf("get pause container secrets: %w", err)
+		}
+		task.PauseSecrets = pauseSecrets
+	}
+
 	for _, ctr := range td.ContainerDefinitions {
 		name := aws.StringValue(ctr.Name)
 		def := orchestrator.ContainerDefinition{
@@ -399,6 +407,24 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	return task, nil
+}
+
+func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]string, error) {
+	creds, err := sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get IAM credentials: %w", err)
+	}
+
+	env := map[string]string{
+		"AWS_ACCESS_KEY_ID":     creds.AccessKeyID,
+		"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
+		"AWS_SESSION_TOKEN":     creds.SessionToken,
+	}
+	if sess.Config.Region != nil {
+		env["AWS_DEFAULT_REGION"] = aws.StringValue(sess.Config.Region)
+		env["AWS_REGION"] = aws.StringValue(sess.Config.Region)
+	}
+	return env, nil
 }
 
 type containerEnv map[string]envVarValue
@@ -439,35 +465,12 @@ func (c containerEnv) Secrets() map[string]string {
 
 // getEnvVars uses env overrides passed by flags and environment variables/secrets
 // specified in the Task Definition to return a set of environment varibles for each
-// continer defined in the TaskDefinition. The returned map is a map of container names,
+// container defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
-	creds, err := o.sess.Config.Credentials.GetWithContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get IAM credentials: %w", err)
-	}
-
-	envVars := make(map[string]containerEnv)
+	envVars := make(map[string]containerEnv, len(taskDef.ContainerDefinitions))
 	for _, ctr := range taskDef.ContainerDefinitions {
-		name := aws.StringValue(ctr.Name)
-		envVars[name] = map[string]envVarValue{
-			"AWS_ACCESS_KEY_ID": {
-				Value: creds.AccessKeyID,
-			},
-			"AWS_SECRET_ACCESS_KEY": {
-				Value: creds.SecretAccessKey,
-			},
-			"AWS_SESSION_TOKEN": {
-				Value: creds.SessionToken,
-			},
-		}
-		if o.sess.Config.Region != nil {
-			val := envVarValue{
-				Value: aws.StringValue(o.sess.Config.Region),
-			}
-			envVars[name]["AWS_DEFAULT_REGION"] = val
-			envVars[name]["AWS_REGION"] = val
-		}
+		envVars[aws.StringValue(ctr.Name)] = make(map[string]envVarValue)
 	}
 
 	for _, e := range taskDef.EnvironmentVariables() {
@@ -483,6 +486,24 @@ func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefin
 	if err := o.fillSecrets(ctx, envVars, taskDef); err != nil {
 		return nil, fmt.Errorf("get secrets: %w", err)
 	}
+
+	// inject session variables if they haven't been already set
+	sessionVars, err := sessionEnvVars(ctx, o.sess)
+	if err != nil {
+		return nil, err
+	}
+
+	for ctr := range envVars {
+		for k, v := range sessionVars {
+			if _, ok := envVars[ctr][k]; !ok {
+				envVars[ctr][k] = envVarValue{
+					Value:  v,
+					Secret: true,
+				}
+			}
+		}
+	}
+
 	return envVars, nil
 }
 

@@ -317,7 +317,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				},
 			},
 		},
-		"build and push sidecar container images only with git tag succesfully": {
+		"build and push sidecar container images only with git tag Successfully": {
 			inDockerBuildArgs: map[string]*manifest.DockerBuildArgs{
 				"nginx": {
 					Dockerfile: aws.String("sidecarMockDockerfile"),

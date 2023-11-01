@@ -192,21 +192,13 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: 'DenyIAMExceptTaggedRoles'
+        - PolicyName: 'DenyIAM'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: 'Deny'
                 Action: 'iam:*'
                 Resource: '*'
-              - Effect: 'Allow'
-                Action: 'sts:AssumeRole'
-                Resource:
-                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
-                Condition:
-                  StringEquals:
-                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
         - PolicyName: 'Publish2SNS'
           PolicyDocument:
             Version: '2012-10-17'
@@ -255,7 +247,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   DynamicDesiredCountFunctionRole:
     Metadata:
       'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
@@ -360,7 +352,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   EnvControllerRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update your environment stack"
@@ -481,7 +473,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'RulePriorityFunctionRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
   RulePriorityFunctionRole:
     Metadata:
       'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
