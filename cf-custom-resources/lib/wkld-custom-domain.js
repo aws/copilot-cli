@@ -1,7 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-const AWS = require("aws-sdk");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { ACM } = require("@aws-sdk/client-acm");
+const { ResourceGroupsTaggingAPI } = require("@aws-sdk/client-resource-groups-tagging-api");
+const { Route53 } = require("@aws-sdk/client-route-53");
+
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
@@ -16,11 +20,11 @@ const appRoute53Context = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.Route53({
-        credentials: new AWS.ChainableTemporaryCredentials({
+      client = new Route53({
+        credentials: fromTemporaryCredentials({
           params: { RoleArn: rootDNSRole },
-          masterCredentials: new AWS.EnvironmentCredentials("AWS"),
-        }),
+          masterCredentials: fromEnv("AWS"),
+        })
       });
     }
     return client;
@@ -31,7 +35,7 @@ const envRoute53Context = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.Route53();
+      client = new Route53();
     }
     return client;
   };
@@ -41,7 +45,7 @@ const acmContext = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.ACM();
+      client = new ACM();
     }
     return client;
   };
@@ -51,7 +55,7 @@ const resourceGroupsTaggingAPIContext = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.ResourceGroupsTaggingAPI();
+      client = new ResourceGroupsTaggingAPI();
     }
     return client;
   };

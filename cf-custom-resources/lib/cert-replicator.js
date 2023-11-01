@@ -6,7 +6,7 @@
 
 "use strict";
 
-const aws = require("aws-sdk");
+const { ACM } = require("@aws-sdk/client-acm");
 
 const defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -102,8 +102,7 @@ const replicateCertificate = async function (
   const { Certificate } = await envRegionAcm
     .describeCertificate({
       CertificateArn: certArn,
-    })
-    .promise();
+    });
   const domainName = Certificate.DomainName;
   const sans = Certificate.SubjectAlternativeNames;
 
@@ -128,8 +127,7 @@ const replicateCertificate = async function (
           Value: envName,
         },
       ],
-    })
-    .promise();
+    });
 };
 
 /**
@@ -202,8 +200,8 @@ exports.certificateReplicateHandler = async function (event, context) {
   ];
   let handler = async function () {
     // Configure clients.
-    const envRegionAcm = new aws.ACM({ region: envRegion });
-    const targetRegionAcm = new aws.ACM({ region: targetRegion });
+    const envRegionAcm = new ACM({ region: envRegion });
+    const targetRegionAcm = new ACM({ region: targetRegion });
     switch (event.RequestType) {
       case "Create":
       case "Update":

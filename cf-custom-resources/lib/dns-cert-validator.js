@@ -4,9 +4,10 @@
 /* jshint node: true */
 /* jshint esversion: 8 */
 
-"use strict";
-
-const aws = require("aws-sdk");
+"use strict";;
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { ACM, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
+const { Route53 } = require("@aws-sdk/client-route-53");
 
 const defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -144,8 +145,7 @@ const requestCertificate = async function (
           Value: envName,
         },
       ],
-    })
-    .promise();
+    });
 };
 
 /**
@@ -168,8 +168,7 @@ const waitForValidationOptionsToBeReady = async function(
     const { Certificate } = await acm
         .describeCertificate({
           CertificateArn: certificateARN,
-        })
-        .promise();
+        });
     options = Certificate.DomainValidationOptions || [];
     let readyRecordsNum = 0;
     for (const option of options) {
@@ -228,16 +227,13 @@ const validateCertificate = async function(
       envHostedZoneId
   );
 
-  await acm
-    .waitFor("certificateValidated", {
-      // Wait up to 9 minutes and 30 seconds
-      $waiter: {
-        delay: 30,
-        maxAttempts: 19,
-      },
-      CertificateArn: certificateARN,
-    })
-    .promise();
+  await waitUntilCertificateValidated({
+    client: acm,
+    minDelay: 30,
+    maxWaitTime: 1140
+  }, {
+    CertificateArn: certificateARN
+  });
 };
 
 const updateHostedZoneRecords = async function (
@@ -312,8 +308,7 @@ const deleteHostedZoneRecords = async function (
   let isNewCertFound = false;
   while (!isNewCertFound) {
     const listCertResp = await acm
-      .listCertificates(listCertificatesInput)
-      .promise();
+      .listCertificates(listCertificatesInput);
     for (const certSummary of listCertResp.CertificateSummaryList || []) {
       if (
         certSummary.DomainName !== defaultDomain ||
@@ -327,8 +322,7 @@ const deleteHostedZoneRecords = async function (
       const { Certificate } = await acm
         .describeCertificate({
           CertificateArn: certSummary.CertificateArn,
-        })
-        .promise();
+        });
       newCertOptions = Certificate.DomainValidationOptions || [];
       isNewCertFound = true;
       break;
@@ -444,8 +438,7 @@ const deleteCertificate = async function (
       const { Certificate } = await acm
         .describeCertificate({
           CertificateArn: arn,
-        })
-        .promise();
+        });
 
       inUseByResources = Certificate.InUseBy || [];
       options = Certificate.DomainValidationOptions || [];
@@ -485,8 +478,7 @@ const deleteCertificate = async function (
     await acm
       .deleteCertificate({
         CertificateArn: arn,
-      })
-      .promise();
+      });
   } catch (err) {
     if (err.name !== "ResourceNotFoundException") {
       throw err;
@@ -576,15 +568,15 @@ const getDomainType = function (alias) {
 };
 
 const clients = function (region, rootDnsRole) {
-  const acm = new aws.ACM({
-    region,
+  const acm = new ACM({
+    region
   });
-  const envRoute53 = new aws.Route53();
-  const appRoute53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const envRoute53 = new Route53();
+  const appRoute53 = new Route53({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole, },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
-    }),
+      masterCredentials: fromEnv("AWS"),
+    })
   });
   if (waiter) {
     // Used by the test suite, since waiters aren't mockable yet

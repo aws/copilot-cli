@@ -3,7 +3,7 @@
 
 "use strict";
 
-const aws = require("aws-sdk");
+const { SFN } = require("@aws-sdk/client-sfn");
 
 /**
  * Main handler, invoked by Lambda
@@ -16,10 +16,10 @@ exports.handler = async function (event, context) {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        const sf = new aws.StepFunctions();
+        const sf = new SFN();
         const res = await sf.startSyncExecution({
           stateMachineArn: event.ResourceProperties.StateMachineARN,
-        }).promise();
+        });
 
         // Even if the execution starts and does not throw an error it does not mean the execution was successful.
         // See https://docs.aws.amazon.com/step-functions/latest/apireference/API_StartSyncExecution.html#StepFunctions-StartSyncExecution-response-status

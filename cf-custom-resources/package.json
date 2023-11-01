@@ -23,7 +23,16 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "aws-sdk": "^2.1354.0"
+    "@aws-sdk/client-acm": "^3.437.0",
+    "@aws-sdk/client-apprunner": "^3.437.0",
+    "@aws-sdk/client-cloudformation": "^3.437.0",
+    "@aws-sdk/client-ecs": "^3.437.0",
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.437.0",
+    "@aws-sdk/client-resource-groups-tagging-api": "^3.437.0",
+    "@aws-sdk/client-route-53": "^3.437.0",
+    "@aws-sdk/client-sfn": "^3.437.0",
+    "@aws-sdk/client-sqs": "^3.437.0",
+    "@aws-sdk/credential-providers": "^3.437.0"
   },
   "devDependencies": {
     "ansi-regex": ">=5.0.1",

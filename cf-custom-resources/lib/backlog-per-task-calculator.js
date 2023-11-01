@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-"use strict";
-
-const aws = require("aws-sdk");
+"use strict";;
+const { ECS } = require("@aws-sdk/client-ecs");
+const { SQS } = require("@aws-sdk/client-sqs");
 
 // AWS Clients that are overriden in tests.
 let ecs, sqs;
@@ -119,8 +119,8 @@ const getRunningTaskCount = async (clusterId, serviceName) => {
  * Create new clients.
  */
 const setupClients = () => {
-  ecs = new aws.ECS();
-  sqs = new aws.SQS();
+  ecs = new ECS();
+  sqs = new SQS();
 }
 
 // convertQueueNames takes a comma separated string of SQS queue names and returns it as an array of strings.

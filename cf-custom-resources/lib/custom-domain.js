@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-"use strict";
-
-const aws = require("aws-sdk");
+"use strict";;
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { Route53 } = require("@aws-sdk/client-route-53");
 
 const changeRecordAction = {
   Upsert: "UPSERT",
@@ -217,12 +217,12 @@ exports.handler = async function (event, context) {
     },
     OtherDomainZone: { regex: new RegExp(`.*`) },
   };
-  const envRoute53 = new aws.Route53();
-  const appRoute53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const envRoute53 = new Route53();
+  const appRoute53 = new Route53({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: props.AppDNSRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
-    }),
+      masterCredentials: fromEnv("AWS"),
+    })
   });
   if (waiter) {
     // Used by the test suite, since waiters aren't mockable yet

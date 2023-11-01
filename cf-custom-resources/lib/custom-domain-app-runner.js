@@ -4,9 +4,10 @@
 /* jshint node: true */
 /*jshint esversion: 8 */
 
-"use strict";
-
-const AWS = require('aws-sdk');
+"use strict";;
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { AppRunner } = require("@aws-sdk/client-apprunner");
+const { Route53 } = require("@aws-sdk/client-route-53");
 
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
@@ -88,13 +89,13 @@ exports.handler = async function (event, context) {
     const physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
     let handler = async function () {
         // Configure clients.
-        appRoute53Client = new AWS.Route53({
-            credentials: new AWS.ChainableTemporaryCredentials({
+        appRoute53Client = new Route53({
+            credentials: fromTemporaryCredentials({
                 params: { RoleArn: appDNSRole, },
-                masterCredentials: new AWS.EnvironmentCredentials("AWS"),
-            }),
+                masterCredentials: fromEnv("AWS"),
+            })
         });
-        appRunnerClient = new AWS.AppRunner();
+        appRunnerClient = new AppRunner();
         appHostedZoneID = props.RootHostedZoneId
         if (!appHostedZoneID){
             appHostedZoneID = await domainHostedZoneID(appDNSName);
