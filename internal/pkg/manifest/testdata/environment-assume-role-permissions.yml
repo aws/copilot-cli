@@ -22,4 +22,4 @@ type: Environment
 
 # Configure additional permissions for the trust policy of the environment manager role to be able to assume it
 additionalAssumeRolePermissions:
-  - sts:SetSourceIdentity1
+  - sts:SetSourceIdentity
