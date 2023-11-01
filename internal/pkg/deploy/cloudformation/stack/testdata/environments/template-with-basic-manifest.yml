@@ -681,6 +681,9 @@ Resources:
     Condition: CreateALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      LoadBalancerAttributes:
+        - Key: 'access_logs.s3.enabled'
+          Value: false
       Scheme: internet-facing
       SecurityGroups: 
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId

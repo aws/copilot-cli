@@ -34,6 +34,7 @@ const (
 	customDomainFnName        = "CustomDomainFunction"
 	certValidationFnName      = "CertificateValidationFunction"
 	dnsDelegationFnName       = "DNSDelegationFunction"
+	bucketCleanerFnName       = "BucketCleanerFunction"
 	certReplicatorFnName      = "CertificateReplicatorFunction"
 	uniqueJsonValuesFnName    = "UniqueJSONValuesFunction"
 	triggerStateMachineFnName = "TriggerStateMachineFunction"
@@ -48,6 +49,7 @@ var (
 	desiredCountDelegationFilePath   = path.Join(customResourcesDir, "desired-count-delegation.js")
 	dnsCertValidationFilePath        = path.Join(customResourcesDir, "dns-cert-validator.js")
 	certReplicatorFilePath           = path.Join(customResourcesDir, "cert-replicator.js")
+	bucketCleanerFilePath            = path.Join(customResourcesDir, "bucket-cleaner.js")
 	dnsDelegationFilePath            = path.Join(customResourcesDir, "dns-delegation.js")
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
 	wkldCertValidatorFilePath        = path.Join(customResourcesDir, "wkld-cert-validator.js")
@@ -165,6 +167,7 @@ func Env(fs template.Reader) ([]*CustomResource, error) {
 		customDomainFnName:     customDomainFilePath,
 		dnsDelegationFnName:    dnsDelegationFilePath,
 		certReplicatorFnName:   certReplicatorFilePath,
+		bucketCleanerFnName:    bucketCleanerFilePath,
 		uniqueJsonValuesFnName: uniqueJSONValuesFilePath,
 	})
 }

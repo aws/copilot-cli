@@ -305,8 +305,8 @@ Resources:
     {{- end}}
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      {{- if .PublicHTTPConfig.ELBAccessLogs }}
       LoadBalancerAttributes:
+      {{- if .PublicHTTPConfig.ELBAccessLogs }}
         - Key: 'access_logs.s3.enabled'
           Value: true
           {{- if .PublicHTTPConfig.ELBAccessLogs.Prefix }}
@@ -315,6 +315,9 @@ Resources:
           {{- end }}
         - Key: 'access_logs.s3.bucket'
           Value: {{- if .PublicHTTPConfig.ELBAccessLogs.BucketName }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- else }} !Ref ELBAccessLogsBucket {{- end }}
+      {{- else}}
+        - Key: 'access_logs.s3.enabled'
+          Value: false
       {{- end }}
       Scheme: internet-facing
       SecurityGroups: 
