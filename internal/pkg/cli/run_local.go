@@ -465,7 +465,7 @@ func (c containerEnv) Secrets() map[string]string {
 
 // getEnvVars uses env overrides passed by flags and environment variables/secrets
 // specified in the Task Definition to return a set of environment varibles for each
-// continer defined in the TaskDefinition. The returned map is a map of container names,
+// container defined in the TaskDefinition. The returned map is a map of container names,
 // each of which contains a mapping of key->envVarValue, which defines if the variable is a secret or not.
 func (o *runLocalOpts) getEnvVars(ctx context.Context, taskDef *awsecs.TaskDefinition) (map[string]containerEnv, error) {
 	envVars := make(map[string]containerEnv, len(taskDef.ContainerDefinitions))
