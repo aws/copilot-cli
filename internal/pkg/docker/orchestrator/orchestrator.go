@@ -4,6 +4,7 @@
 package orchestrator
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"io"
 	"maps"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,7 +49,7 @@ type DockerEngine interface {
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
-	Exec(ctx context.Context, container string, cmd string, args ...string) (string, error)
+	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
 }
 
 const (
@@ -141,6 +143,7 @@ type Host struct {
 	Port string
 }
 
+// TODO rename to RunTaskWithProxy(remoteContainerID, hosts...)
 func RunTaskWithHosts(hosts ...Host) RunTaskOption {
 	return func(r *runTaskAction) {
 		r.hosts = hosts
@@ -211,14 +214,44 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 }
 
 func (o *Orchestrator) setupProxyConnections(ctx context.Context, container string, hosts []Host) error {
-	fmt.Printf("setupProxyConnections(%q, %q)\n", container, hosts)
-	defer fmt.Printf("exiting setupProxyConnections()\n")
-	out, err := o.docker.Exec(ctx, container, "echo", "hello world")
-	if err != nil {
-		return err
-	}
+	return o.setupProxyConnection(ctx, container, hosts[0])
+}
 
-	fmt.Printf("output from exec:\n%v\n", out)
+func (o *Orchestrator) setupProxyConnection(ctx context.Context, container string, host Host) error {
+	fmt.Printf("setupProxyConnection(%q, %q)\n", container, host)
+	defer fmt.Printf("exiting setupProxyConnection()\n")
+
+	out := &bytes.Buffer{}
+	o.wg.Add(1)
+	go func() {
+		defer o.wg.Done()
+
+		err := o.docker.Exec(context.Background(), container, out, "aws", "ssm", "start-session",
+			"--target", container,
+			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
+			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
+		if err != nil && o.curTaskID.Load() != orchestratorStoppedTaskID {
+			// should follow same pattern for reporting runtime errors as the pause container
+			o.runErrs <- fmt.Errorf("proxy connection to %v:%v closed: %w", host.Host, host.Port, err)
+		}
+	}()
+
+	var localPort string
+	for localPort == "" {
+		time.Sleep(100 * time.Millisecond)
+		// the line we want looks like: (TODO update)
+		// Port 3306
+		for _, line := range strings.Split(out.String(), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
+				split := strings.Split(line, " ")
+				localPort = split[1] // TODO less brittle
+				break
+			}
+		}
+	}
+	fmt.Printf("port: %v\n", localPort)
+
+	// run iptables command
 	return nil
 }
 
