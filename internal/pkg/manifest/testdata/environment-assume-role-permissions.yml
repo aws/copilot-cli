@@ -7,25 +7,19 @@ name: test
 type: Environment
 
 # Import your own VPC and subnets or configure how they should be created.
-network:
-  vpc:
-    id: mock-vpc-id
-    subnets:
-      private:
-        - id: mock-subnet-id-3
-        - id: mock-subnet-id-4
+# network:
+#   vpc:
+#     id:
 
 # Configure the load balancers in your environment, once created.
-http:
-  private:
-    certificates: [mock-cert-1, mock-cert-2]
-    subnets: [mock-subnet-id-3 mock-subnet-id-4]
+# http:
+#   public:
+#   private:
 
 # Configure observability for your environment resources.
-observability:
-  container_insights: false
+# observability:
+#   container_insights: true
 
 # Configure additional permissions for the trust policy of the environment manager role to be able to assume it
-# additionalAssumeRolePermissions:
-#   - sts:SetSourceIdentity
-#   - sts:TagSession
+additionalAssumeRolePermissions:
+  - sts:SetSourceIdentity1
