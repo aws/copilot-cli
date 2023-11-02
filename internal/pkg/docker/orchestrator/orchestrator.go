@@ -219,7 +219,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 }
 
 func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer string, a *runTaskAction) error {
-	fmt.Printf("Setting up proxy connections...\n")
+	fmt.Printf("\nSetting up proxy connections...\n")
 	g, gctx := errgroup.WithContext(ctx)
 	ports := make(map[Host]string)
 	portsMu := &sync.Mutex{}
