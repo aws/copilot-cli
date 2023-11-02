@@ -305,10 +305,10 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			return err
 		}
 
-		fmt.Printf("Created connection to %v:%v\n\n", host.Host, host.Port)
+		fmt.Printf("Created connection to %v:%v\n", host.Host, host.Port)
 	}
 
-	fmt.Printf("Finished setting up proxy connections\n")
+	fmt.Printf("Finished setting up proxy connections\n\n")
 	return nil
 }
 
