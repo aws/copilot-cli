@@ -133,7 +133,7 @@ const cleanBucket = async function (bucketName) {
 exports.handler = async function (event, context) {
   var responseData = {};
   const props = event.ResourceProperties;
-  const physicalResourceId = event.PhysicalResourceId;
+  const physicalResourceId = event.PhysicalResourceId || `bucket-cleaner-${event.LogicalResourceId}`;
 
   try {
     switch (event.RequestType) {
@@ -181,3 +181,20 @@ exports.withDefaultLogStream = function (logStream) {
 exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
 };
+
+class AggregateError extends Error {
+  #errors;
+  name = "AggregateError";
+  constructor(errors) {
+    let message = errors
+      .map(error =>
+        String(error),
+      )
+      .join("\n");
+    super(message);
+    this.#errors = errors;
+  }
+  get errors() {
+    return [...this.#errors];
+  }
+}

@@ -17,9 +17,9 @@ ELBAccessLogsBucketPolicy:
                 - !Ref AWS::Partition
                 - ':s3:::'
                 - !Ref ELBAccessLogsBucket
-                {{- if .Prefix }}
+                {{- if .PublicHTTPConfig.ELBAccessLogs.Prefix }}
                 - '/'
-                - {{.Prefix }}
+                - {{ .PublicHTTPConfig.ELBAccessLogs.Prefix }}
                 {{- end }}
                 - '/AWSLogs/'
                 - !Ref AWS::AccountId
@@ -42,3 +42,59 @@ ELBAccessLogsBucket:
       BlockPublicPolicy: true
       IgnorePublicAcls: true
       RestrictPublicBuckets: true
+
+ELBAccessLogsBucketCleanerAction:
+  Metadata:
+    'aws:copilot:description': 'A custom resource that empties the ELB access logs bucket'
+  Type: Custom::BucketCleanerFunction
+  Properties:
+    ServiceToken: !GetAtt BucketCleanerFunction.Arn
+    BucketName: !Ref ELBAccessLogsBucket
+
+BucketCleanerFunction:
+  Type: AWS::Lambda::Function
+  Properties:
+    {{- with $cr := index .CustomResources "BucketCleanerFunction" }}
+    Code:
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
+    Handler: "index.handler"
+    Timeout: 900
+    MemorySize: 512
+    Role: !GetAtt 'ELBAccessLogsBucketCleanerRole.Arn'
+    Runtime: nodejs16.x
+
+ELBAccessLogsBucketCleanerRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to clean the ELB access logs bucket'
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        -
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}
+    Path: /
+    Policies:
+      - PolicyName: "CleanELBAccessLogs"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: "s3:*"
+              Resource: 
+                - !GetAtt ELBAccessLogsBucket.Arn
+                - !Sub
+                  - ${ BucketARN }/*
+                  - BucketARN: !GetAtt ELBAccessLogsBucket.Arn
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
