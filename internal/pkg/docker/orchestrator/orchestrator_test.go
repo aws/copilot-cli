@@ -6,7 +6,9 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"strings"
 	"sync"
 	"testing"
@@ -171,6 +173,91 @@ func TestOrchestrator(t *testing.T) {
 				})
 			},
 			errs: []string{},
+		},
+		"proxy returns error": {
+			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
+				return &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
+						if cmd == "aws" {
+							// fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId")
+							return errors.New("some error")
+						}
+						return nil
+					},
+				}
+			},
+			logOptions: noLogs,
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
+				require.NoError(t, err)
+
+				o.RunTask(Task{
+					PauseSecrets: map[string]string{
+						"A_SECRET": "very secret",
+					},
+					Containers: map[string]ContainerDefinition{
+						"foo": {
+							Ports: map[string]string{
+								"8080": "80",
+							},
+						},
+						"bar": {
+							Ports: map[string]string{
+								"9000": "90",
+							},
+						},
+					},
+				}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					Host: "remote-foo",
+					Port: "80",
+				}))
+			},
+			errs: []string{`setup proxy connections: setup proxy connection for "remote-foo": some error`},
+		},
+		"proxy success": {
+			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
+				return &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
+						if cmd == "aws" {
+							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId")
+							return nil
+						}
+						return nil
+					},
+				}
+			},
+			logOptions: noLogs,
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
+				require.NoError(t, err)
+
+				o.RunTask(Task{
+					PauseSecrets: map[string]string{
+						"A_SECRET": "very secret",
+					},
+					Containers: map[string]ContainerDefinition{
+						"foo": {
+							Ports: map[string]string{
+								"8080": "80",
+							},
+						},
+						"bar": {
+							Ports: map[string]string{
+								"9000": "90",
+							},
+						},
+					},
+				}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					Host: "remote-foo",
+					Port: "80",
+				}))
+			},
 		},
 	}
 

@@ -190,9 +190,10 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
 
-		// run commands to set up proxy connections
-		if err := o.setupProxyConnections(ctx, opts.ContainerName, a); err != nil {
-			return fmt.Errorf("setup proxy connections: %w", err)
+		if len(a.hosts) > 0 {
+			if err := o.setupProxyConnections(ctx, opts.ContainerName, a); err != nil {
+				return fmt.Errorf("setup proxy connections: %w", err)
+			}
 		}
 	} else {
 		// ensure no pause container changes
@@ -313,31 +314,51 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 }
 
 func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
+	returned := make(chan bool)
+	defer close(returned)
+
 	out := &bytes.Buffer{}
+	errCh := make(chan error)
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
+		defer close(errCh)
 
 		err := o.docker.Exec(context.Background(), localContainer, out, "aws", "ssm", "start-session",
 			"--target", remoteContainer,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
 			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
 		if err != nil && o.curTaskID.Load() != orchestratorStoppedTaskID {
-			// should follow same pattern for reporting runtime errors as the pause container
-			o.runErrs <- fmt.Errorf("proxy connection to %v:%v closed: %w", host.Host, host.Port, err)
+			// TODO is this random? or is <-returned always selected if it's closed?
+			select {
+			// if setupProxyConnection() has already returned, we should report
+			// this as a runtime error from the pause container
+			case <-returned:
+				if o.curTaskID.Load() != orchestratorStoppedTaskID {
+					o.runErrs <- fmt.Errorf("proxy connection to %v:%v closed: %w", host.Host, host.Port, err)
+				}
+			// if setupProxyConnection() has not returned, we should tell
+			// it to stop searching our output and return the error
+			case errCh <- err:
+			}
+
 		}
 	}()
 
 	var port string
 	for port == "" {
-		time.Sleep(100 * time.Millisecond)
-		// the line we want looks like: (TODO update)
-		// Port 3306
-		for _, line := range strings.Split(out.String(), "\n") {
-			if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
-				split := strings.Split(line, " ")
-				port = split[1] // TODO less brittle
-				break
+		select {
+		case err := <-errCh:
+			return "", err
+		case <-time.After(100 * time.Millisecond):
+			// the line we want looks like:
+			// Port 61972 opened for sessionId mySessionId
+			for _, line := range strings.Split(out.String(), "\n") {
+				if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
+					split := strings.Split(line, " ")
+					port = split[1] // TODO less brittle
+					break
+				}
 			}
 		}
 	}
