@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"slices"
@@ -75,6 +76,7 @@ type runLocalVars struct {
 	envOverrides  map[string]string
 	portOverrides portOverrides
 	proxy         bool
+	proxyNetwork  net.IPNet
 }
 
 type runLocalOpts struct {
@@ -289,7 +291,7 @@ func (o *runLocalOpts) Execute() error {
 	}
 
 	var hosts []orchestrator.Host
-	// var remoteContainerID string
+	var remoteContainerID string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
 			// return err
@@ -306,7 +308,10 @@ func (o *runLocalOpts) Execute() error {
 		}
 
 		// pick a random containerID, it shouldn't matter
-		fmt.Printf("containerIDs: %q\n", containerIDs)
+		for _, id := range containerIDs {
+			remoteContainerID = id
+			break
+		}
 	}
 
 	mft, _, err := workloadManifest(&workloadManifestInput{
@@ -342,7 +347,7 @@ func (o *runLocalOpts) Execute() error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
-	o.orchestrator.RunTask(task, orchestrator.RunTaskWithProxy("", hosts...))
+	o.orchestrator.RunTask(task, orchestrator.RunTaskWithProxy(remoteContainerID, o.proxyNetwork, hosts...))
 
 	for {
 		select {
@@ -728,5 +733,12 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
+	cmd.Flags().IPNetVar(&vars.proxyNetwork, "proxy-network", net.IPNet{
+		// docker uses 172.17.0.0/16 for networking by default
+		// so we'll default to different /16 from the 172.17.0.0/12
+		// private network defined by RFC 1918.
+		IP:   net.IPv4(172, 20, 0, 0),
+		Mask: net.CIDRMask(16, 32),
+	}, "a proxy network")
 	return cmd
 }

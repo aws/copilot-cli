@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"golang.org/x/sync/errgroup"
 )
 
 // Orchestrator manages running a Task. Only a single Task
@@ -140,6 +142,7 @@ type runTaskAction struct {
 	task              Task
 	hosts             []Host
 	remoteContainerID string
+	network           net.IPNet
 }
 
 type RunTaskOption func(*runTaskAction)
@@ -149,10 +152,11 @@ type Host struct {
 	Port string
 }
 
-func RunTaskWithProxy(remoteContainerID string, hosts ...Host) RunTaskOption {
+func RunTaskWithProxy(remoteContainerID string, network net.IPNet, hosts ...Host) RunTaskOption {
 	return func(r *runTaskAction) {
 		r.remoteContainerID = remoteContainerID
 		r.hosts = hosts
+		r.network = network
 	}
 }
 
@@ -187,7 +191,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		}
 
 		// run commands to set up proxy connections
-		if err := o.setupProxyConnections(ctx, opts.ContainerName, a.remoteContainerID, a.hosts); err != nil {
+		if err := o.setupProxyConnections(ctx, opts.ContainerName, a); err != nil {
 			return fmt.Errorf("setup proxy connections: %w", err)
 		}
 	} else {
@@ -214,14 +218,97 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	return nil
 }
 
-func (o *Orchestrator) setupProxyConnections(ctx context.Context, localContainer, remoteContainer string, hosts []Host) error {
-	return o.setupProxyConnection(ctx, localContainer, remoteContainer, hosts[0])
+func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer string, a *runTaskAction) error {
+	g, gctx := errgroup.WithContext(ctx)
+	ports := make(map[Host]string)
+	portsMu := &sync.Mutex{}
+
+	for _, host := range a.hosts {
+		host := host
+		o.wg.Add(1)
+		g.Go(func() error {
+			defer o.wg.Done()
+			port, err := o.setupProxyConnection(gctx, pauseContainer, a.remoteContainerID, host)
+			if err != nil {
+				return fmt.Errorf("setup proxy connection for %q: %w", host.Host, err)
+			}
+
+			portsMu.Lock()
+			defer portsMu.Unlock()
+			ports[host] = port
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	ip := a.network.IP
+	increment := func(ip net.IP) (net.IP, error) {
+		// make a copy of the previous ip
+		tmp := ip.To4()
+		ip = net.IPv4(tmp[0], tmp[1], tmp[2], tmp[3])
+		ip = ip.To4()
+
+		var inc func(idx int) error
+		inc = func(idx int) error {
+			if idx == -1 {
+				return fmt.Errorf("ip overflow")
+			}
+
+			ip[idx]++
+			if ip[idx] == 0 { // overflow occured
+				return inc(idx - 1)
+			}
+			return nil
+		}
+
+		err := inc(3) // 3 since this is an ipv4 address
+		if err != nil {
+			return nil, fmt.Errorf("get next ip: %w", err)
+		}
+		if !a.network.Contains(ip) {
+			return nil, fmt.Errorf("no more addresses in network")
+		}
+		return ip, err
+	}
+
+	for host, port := range ports {
+		ipOut := &bytes.Buffer{}
+		err := o.docker.Exec(ctx, pauseContainer, ipOut, "iptables",
+			"-t", "nat",
+			"-A", "OUTPUT",
+			"-d", ip.String(),
+			"-p", "tcp",
+			"-m", "tcp",
+			"--dport", host.Port,
+			"-j", "REDIRECT",
+			"--to-ports", port)
+		if err != nil {
+			return fmt.Errorf("modify iptables: %w", err)
+		}
+
+		err = o.docker.Exec(ctx, pauseContainer, ipOut, "iptables-save")
+		if err != nil {
+			return fmt.Errorf("save iptables: %w", err)
+		}
+
+		err = o.docker.Exec(ctx, pauseContainer, ipOut, "/bin/bash",
+			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Host))
+		if err != nil {
+			return fmt.Errorf("update /etc/hosts: %w", err)
+		}
+
+		ip, err = increment(ip)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) error {
-	fmt.Printf("setupProxyConnection(%q, %q, %q)\n", localContainer, remoteContainer, host)
-	defer fmt.Printf("exiting setupProxyConnection()\n")
-
+func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
 	out := &bytes.Buffer{}
 	o.wg.Add(1)
 	go func() {
@@ -237,23 +324,21 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 		}
 	}()
 
-	var localPort string
-	for localPort == "" {
+	var port string
+	for port == "" {
 		time.Sleep(100 * time.Millisecond)
 		// the line we want looks like: (TODO update)
 		// Port 3306
 		for _, line := range strings.Split(out.String(), "\n") {
 			if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
 				split := strings.Split(line, " ")
-				localPort = split[1] // TODO less brittle
+				port = split[1] // TODO less brittle
 				break
 			}
 		}
 	}
-	fmt.Printf("port: %v\n", localPort)
 
-	// TODO run iptables command
-	return nil
+	return port, nil
 }
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
@@ -369,11 +454,12 @@ type ContainerDefinition struct {
 // among all of the containers in the task.
 func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
-		ImageURI:       fmt.Sprintf("%s:%s", pauseCtrURI, pauseCtrTag),
-		ContainerName:  o.containerID("pause"),
-		Command:        []string{"sleep", "infinity"},
-		ContainerPorts: make(map[string]string),
-		Secrets:        t.PauseSecrets,
+		ImageURI:             fmt.Sprintf("%s:%s", pauseCtrURI, pauseCtrTag),
+		ContainerName:        o.containerID("pause"),
+		Command:              []string{"sleep", "infinity"},
+		ContainerPorts:       make(map[string]string),
+		Secrets:              t.PauseSecrets,
+		AddLinuxCapabilities: []string{"NET_ADMIN"},
 	}
 
 	for _, ctr := range t.Containers {

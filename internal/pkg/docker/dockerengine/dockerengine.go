@@ -78,14 +78,15 @@ type BuildArguments struct {
 
 // RunOptions holds the options for running a Docker container.
 type RunOptions struct {
-	ImageURI         string            // Required. The image name to run.
-	Secrets          map[string]string // Optional. Secrets to pass to the container as environment variables.
-	EnvVars          map[string]string // Optional. Environment variables to pass to the container.
-	ContainerName    string            // Optional. The name for the container.
-	ContainerPorts   map[string]string // Optional. Contains host and container ports.
-	Command          []string          // Optional. The command to run in the container.
-	ContainerNetwork string            // Optional. Network mode for the container.
-	LogOptions       RunLogOptions
+	ImageURI             string            // Required. The image name to run.
+	Secrets              map[string]string // Optional. Secrets to pass to the container as environment variables.
+	EnvVars              map[string]string // Optional. Environment variables to pass to the container.
+	ContainerName        string            // Optional. The name for the container.
+	ContainerPorts       map[string]string // Optional. Contains host and container ports.
+	Command              []string          // Optional. The command to run in the container.
+	ContainerNetwork     string            // Optional. Network mode for the container.
+	LogOptions           RunLogOptions
+	AddLinuxCapabilities []string
 }
 
 // RunLogOptions holds the logging configuration for Run().
@@ -266,6 +267,10 @@ func (in *RunOptions) generateRunArguments() []string {
 
 	for key, value := range in.EnvVars {
 		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	for _, cap := range in.AddLinuxCapabilities {
+		args = append(args, "--cap-add", cap)
 	}
 
 	args = append(args, in.ImageURI)
