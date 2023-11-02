@@ -219,6 +219,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 }
 
 func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer string, a *runTaskAction) error {
+	fmt.Printf("Setting up proxy connections...\n")
 	g, gctx := errgroup.WithContext(ctx)
 	ports := make(map[Host]string)
 	portsMu := &sync.Mutex{}
@@ -275,26 +276,25 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 	}
 
 	for host, port := range ports {
-		ipOut := &bytes.Buffer{}
-		err := o.docker.Exec(ctx, pauseContainer, ipOut, "iptables",
-			"-t", "nat",
-			"-A", "OUTPUT",
-			"-d", ip.String(),
-			"-p", "tcp",
-			"-m", "tcp",
+		err := o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables",
+			"--table", "nat",
+			"--append", "OUTPUT",
+			"--destination", ip.String(),
+			"--protocol", "tcp",
+			"--match", "tcp",
 			"--dport", host.Port,
-			"-j", "REDIRECT",
+			"--jump", "REDIRECT",
 			"--to-ports", port)
 		if err != nil {
 			return fmt.Errorf("modify iptables: %w", err)
 		}
 
-		err = o.docker.Exec(ctx, pauseContainer, ipOut, "iptables-save")
+		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables-save")
 		if err != nil {
 			return fmt.Errorf("save iptables: %w", err)
 		}
 
-		err = o.docker.Exec(ctx, pauseContainer, ipOut, "/bin/bash",
+		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "/bin/bash",
 			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Host))
 		if err != nil {
 			return fmt.Errorf("update /etc/hosts: %w", err)
@@ -304,7 +304,11 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 		if err != nil {
 			return err
 		}
+
+		fmt.Printf("Created connection to %v:%v\n\n", host.Host, host.Port)
 	}
+
+	fmt.Printf("Finished setting up proxy connections\n")
 	return nil
 }
 
