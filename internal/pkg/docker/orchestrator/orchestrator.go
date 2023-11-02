@@ -136,6 +136,12 @@ func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
 	}
 }
 
+type runTaskAction struct {
+	task              Task
+	hosts             []Host
+	remoteContainerID string
+}
+
 type RunTaskOption func(*runTaskAction)
 
 type Host struct {
@@ -143,16 +149,11 @@ type Host struct {
 	Port string
 }
 
-// TODO rename to RunTaskWithProxy(remoteContainerID, hosts...)
-func RunTaskWithHosts(hosts ...Host) RunTaskOption {
+func RunTaskWithProxy(remoteContainerID string, hosts ...Host) RunTaskOption {
 	return func(r *runTaskAction) {
+		r.remoteContainerID = remoteContainerID
 		r.hosts = hosts
 	}
-}
-
-type runTaskAction struct {
-	task  Task
-	hosts []Host
 }
 
 func (a *runTaskAction) Do(o *Orchestrator) error {
@@ -186,7 +187,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		}
 
 		// run commands to set up proxy connections
-		if err := o.setupProxyConnections(ctx, opts.ContainerName, a.hosts); err != nil {
+		if err := o.setupProxyConnections(ctx, opts.ContainerName, a.remoteContainerID, a.hosts); err != nil {
 			return fmt.Errorf("setup proxy connections: %w", err)
 		}
 	} else {
@@ -213,12 +214,12 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	return nil
 }
 
-func (o *Orchestrator) setupProxyConnections(ctx context.Context, container string, hosts []Host) error {
-	return o.setupProxyConnection(ctx, container, hosts[0])
+func (o *Orchestrator) setupProxyConnections(ctx context.Context, localContainer, remoteContainer string, hosts []Host) error {
+	return o.setupProxyConnection(ctx, localContainer, remoteContainer, hosts[0])
 }
 
-func (o *Orchestrator) setupProxyConnection(ctx context.Context, container string, host Host) error {
-	fmt.Printf("setupProxyConnection(%q, %q)\n", container, host)
+func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) error {
+	fmt.Printf("setupProxyConnection(%q, %q, %q)\n", localContainer, remoteContainer, host)
 	defer fmt.Printf("exiting setupProxyConnection()\n")
 
 	out := &bytes.Buffer{}
@@ -226,8 +227,8 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, container strin
 	go func() {
 		defer o.wg.Done()
 
-		err := o.docker.Exec(context.Background(), container, out, "aws", "ssm", "start-session",
-			"--target", container,
+		err := o.docker.Exec(context.Background(), localContainer, out, "aws", "ssm", "start-session",
+			"--target", remoteContainer,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
 			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
 		if err != nil && o.curTaskID.Load() != orchestratorStoppedTaskID {
@@ -251,7 +252,7 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, container strin
 	}
 	fmt.Printf("port: %v\n", localPort)
 
-	// run iptables command
+	// TODO run iptables command
 	return nil
 }
 

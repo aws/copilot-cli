@@ -5,6 +5,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -288,6 +289,7 @@ func (o *runLocalOpts) Execute() error {
 	}
 
 	var hosts []orchestrator.Host
+	// var remoteContainerID string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
 			// return err
@@ -297,6 +299,14 @@ func (o *runLocalOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("find hosts to connect to: %w", err)
 		}
+
+		containerIDs, err := o.getContainerIDs(ctx)
+		if err != nil {
+			return fmt.Errorf("get running container IDs: %w", err)
+		}
+
+		// pick a random containerID, it shouldn't matter
+		fmt.Printf("containerIDs: %q\n", containerIDs)
 	}
 
 	mft, _, err := workloadManifest(&workloadManifestInput{
@@ -332,7 +342,7 @@ func (o *runLocalOpts) Execute() error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
-	o.orchestrator.RunTask(task, orchestrator.RunTaskWithHosts(hosts...))
+	o.orchestrator.RunTask(task, orchestrator.RunTaskWithProxy("", hosts...))
 
 	for {
 		select {
@@ -350,6 +360,47 @@ func (o *runLocalOpts) Execute() error {
 			o.orchestrator.Stop()
 		}
 	}
+}
+
+func (o *runLocalOpts) getContainerIDs(ctx context.Context) (map[string]string, error) {
+	svc, err := o.ecsClient.DescribeService(o.appName, o.envName, o.wkldName)
+	if err != nil {
+		return nil, fmt.Errorf("describe service: %w", err)
+	}
+
+	ctrs := make(map[string]string)
+	for _, task := range svc.Tasks {
+		taskARN, err := arn.Parse(aws.StringValue(task.TaskArn))
+		if err != nil {
+			return nil, fmt.Errorf("parse task arn: %w", err)
+		}
+
+		split := strings.Split(taskARN.Resource, "/")
+		if len(split) != 3 {
+			return nil, fmt.Errorf("task ARN in unexpected format: %q", taskARN)
+		}
+		taskName := split[2]
+
+		for _, ctr := range task.Containers {
+			id := aws.StringValue(ctr.RuntimeId)
+			hasECSExec := slices.ContainsFunc(ctr.ManagedAgents, func(a *sdkecs.ManagedAgent) bool {
+				return aws.StringValue(a.Name) == "ExecuteCommandAgent" && aws.StringValue(a.LastStatus) == "RUNNING"
+			})
+			if id != "" && hasECSExec && aws.StringValue(ctr.LastStatus) == "RUNNING" {
+				ctrs[aws.StringValue(ctr.Name)] = fmt.Sprintf("ecs:%s_%s_%s", svc.ClusterName, taskName, aws.StringValue(ctr.RuntimeId))
+			}
+		}
+
+		if len(ctrs) > 0 {
+			// we only care about getting one task's containers
+			break
+		}
+	}
+
+	if len(ctrs) == 0 {
+		return nil, errors.New("no running tasks have running containers with ecs exec enabled")
+	}
+	return ctrs, nil
 }
 
 func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
