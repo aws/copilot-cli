@@ -25,6 +25,8 @@ const (
 	URIAccessTypeInternal
 	URIAccessTypeServiceDiscovery
 	URIAccessTypeServiceConnect
+
+	LBDNS = "COPILOT_LB_DNS"
 )
 
 var (
@@ -80,7 +82,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, err
 	}
-	var albEnabled, nlbEnabled bool
+	var albEnabled, importedALB, nlbEnabled bool
 	resources, err := svcDescr.StackResources()
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
@@ -88,6 +90,9 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 	for _, resource := range resources {
 		if strings.HasPrefix(resource.LogicalID, svcStackResourceALBTargetGroupLogicalID) {
 			albEnabled = true
+		}
+		if strings.HasPrefix(resource.LogicalID, svcStackResourceListenerRuleForImportedALBLogicalID) {
+			importedALB = true
 		}
 		if strings.HasPrefix(resource.LogicalID, svcStackResourceNLBTargetGroupLogicalID) {
 			nlbEnabled = true
@@ -106,6 +111,9 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 			envDescriber:     envDescr,
 			initLBDescriber:  d.initLBDescriber,
 			albCFNOutputName: envOutputPublicLoadBalancerDNSName,
+		}
+		if importedALB {
+			uriDescr.albCFNOutputName = ""
 		}
 		publicURI, err := uriDescr.uri()
 		if err != nil {
@@ -304,6 +312,21 @@ func (d *uriDescriber) uri() (accessURI, error) {
 		return accessURI{}, fmt.Errorf("get host headers for listener rules %s: %w", strings.Join(ruleARNs, ","), err)
 	}
 	if len(dnsNames) == 0 {
+		envVars, err := d.svcDescriber.EnvVars()
+		if err != nil {
+			return accessURI{}, fmt.Errorf("get service environment variables: %w", err)
+		}
+		var lbDNS string
+		for _, envVar := range envVars {
+			if envVar.Name == LBDNS {
+				lbDNS = envVar.Value
+				return accessURI{
+					HTTPS:    httpsEnabled,
+					DNSNames: []string{lbDNS},
+					Path:     path,
+				}, nil
+			}
+		}
 		return d.envDNSName(path)
 	}
 	return accessURI{

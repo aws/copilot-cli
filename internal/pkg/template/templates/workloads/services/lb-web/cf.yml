@@ -119,9 +119,9 @@ Resources:
     {{- if .ALBListener}}
     {{- range $i, $rule := .ALBListener.Rules }}
       {{- if $.ImportedALB}}
-      - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
         {{- if $.ImportedALB.HasTwoListeners}}
-      - HTTPListenerRedirectRule
+      - HTTPListenerRedirectRuleForImportedALB
         {{- end}}
       {{- else if $.ALBListener.IsHTTPS }}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}

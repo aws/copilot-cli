@@ -24,7 +24,7 @@ HTTPRulePriorityAction:
 
 {{- $isHTTPS := .ALBListener.IsHTTPS}}
 {{- range $i, $rule := .ALBListener.Rules}}
-HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
+HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'An HTTP listener rule for path `{{$rule.Path}}` that forwards HTTP traffic to your tasks'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -89,7 +89,7 @@ HTTPRedirectRulePriorityAction:
     ListenerArn: {{$port80arn}}
 
 {{- range $i, $rule := .ALBListener.Rules}}
-HTTPListenerRedirectRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
+HTTPListenerRedirectRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Metadata:
     'aws:copilot:description': 'An HTTP listener rule that redirects port 80 to port 443'
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
