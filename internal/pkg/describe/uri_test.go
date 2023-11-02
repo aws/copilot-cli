@@ -6,6 +6,7 @@ package describe
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -149,6 +150,41 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			},
 
 			wantedURI: "http://abc.us-west-1.elb.amazonaws.com/mySvc",
+		},
+		"http web service with imported ALB": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceListenerRuleForImportedALBLogicalID,
+						},
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil).Times(1),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "/",
+					}, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceListenerRuleForImportedALBLogicalID,
+						},
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil).Times(1),
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders(nil).
+						Return(nil, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+						{
+							Name:  LBDNS,
+							Value: "mockDNSName",
+						},
+					}, nil),
+				)
+			},
+
+			wantedURI: "http://mockDNSName",
 		},
 		"http web service with cloudfront": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {

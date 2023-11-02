@@ -55,7 +55,7 @@ HTTPSRulePriorityAction:
     {{- if eq $.WorkloadType "Backend Service" }}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
-    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
 
 HTTPRuleWithDomainPriorityAction:
@@ -177,7 +177,7 @@ HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}:
     {{- if eq $.WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
-    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
     Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
-  {{- end }}
+{{- end }}
