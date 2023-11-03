@@ -294,7 +294,7 @@ func (o *runLocalOpts) Execute() error {
 	var remoteContainerID string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
-			// return err
+			return err
 		}
 
 		hosts, err = o.hostFinder.Hosts(ctx)
