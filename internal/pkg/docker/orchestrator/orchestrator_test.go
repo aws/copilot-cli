@@ -204,23 +204,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
 						Port: "80",
 					}))
@@ -247,23 +231,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
 						Port: "80",
 					}))
@@ -291,23 +259,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("172.20.0.0/24") // 172.20.0.0 - 172.20.0.255
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(257)...))
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(257)...))
 				}, de
 			},
 			stopAfterNErrs: 1,
@@ -332,23 +284,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("255.255.255.254/31") // 255.255.255.254 - 255.255.255.255
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(3)...))
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(3)...))
 				}, de
 			},
 			stopAfterNErrs: 1,
@@ -375,23 +311,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
 						Port: "80",
 					}))
@@ -421,23 +341,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
 						Port: "80",
 					}))
@@ -467,23 +371,7 @@ func TestOrchestrator(t *testing.T) {
 					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
 					require.NoError(t, err)
 
-					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
 						Port: "80",
 					}))
@@ -519,20 +407,8 @@ func TestOrchestrator(t *testing.T) {
 					require.NoError(t, err)
 
 					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
 						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
+							"foo": {},
 						},
 					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
@@ -574,20 +450,8 @@ func TestOrchestrator(t *testing.T) {
 					require.NoError(t, err)
 
 					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
 						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
+							"foo": {},
 						},
 					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(257)...))
 
@@ -627,20 +491,8 @@ func TestOrchestrator(t *testing.T) {
 					require.NoError(t, err)
 
 					o.RunTask(Task{
-						PauseSecrets: map[string]string{
-							"A_SECRET": "very secret",
-						},
 						Containers: map[string]ContainerDefinition{
-							"foo": {
-								Ports: map[string]string{
-									"8080": "80",
-								},
-							},
-							"bar": {
-								Ports: map[string]string{
-									"9000": "90",
-								},
-							},
+							"foo": {},
 						},
 					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
