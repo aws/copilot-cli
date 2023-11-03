@@ -75,7 +75,7 @@ let report = function (
  * @param {string} bucketName Name of the bucket to be cleaned.
  */
 const cleanBucket = async function (bucketName) {
-  let s3 = new aws.S3();
+  const s3 = new aws.S3();
   // Make sure the bucket exists.
   try {
     await s3.headBucket({ Bucket: bucketName }).promise();
@@ -90,21 +90,12 @@ const cleanBucket = async function (bucketName) {
   }
   while (true) {
     const listResp = await s3.listObjectVersions(listObjectVersionsParam).promise();
-    let objectsToDelete = []
-    for (const object of listResp.Versions) {
-      objectsToDelete.push({
-        Key: object.Key,
-        VersionId: object.VersionId
-      })
-    }
     // After deleting other versions, remove delete markers version.
     // For info on "delete marker": https://docs.aws.amazon.com/AmazonS3/latest/dev/DeleteMarker.html
-    for (const deleteMarker of listResp.DeleteMarkers) {
-      objectsToDelete.push({
-        Key: deleteMarker.Key,
-        VersionId: deleteMarker.VersionId
-      })
-    }
+    let objectsToDelete = [
+      ...listResp.Versions.map(version => ({ Key: version.Key, VersionId: version.VersionId })),
+      ...listResp.DeleteMarkers.map(marker => ({ Key: marker.Key, VersionId: marker.VersionId }))
+    ];
     if (objectsToDelete.length === 0) {
       return
     }
