@@ -5,9 +5,12 @@ package orchestrator
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,6 +46,7 @@ type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
+	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
 }
 
 const (
@@ -51,8 +55,12 @@ const (
 )
 
 const (
-	pauseContainerURI = "public.ecr.aws/amazonlinux/amazonlinux:2023"
+	pauseCtrURI = "aws-copilot-pause"
+	pauseCtrTag = "latest"
 )
+
+//go:embed Pause-Dockerfile
+var pauseDockerfile string
 
 // New creates a new Orchestrator. idPrefix is a prefix used when
 // naming containers that are run by the Orchestrator.
@@ -143,6 +151,10 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	}()
 
 	if taskID == 1 {
+		if err := o.buildPauseContainer(ctx); err != nil {
+			return fmt.Errorf("build pause container: %w", err)
+		}
+
 		// start the pause container
 		opts := o.pauseRunOptions(a.task)
 		o.run(pauseCtrTaskID, opts)
@@ -175,6 +187,14 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 
 	o.curTask = a.task
 	return nil
+}
+
+func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
+	return o.docker.Build(ctx, &dockerengine.BuildArguments{
+		URI:               pauseCtrURI,
+		Tags:              []string{pauseCtrTag},
+		DockerfileContent: pauseDockerfile,
+	}, os.Stderr)
 }
 
 // Stop stops the current running task containers and the Orchestrator. Stop is
@@ -265,7 +285,8 @@ func (o *Orchestrator) containerID(name string) string {
 // Containers within a Task can talk to each other on localhost
 // and are stopped and started as a group.
 type Task struct {
-	Containers map[string]ContainerDefinition
+	Containers   map[string]ContainerDefinition
+	PauseSecrets map[string]string
 }
 
 // ContainerDefinition defines information necessary to run a container.
@@ -281,10 +302,11 @@ type ContainerDefinition struct {
 // among all of the containers in the task.
 func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
-		ImageURI:       pauseContainerURI,
+		ImageURI:       fmt.Sprintf("%s:%s", pauseCtrURI, pauseCtrTag),
 		ContainerName:  o.containerID("pause"),
 		Command:        []string{"sleep", "infinity"},
 		ContainerPorts: make(map[string]string),
+		Secrets:        t.PauseSecrets,
 	}
 
 	for _, ctr := range t.Containers {

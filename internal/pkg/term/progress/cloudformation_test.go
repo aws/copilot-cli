@@ -346,7 +346,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 }
 
 func TestRegularResourceComponent_Render(t *testing.T) {
-	t.Run("renders a resource that was created succesfully immediately", func(t *testing.T) {
+	t.Run("renders a resource that was created Successfully immediately", func(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",

@@ -303,7 +303,7 @@ func TestEC2_managedPrefixList(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("describe managed prefix list with name %s: %w", mockPrefixListName, mockError),
 		},
-		"query returns succesfully": {
+		"query returns Successfully": {
 			mockEC2Client: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
 					Filters: mockFilter,
@@ -405,7 +405,7 @@ func TestEC2_CloudFrontManagedPrefixListId(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `found more than one prefix list with the name `,
 		},
-		"query returns succesfully": {
+		"query returns Successfully": {
 			mockEC2Client: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
 					Filters: mockFilter,

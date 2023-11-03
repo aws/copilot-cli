@@ -226,7 +226,7 @@ func (o *deployEnvOpts) Execute() error {
 		if o.detach {
 			return nil
 		}
-		log.Successf("Succesfully deployed environment %s", o.name)
+		log.Successf("Successfully deployed environment %s", o.name)
 		return nil
 	}
 	var errStackDeletedOnInterrupt *deploycfn.ErrStackDeletedOnInterrupt
