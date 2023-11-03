@@ -314,12 +314,26 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 }
 
 func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
+	errCh := make(chan error)
 	returned := make(chan struct{})
 	defer close(returned)
 
-	pr, pw := io.Pipe()
-	errCh := make(chan error)
+	reportError := func(err error) {
+		select {
+		case errCh <- err:
+			// if setupProxyConnection() hasn't returned yet, report the error.
+			// this will never happen if setupProxyConnection() has already
+			// returned, as no goroutine will be able to read from errCh.
+		case <-returned:
+			// if setupProxyConnection() has already returned, we report
+			// this as a runtime error from the pause container
+			if o.curTaskID.Load() != orchestratorStoppedTaskID {
+				o.runErrs <- err
+			}
+		}
+	}
 
+	pr, pw := io.Pipe()
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
@@ -328,23 +342,31 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 			"--target", remoteContainer,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
 			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
-		if err != nil && o.curTaskID.Load() != orchestratorStoppedTaskID {
-			select {
-			case errCh <- err:
-				// this will never happen if setupProxyConnection() has already
-				// returned, as no goroutine will be able to read from errCh.
-			case <-returned:
-				// if setupProxyConnection() has already returned, we should report
-				// this as a runtime error from the pause container
-				if o.curTaskID.Load() != orchestratorStoppedTaskID {
-					o.runErrs <- fmt.Errorf("proxy connection to %v:%v closed: %w", host.Host, host.Port, err)
-				}
-			}
-
+		if err != nil {
+			reportError(fmt.Errorf("proxy to %v:%v: %w", host.Host, host.Port, err))
 		}
 	}()
 
-	out := bufio.NewReader(pr)
+	scanner := bufio.NewScanner(pr)
+	lines := make(chan string)
+
+	// read the output of exec, so the buffer doesn't
+	// fill up and block the ssm session process. until setupProxyConnection()
+	// returns, we'll send the output to lines.
+	o.wg.Add(1)
+	go func() {
+		defer o.wg.Done()
+		for scanner.Scan() {
+			line := scanner.Text()
+			select {
+			case lines <- line:
+			default:
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			reportError(fmt.Errorf("process output for proxy to %v:%v: %w", host.Host, host.Port, err))
+		}
+	}()
 
 	var port string
 	for port == "" {
@@ -353,14 +375,9 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 			return "", ctx.Err()
 		case err := <-errCh:
 			return "", err
-		default:
+		case line := <-lines:
 			// the line we want looks like:
 			// Port 61972 opened for sessionId mySessionId
-			line, err := out.ReadString('\n')
-			if err != nil {
-				return "", fmt.Errorf("read line: %w", err)
-			}
-
 			if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
 				split := strings.Split(line, " ")
 				if len(split) > 2 {
