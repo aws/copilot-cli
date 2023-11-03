@@ -81,11 +81,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
-	defaultSess, err := in.SessionProvider.Default()
-	if err != nil {
-		return nil, fmt.Errorf("create default session: %w", err)
-	}
-	elbGetter := elbv2.New(defaultSess)
+	elbGetter := elbv2.New(svcDeployer.envSess)
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
 		Env:         in.Env.Name,
@@ -240,12 +236,15 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 }
 
 func (d *lbWebSvcDeployer) validateImportedALBConfig() error {
+	if d.lbMft.HTTPOrBool.ImportedALB == nil {
+		return nil
+	}
 	alb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
 	if err != nil {
 		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB), err)
 	}
 	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
-		return fmt.Errorf(`imported ALB %q must have exactly two listeners`, d.lbMft.HTTPOrBool.ImportedALB)
+		return fmt.Errorf(`imported ALB %q must have exactly two listeners`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
 	}
 	if len(alb.Listeners) == 2 {
 		var has80, has443 bool
