@@ -474,11 +474,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`interpolate environment variables for testWkld manifest: some error`),
 		},
-		"error getting hosts to proxy to": {
+		"error building container images": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			inputProxy:    true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
@@ -491,7 +490,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			inProxy:       true,
+			inputProxy:    true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
@@ -505,7 +504,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			inProxy:       true,
+			inputProxy:    true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
@@ -519,7 +518,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
-			inProxy:       true,
+			inputProxy:    true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
