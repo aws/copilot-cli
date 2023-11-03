@@ -475,9 +475,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			wantedError: errors.New(`interpolate environment variables for testWkld manifest: some error`),
 		},
 		"error building container images": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
+			inputAppName:     testAppName,
+			inputWkldName:    testWkldName,
+			inputEnvName:     testEnvName,
+			buildImagesError: errors.New("some error"),
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
