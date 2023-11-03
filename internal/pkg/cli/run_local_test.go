@@ -468,6 +468,118 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`build images: some error`),
 		},
+		"error, proxy, describe service": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+
+							Host: "a-different-service",
+							Port: "80",
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("get running container IDs: describe service: some error"),
+		},
+		"error, proxy, parse arn": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+
+							Host: "a-different-service",
+							Port: "80",
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("asdf"),
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New(`get running container IDs: parse task arn: arn: invalid prefix`),
+		},
+		"error, proxy, process task": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+
+							Host: "a-different-service",
+							Port: "80",
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/asdf"),
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New(`get running container IDs: task ARN in unexpected format: "arn:aws:ecs:us-west-2:123456789:task/asdf"`),
+		},
+		"error, proxy, no valid containers": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+
+							Host: "a-different-service",
+							Port: "80",
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/cluster/hash"),
+							Containers: []*sdkecs.Container{
+								{
+									RuntimeId:  aws.String("runtime-id"),
+									LastStatus: aws.String("RUNNING"),
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New(`no running tasks have running containers with esc exec enabled`),
+		},
 		"success, one run task call": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
