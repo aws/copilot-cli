@@ -244,10 +244,10 @@ func (d *lbWebSvcDeployer) validateImportedALBConfig() error {
 	if err != nil {
 		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB), err)
 	}
-	if len(alb.Listeners) == 0 {
-		return fmt.Errorf(`imported ALB %q has no listeners`, d.lbMft.HTTPOrBool.ImportedALB)
+	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
+		return fmt.Errorf(`imported ALB %q must have exactly two listeners`, d.lbMft.HTTPOrBool.ImportedALB)
 	}
-	if len(alb.Listeners) >= 2 {
+	if len(alb.Listeners) == 2 {
 		var has80, has443 bool
 		for _, listener := range alb.Listeners {
 			if listener.Port == 80 {
