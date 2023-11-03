@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -493,9 +494,19 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					break
 				}
 
-				isHidden, err := file.IsHiddenFile(event.Name)
-				if err != nil {
-					break
+				// check if any subdirectories within copilotDir are hidden
+				isHidden := false
+				parent := copilotDir
+				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
+				for _, child := range strings.Split(suffix, "/") {
+					parent = filepath.Join(parent, child)
+					subdirHidden, err := file.IsHiddenFile(child)
+					if err != nil {
+						break
+					}
+					if subdirHidden {
+						isHidden = true
+					}
 				}
 
 				// TODO(Aiden): implement dockerignore blacklist for update

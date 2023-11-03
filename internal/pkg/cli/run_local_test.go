@@ -581,6 +581,46 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				}
 			},
 		},
+		"watch flag receives hidden file update, doesn't restart": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.ws.EXPECT().Path().Return("")
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					eventCh <- fsnotify.Event{
+						Name: ".hiddensubdir/mockFilename",
+						Op:   fsnotify.Write,
+					}
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
 		"watch flag restarts, error for pause container definition update": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
