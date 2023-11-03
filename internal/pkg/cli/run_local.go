@@ -739,7 +739,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
 	cmd.Flags().IPNetVar(&vars.proxyNetwork, proxyNetworkFlag, net.IPNet{
 		// docker uses 172.17.0.0/16 for networking by default
-		// so we'll default to different /16 from the 172.17.0.0/12
+		// so we'll default to different /16 from the 172.16.0.0/12
 		// private network defined by RFC 1918.
 		IP:   net.IPv4(172, 20, 0, 0),
 		Mask: net.CIDRMask(16, 32),
