@@ -314,12 +314,9 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 }
 
 func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
-	//returned := make(chan bool)
-	//defer close(returned)
-
 	pr, pw := io.Pipe()
 	errCh := make(chan error)
-	defer close(errCh)
+
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
@@ -329,18 +326,16 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
 			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
 		if err != nil && o.curTaskID.Load() != orchestratorStoppedTaskID {
-			// TODO is this random? or is <-returned always selected if it's closed?
-			// test if this actually is valid/works
 			select {
-			case <-errCh:
+			case errCh <- err:
+				// this will never happen if setupProxyConnection() has already
+				// returned, as no goroutine will be able to read from errCh.
+			default:
 				// if setupProxyConnection() has already returned, we should report
 				// this as a runtime error from the pause container
 				if o.curTaskID.Load() != orchestratorStoppedTaskID {
 					o.runErrs <- fmt.Errorf("proxy connection to %v:%v closed: %w", host.Host, host.Port, err)
 				}
-			case errCh <- err:
-				// if setupProxyConnection() has not returned, we should tell
-				// it to stop searching our output and return the error
 			}
 
 		}
