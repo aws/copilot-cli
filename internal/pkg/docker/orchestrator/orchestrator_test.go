@@ -174,7 +174,7 @@ func TestOrchestrator(t *testing.T) {
 			},
 			errs: []string{},
 		},
-		"proxy returns error": {
+		"proxy setup connection returns error": {
 			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
 				return &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
@@ -182,7 +182,7 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							// fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId")
+							sync <- struct{}{}
 							return errors.New("some error")
 						}
 						return nil
@@ -214,6 +214,8 @@ func TestOrchestrator(t *testing.T) {
 					Host: "remote-foo",
 					Port: "80",
 				}))
+
+				<-sync
 			},
 			errs: []string{`setup proxy connections: setup proxy connection for "remote-foo": some error`},
 		},
@@ -225,8 +227,13 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId")
-							return nil
+							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
+						}
+						return nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-foo" {
+							sync <- struct{}{}
 						}
 						return nil
 					},
@@ -257,6 +264,9 @@ func TestOrchestrator(t *testing.T) {
 					Host: "remote-foo",
 					Port: "80",
 				}))
+
+				// don't return until Run() has been called for foo
+				<-sync
 			},
 		},
 	}

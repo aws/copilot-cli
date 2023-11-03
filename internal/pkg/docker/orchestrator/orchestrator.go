@@ -4,7 +4,7 @@
 package orchestrator
 
 import (
-	"bytes"
+	"bufio"
 	"context"
 	_ "embed"
 	"errors"
@@ -314,49 +314,59 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 }
 
 func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
-	returned := make(chan bool)
-	defer close(returned)
+	//returned := make(chan bool)
+	//defer close(returned)
 
-	out := &bytes.Buffer{}
+	pr, pw := io.Pipe()
 	errCh := make(chan error)
+	defer close(errCh)
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
-		defer close(errCh)
 
-		err := o.docker.Exec(context.Background(), localContainer, out, "aws", "ssm", "start-session",
+		err := o.docker.Exec(context.Background(), localContainer, pw, "aws", "ssm", "start-session",
 			"--target", remoteContainer,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
 			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
 		if err != nil && o.curTaskID.Load() != orchestratorStoppedTaskID {
 			// TODO is this random? or is <-returned always selected if it's closed?
+			// test if this actually is valid/works
 			select {
-			// if setupProxyConnection() has already returned, we should report
-			// this as a runtime error from the pause container
-			case <-returned:
+			case <-errCh:
+				// if setupProxyConnection() has already returned, we should report
+				// this as a runtime error from the pause container
 				if o.curTaskID.Load() != orchestratorStoppedTaskID {
 					o.runErrs <- fmt.Errorf("proxy connection to %v:%v closed: %w", host.Host, host.Port, err)
 				}
-			// if setupProxyConnection() has not returned, we should tell
-			// it to stop searching our output and return the error
 			case errCh <- err:
+				// if setupProxyConnection() has not returned, we should tell
+				// it to stop searching our output and return the error
 			}
 
 		}
 	}()
 
+	out := bufio.NewReader(pr)
+
 	var port string
 	for port == "" {
 		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
 		case err := <-errCh:
 			return "", err
 		case <-time.After(100 * time.Millisecond):
 			// the line we want looks like:
 			// Port 61972 opened for sessionId mySessionId
-			for _, line := range strings.Split(out.String(), "\n") {
-				if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
-					split := strings.Split(line, " ")
-					port = split[1] // TODO less brittle
+			line, err := out.ReadString('\n')
+			if err != nil {
+				return "", fmt.Errorf("read line: %w", err)
+			}
+
+			if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
+				split := strings.Split(line, " ")
+				if len(split) > 2 {
+					port = split[1]
 					break
 				}
 			}
