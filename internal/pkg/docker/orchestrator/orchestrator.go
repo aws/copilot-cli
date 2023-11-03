@@ -145,13 +145,16 @@ type runTaskAction struct {
 	network           net.IPNet
 }
 
+// RunTaskOption adds optional data to RunTask.
 type RunTaskOption func(*runTaskAction)
 
+// Host represents a service reachable via the network.
 type Host struct {
 	Host string
 	Port string
 }
 
+// RunTaskWithProxy returns a RunTaskOption that sets up a proxy connection to hosts.
 func RunTaskWithProxy(remoteContainerID string, network net.IPNet, hosts ...Host) RunTaskOption {
 	return func(r *runTaskAction) {
 		r.remoteContainerID = remoteContainerID

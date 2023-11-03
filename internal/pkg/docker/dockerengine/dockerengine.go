@@ -205,6 +205,7 @@ func (c DockerCmdClient) Login(uri, username, password string) error {
 	return nil
 }
 
+// Exec calls runs cmd in conatiner with args, and sets Stdout and Stderr to out.
 func (c DockerCmdClient) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
 	return c.runner.RunWithContext(ctx, "docker", append([]string{
 		"exec",
