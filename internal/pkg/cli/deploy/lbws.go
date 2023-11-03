@@ -223,6 +223,10 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		return nil
 	}
 
+	if err := d.validateImportedALBConfig(); err != nil {
+		return fmt.Errorf(`validate imported ALB configuration for "http": %w`, err)
+	}
+
 	if err := d.validateRuntimeRoutingRule(d.lbMft.HTTPOrBool.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
@@ -230,6 +234,30 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	for idx, rule := range d.lbMft.HTTPOrBool.AdditionalRoutingRules {
 		if err := d.validateRuntimeRoutingRule(rule); err != nil {
 			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rule[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+func (d *lbWebSvcDeployer) validateImportedALBConfig() error {
+	alb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
+	if err != nil {
+		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB), err)
+	}
+	if len(alb.Listeners) == 0 {
+		return fmt.Errorf(`imported ALB %q has no listeners`, d.lbMft.HTTPOrBool.ImportedALB)
+	}
+	if len(alb.Listeners) >= 2 {
+		var has80, has443 bool
+		for _, listener := range alb.Listeners {
+			if listener.Port == 80 {
+				has80 = true
+			} else if listener.Port == 443 {
+				has443 = true
+			}
+		}
+		if !(has80 && has443) {
+			return fmt.Errorf("imported ALB must have listeners on ports 80 and 443")
 		}
 	}
 	return nil

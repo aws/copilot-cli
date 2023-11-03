@@ -935,51 +935,6 @@ func Test_convertImportedALB(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 	})
-	t.Run("return err if listener ports aren't 80 and 443", func(t *testing.T) {
-		//GIVEN
-		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
-			App:         &config.Application{},
-			EnvManifest: &manifest.Environment{},
-			Manifest: &manifest.LoadBalancedWebService{
-				Workload: manifest.Workload{
-					Name: aws.String("frontend"),
-				},
-				LoadBalancedWebServiceConfig: manifest.LoadBalancedWebServiceConfig{
-					HTTPOrBool: manifest.HTTPOrBool{
-						HTTP: manifest.HTTP{
-							ImportedALB: aws.String("mockName"),
-						},
-						Enabled: aws.Bool(true),
-					},
-				},
-			},
-		}, WithImportedALB(&elbv2.LoadBalancer{
-			ARN:     "mockARN",
-			Name:    "mockName",
-			DNSName: "mockDNSName",
-			Listeners: []elbv2.Listener{
-				{
-					ARN:      "mockListenerARN",
-					Port:     80,
-					Protocol: "mockProtocol",
-				},
-				{
-					ARN:      "mockListenerARN2",
-					Port:     9,
-					Protocol: "mockProtocol",
-				},
-			},
-			Scheme:         "internet-facing",
-			SecurityGroups: []string{"sg1", "sg2"},
-		}))
-		require.NoError(t, err)
-
-		// WHEN
-		_, err = lbws.convertImportedALB()
-
-		// THEN
-		require.EqualError(t, err, "imported ALB must have listeners on ports 80 and 443")
-	})
 	t.Run("successfully convert", func(t *testing.T) {
 		//GIVEN
 		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
@@ -1025,10 +980,10 @@ func Test_convertImportedALB(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, &template.ImportedALB{
-			Name:            "mockName",
-			ARN:             "mockARN",
-			DNSName:         "mockDNSName",
-			HasTwoListeners: true,
+			Name:                 "mockName",
+			ARN:                  "mockARN",
+			DNSName:              "mockDNSName",
+			HasMultipleListeners: true,
 			Listeners: []template.LBListener{
 				{
 					ARN:      "mockListenerARN",

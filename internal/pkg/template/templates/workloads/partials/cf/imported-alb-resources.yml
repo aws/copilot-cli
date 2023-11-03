@@ -1,6 +1,6 @@
 # For one listener or the port 443 listener if two.
 {{- $arn := ""}}
-{{- if not $.ImportedALB.HasTwoListeners }}
+{{- if not $.ImportedALB.HasMultipleListeners }}
   {{- range $listener := $.ImportedALB.Listeners}}
   {{- $arn = $listener.ARN}}
   {{- end}}
@@ -70,7 +70,7 @@ HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
 {{- end }}
 
 # If two listeners, redirect port 80 to 443.
-{{- if $.ImportedALB.HasTwoListeners }}
+{{- if $.ImportedALB.HasMultipleListeners }}
 {{- $port80arn := ""}}
 {{- range $listener := $.ImportedALB.Listeners}}
   {{- if eq $listener.Port 80}}

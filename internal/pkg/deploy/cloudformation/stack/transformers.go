@@ -729,13 +729,9 @@ func (s *LoadBalancedWebService) convertImportedALB() (*template.ImportedALB, er
 	if s.importedALB == nil {
 		return nil, nil
 	}
-	l := s.importedALB.Listeners
-	var twoListeners bool
-	if len(l) == 2 {
-		twoListeners = true
-		if !((l[0].Port == 80 && l[1].Port == 443) || (l[0].Port == 443 && l[1].Port == 80)) {
-			return nil, fmt.Errorf("imported ALB must have listeners on ports 80 and 443")
-		}
+	var hasMultipleListeners bool
+	if len(s.importedALB.Listeners) >= 2 {
+		hasMultipleListeners = true
 	}
 	var listeners []template.LBListener
 	for _, listener := range s.importedALB.Listeners {
@@ -752,12 +748,12 @@ func (s *LoadBalancedWebService) convertImportedALB() (*template.ImportedALB, er
 		})
 	}
 	return &template.ImportedALB{
-		Name:            s.importedALB.Name,
-		ARN:             s.importedALB.ARN,
-		DNSName:         s.importedALB.DNSName,
-		HasTwoListeners: twoListeners,
-		Listeners:       listeners,
-		SecurityGroups:  securityGroups,
+		Name:                 s.importedALB.Name,
+		ARN:                  s.importedALB.ARN,
+		DNSName:              s.importedALB.DNSName,
+		HasMultipleListeners: hasMultipleListeners,
+		Listeners:            listeners,
+		SecurityGroups:       securityGroups,
 	}, nil
 }
 

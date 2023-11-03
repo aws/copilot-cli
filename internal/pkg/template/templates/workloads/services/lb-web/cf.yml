@@ -120,7 +120,7 @@ Resources:
     {{- range $i, $rule := .ALBListener.Rules }}
       {{- if $.ImportedALB}}
       - HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
-        {{- if $.ImportedALB.HasTwoListeners}}
+        {{- if $.ImportedALB.HasMultipleListeners}}
       - HTTPListenerRedirectRuleForImportedALB
         {{- end}}
       {{- else if $.ALBListener.IsHTTPS }}
