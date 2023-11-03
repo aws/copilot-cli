@@ -41,6 +41,10 @@ func TestRecursiveWatcher(t *testing.T) {
 			Op:   fsnotify.Write,
 		},
 		{
+			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
+			Op:   fsnotify.Write,
+		},
+		{
 			Name: fmt.Sprintf("%s/watch/subdir", tmp),
 			Op:   fsnotify.Rename,
 		},
