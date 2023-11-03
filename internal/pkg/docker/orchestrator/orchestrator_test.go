@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -240,32 +239,7 @@ func TestOrchestrator(t *testing.T) {
 			stopAfterNErrs: 1,
 			errs:           []string{`setup proxy connections: setup proxy connection for "remote-foo": process output for proxy to remote-foo:80: some error`},
 		},
-		"proxy setup, subnet out of space": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
-				de := &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
-						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
-							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
-						}
-						return nil
-					},
-				}
-				return func(t *testing.T, o *Orchestrator) {
-					_, ipNet, err := net.ParseCIDR("172.20.0.0/24") // 172.20.0.0 - 172.20.0.255
-					require.NoError(t, err)
-
-					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(257)...))
-				}, de
-			},
-			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: no more addresses in network`},
-		},
-		"proxy setup, run out of ipv4 space": {
+		"proxy setup, ip increment error": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, DockerEngine) {
 				de := &dockerenginetest.Double{
@@ -288,7 +262,7 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: get next ip: ip overflow`},
+			errs:           []string{`setup proxy connections: increment ip: max ipv4 address`},
 		},
 		"proxy setup, ip tables error": {
 			logOptions: noLogs,
@@ -419,49 +393,6 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 		},
-		"proxy success, subnet overflow": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
-				waitUntilRun := make(chan struct{})
-				var gotHosts []string
-
-				de := &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
-						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
-							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
-						} else if cmd == "/bin/bash" {
-							gotHosts = append(gotHosts, args[1])
-						}
-						return nil
-					},
-					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
-						if opts.ContainerName == "prefix-foo" {
-							close(waitUntilRun)
-						}
-						return nil
-					},
-				}
-				return func(t *testing.T, o *Orchestrator) {
-					_, ipNet, err := net.ParseCIDR("172.20.0.0/23") // 172.20.0.0 - 172.20.1.255
-					require.NoError(t, err)
-
-					o.RunTask(Task{
-						Containers: map[string]ContainerDefinition{
-							"foo": {},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(257)...))
-
-					<-waitUntilRun
-					require.True(t, slices.ContainsFunc(gotHosts, func(s string) bool {
-						return strings.HasPrefix(s, "echo 172.20.1.0")
-					}))
-				}, de
-			},
-		},
 		"proxy success, connection runtime error": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, DockerEngine) {
@@ -542,6 +473,47 @@ func TestOrchestrator(t *testing.T) {
 			}()
 
 			wg.Wait()
+		})
+	}
+}
+
+func TestIPv4Increment(t *testing.T) {
+	tests := map[string]struct {
+		cidrIP string
+
+		wantErr string
+		wantIP  string
+	}{
+		"increment": {
+			cidrIP: "10.0.0.15/24",
+			wantIP: "10.0.0.16",
+		},
+		"overflows to next octet": {
+			cidrIP: "10.0.0.255/16",
+			wantIP: "10.0.1.0",
+		},
+		"error if no more ipv4 addresses": {
+			cidrIP:  "255.255.255.255/16",
+			wantErr: "max ipv4 address",
+		},
+		"error if out of network": {
+			cidrIP:  "10.0.0.255/24",
+			wantErr: "no more addresses in network",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ip, network, err := net.ParseCIDR(tc.cidrIP)
+			require.NoError(t, err)
+
+			gotIP, gotErr := ipv4Increment(ip, network)
+			if tc.wantErr != "" {
+				require.EqualError(t, gotErr, tc.wantErr)
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantIP, gotIP.String())
+			}
 		})
 	}
 }

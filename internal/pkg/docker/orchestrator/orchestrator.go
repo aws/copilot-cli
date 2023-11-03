@@ -257,35 +257,6 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 	}
 
 	ip := a.network.IP
-	increment := func(ip net.IP) (net.IP, error) {
-		// make a copy of the previous ip
-		tmp := ip.To4()
-		ip = net.IPv4(tmp[0], tmp[1], tmp[2], tmp[3])
-		ip = ip.To4()
-
-		var inc func(idx int) error
-		inc = func(idx int) error {
-			if idx == -1 {
-				return fmt.Errorf("ip overflow")
-			}
-
-			ip[idx]++
-			if ip[idx] == 0 { // overflow occured
-				return inc(idx - 1)
-			}
-			return nil
-		}
-
-		err := inc(3) // 3 since this is an ipv4 address
-		if err != nil {
-			return nil, fmt.Errorf("get next ip: %w", err)
-		}
-		if !a.network.Contains(ip) {
-			return nil, fmt.Errorf("no more addresses in network")
-		}
-		return ip, err
-	}
-
 	for host, port := range ports {
 		err := o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables",
 			"--table", "nat",
@@ -311,9 +282,9 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			return fmt.Errorf("update /etc/hosts: %w", err)
 		}
 
-		ip, err = increment(ip)
+		ip, err = ipv4Increment(ip, &a.network)
 		if err != nil {
-			return err
+			return fmt.Errorf("increment ip: %w", err)
 		}
 
 		fmt.Printf("Created connection to %v:%v\n", host.Name, host.Port)
@@ -321,6 +292,37 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 
 	fmt.Printf("Finished setting up proxy connections\n\n")
 	return nil
+}
+
+// ipv4Increment returns a copy of ip that has been incremented.
+func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
+	// make a copy of the previous ip
+	cpy := make(net.IP, len(ip))
+	copy(cpy, ip)
+
+	ipv4 := cpy.To4()
+
+	var inc func(idx int) error
+	inc = func(idx int) error {
+		if idx == -1 {
+			return errors.New("max ipv4 address")
+		}
+
+		ipv4[idx]++
+		if ipv4[idx] == 0 { // overflow occured
+			return inc(idx - 1)
+		}
+		return nil
+	}
+
+	err := inc(3) // 3 since this is an ipv4 address
+	if err != nil {
+		return nil, err
+	}
+	if !network.Contains(ipv4) {
+		return nil, fmt.Errorf("no more addresses in network")
+	}
+	return ipv4, nil
 }
 
 // setupProxyConnection establishes an AWS SSM Port Forwarding connection to
