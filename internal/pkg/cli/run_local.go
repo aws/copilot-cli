@@ -236,7 +236,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	}
 	o.debounceTime = 5 * time.Second
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
-		return file.NewRecursiveWatcher(1)
+		return file.NewRecursiveWatcher()
 	}
 	return o, nil
 }
@@ -529,7 +529,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 
 	return watchCh, watchErrCh, nil
 }
-  
+
 func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]string, error) {
 	creds, err := sess.Config.Credentials.GetWithContext(ctx)
 	if err != nil {

@@ -20,14 +20,14 @@ type RecursiveWatcher struct {
 }
 
 // NewRecursiveWatcher returns a RecursiveWatcher which notifies when changes are made to files inside a recursive directory tree.
-func NewRecursiveWatcher(buffer uint) (*RecursiveWatcher, error) {
-	watcher, err := fsnotify.NewBufferedWatcher(buffer)
+func NewRecursiveWatcher() (*RecursiveWatcher, error) {
+	watcher, err := fsnotify.NewBufferedWatcher(1)
 	if err != nil {
 		return nil, err
 	}
 
 	rw := &RecursiveWatcher{
-		events:          make(chan fsnotify.Event, buffer),
+		events:          make(chan fsnotify.Event, 1),
 		errors:          make(chan error),
 		fsnotifyWatcher: watcher,
 		done:            make(chan struct{}),
@@ -67,17 +67,24 @@ func (rw *RecursiveWatcher) Errors() <-chan error {
 
 // Close closes the RecursiveWatcher.
 func (rw *RecursiveWatcher) Close() error {
-	rw.closed = true
-	close(rw.done)
-	return rw.fsnotifyWatcher.Close()
+	for {
+		select {
+		case event := <-rw.fsnotifyWatcher.Events:
+			rw.events <- event
+		case err := <-rw.fsnotifyWatcher.Errors:
+			rw.errors <- err
+		default:
+			rw.closed = true
+			close(rw.done)
+			return rw.fsnotifyWatcher.Close()
+		}
+	}
 }
 
 func (rw *RecursiveWatcher) start() {
 	for {
 		select {
 		case event := <-rw.fsnotifyWatcher.Events:
-			rw.events <- event
-
 			// handle recursive watch
 			switch event.Op {
 			case fsnotify.Create:
@@ -86,6 +93,8 @@ func (rw *RecursiveWatcher) start() {
 					rw.errors <- err
 				}
 			}
+
+			rw.events <- event
 		case err := <-rw.fsnotifyWatcher.Errors:
 			rw.errors <- err
 		case <-rw.done:
