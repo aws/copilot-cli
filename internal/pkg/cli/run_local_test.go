@@ -480,8 +480,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
 						{
-
-							Host: "a-different-service",
+							Name: "a-different-service",
 							Port: "80",
 						},
 					}, nil
@@ -502,8 +501,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
 						{
-
-							Host: "a-different-service",
+							Name: "a-different-service",
 							Port: "80",
 						},
 					}, nil
@@ -530,8 +528,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
 						{
-
-							Host: "a-different-service",
+							Name: "a-different-service",
 							Port: "80",
 						},
 					}, nil
@@ -558,8 +555,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
 						{
-
-							Host: "a-different-service",
+							Name: "a-different-service",
 							Port: "80",
 						},
 					}, nil
@@ -616,8 +612,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
 						{
-
-							Host: "a-different-service",
+							Name: "a-different-service",
 							Port: "80",
 						},
 					}, nil
@@ -1257,7 +1252,7 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 			},
 			wantHosts: []orchestrator.Host{
 				{
-					Host: "primary",
+					Name: "primary",
 					Port: "80",
 				},
 			},

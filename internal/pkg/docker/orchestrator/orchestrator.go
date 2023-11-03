@@ -150,7 +150,7 @@ type RunTaskOption func(*runTaskAction)
 
 // Host represents a service reachable via the network.
 type Host struct {
-	Host string
+	Name string
 	Port string
 }
 
@@ -222,6 +222,13 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	return nil
 }
 
+// setupProxyConnections creates proxy connections to a.hosts in pauseContainer.
+// It assumes that pauseContainer is already running. A unique proxy connection
+// is created for each host (in parallel) using AWS SSM Port Forwarding through
+// a.remoteContainerID. Then, each connection is assigned an IP from a.network,
+// starting at the bottom of the IP range. Using iptables, TCP packets destined
+// for the connection's assigned IP are redirected to the connection. Finally,
+// the host's name is mapped to its assigned IP in /etc/hosts.
 func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer string, a *runTaskAction) error {
 	fmt.Printf("\nSetting up proxy connections...\n")
 	g, gctx := errgroup.WithContext(ctx)
@@ -235,7 +242,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			defer o.wg.Done()
 			port, err := o.setupProxyConnection(gctx, pauseContainer, a.remoteContainerID, host)
 			if err != nil {
-				return fmt.Errorf("setup proxy connection for %q: %w", host.Host, err)
+				return fmt.Errorf("setup proxy connection for %q: %w", host.Name, err)
 			}
 
 			portsMu.Lock()
@@ -299,7 +306,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 		}
 
 		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "/bin/bash",
-			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Host))
+			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Name))
 		if err != nil {
 			return fmt.Errorf("update /etc/hosts: %w", err)
 		}
@@ -309,14 +316,19 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			return err
 		}
 
-		fmt.Printf("Created connection to %v:%v\n", host.Host, host.Port)
+		fmt.Printf("Created connection to %v:%v\n", host.Name, host.Port)
 	}
 
 	fmt.Printf("Finished setting up proxy connections\n\n")
 	return nil
 }
 
-func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
+// setupProxyConnection establishes an AWS SSM Port Forwarding connection to
+// host in pauseContainer via remoteContainer. Since this command is long-running,
+// errors that occur before discovering the epheremal port assigned to the
+// connection are returned. If an error occurs after the port is returned by
+// this function, it is reported as a runtime error to the main Orchestrator routine.
+func (o *Orchestrator) setupProxyConnection(ctx context.Context, pauseContainer, remoteContainer string, host Host) (string, error) {
 	errCh := make(chan error)
 	returned := make(chan struct{})
 	defer close(returned)
@@ -341,12 +353,12 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 	go func() {
 		defer o.wg.Done()
 
-		err := o.docker.Exec(context.Background(), localContainer, pw, "aws", "ssm", "start-session",
+		err := o.docker.Exec(context.Background(), pauseContainer, pw, "aws", "ssm", "start-session",
 			"--target", remoteContainer,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
-			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Host, host.Port))
+			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Name, host.Port))
 		if err != nil {
-			reportError(fmt.Errorf("proxy to %v:%v: %w", host.Host, host.Port, err))
+			reportError(fmt.Errorf("proxy to %v:%v: %w", host.Name, host.Port, err))
 		}
 	}()
 
@@ -367,7 +379,7 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			reportError(fmt.Errorf("process output for proxy to %v:%v: %w", host.Host, host.Port, err))
+			reportError(fmt.Errorf("process output for proxy to %v:%v: %w", host.Name, host.Port, err))
 		}
 	}()
 

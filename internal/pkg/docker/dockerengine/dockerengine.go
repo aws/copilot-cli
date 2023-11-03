@@ -85,8 +85,8 @@ type RunOptions struct {
 	ContainerPorts       map[string]string // Optional. Contains host and container ports.
 	Command              []string          // Optional. The command to run in the container.
 	ContainerNetwork     string            // Optional. Network mode for the container.
-	LogOptions           RunLogOptions
-	AddLinuxCapabilities []string
+	LogOptions           RunLogOptions     // Optional. Configure logging for output from the container
+	AddLinuxCapabilities []string          // Optional. Adds linux capabilities to the container.
 }
 
 // RunLogOptions holds the logging configuration for Run().
@@ -205,7 +205,7 @@ func (c DockerCmdClient) Login(uri, username, password string) error {
 	return nil
 }
 
-// Exec calls runs cmd in conatiner with args, and sets Stdout and Stderr to out.
+// Exec runs cmd in container with args and writes stderr/stdout to out.
 func (c DockerCmdClient) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
 	return c.runner.RunWithContext(ctx, "docker", append([]string{
 		"exec",

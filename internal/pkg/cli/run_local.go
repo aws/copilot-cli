@@ -701,7 +701,7 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 		for _, sc := range svc.Deployments[idx].ServiceConnectConfiguration.Services {
 			for _, alias := range sc.ClientAliases {
 				hosts = append(hosts, orchestrator.Host{
-					Host: aws.StringValue(alias.DnsName),
+					Name: aws.StringValue(alias.DnsName),
 					Port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
 				})
 			}
