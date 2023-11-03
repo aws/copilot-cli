@@ -314,6 +314,9 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 }
 
 func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer, remoteContainer string, host Host) (string, error) {
+	returned := make(chan struct{})
+	defer close(returned)
+
 	pr, pw := io.Pipe()
 	errCh := make(chan error)
 
@@ -330,7 +333,7 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 			case errCh <- err:
 				// this will never happen if setupProxyConnection() has already
 				// returned, as no goroutine will be able to read from errCh.
-			default:
+			case <-returned:
 				// if setupProxyConnection() has already returned, we should report
 				// this as a runtime error from the pause container
 				if o.curTaskID.Load() != orchestratorStoppedTaskID {
@@ -350,7 +353,7 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, localContainer,
 			return "", ctx.Err()
 		case err := <-errCh:
 			return "", err
-		case <-time.After(100 * time.Millisecond):
+		default:
 			// the line we want looks like:
 			// Port 61972 opened for sessionId mySessionId
 			line, err := out.ReadString('\n')
