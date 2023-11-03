@@ -269,6 +269,63 @@ func TestOrchestrator(t *testing.T) {
 				<-sync
 			},
 		},
+		"proxy success, connection runtime error": {
+			dockerEngine: func(t *testing.T, sync chan struct{}) DockerEngine {
+				runCalled := make(chan struct{})
+				return &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
+						if cmd == "aws" {
+							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
+							<-runCalled // wait to return error after Run() is called
+							fmt.Printf("returning\n")
+							return errors.New("some error")
+						} else if cmd == "iptables" {
+							close(runCalled)
+						}
+						return nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-foo" {
+							sync <- struct{}{}
+						}
+						return nil
+					},
+				}
+			},
+			logOptions: noLogs,
+			test: func(t *testing.T, o *Orchestrator, sync chan struct{}) {
+				_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
+				require.NoError(t, err)
+
+				o.RunTask(Task{
+					PauseSecrets: map[string]string{
+						"A_SECRET": "very secret",
+					},
+					Containers: map[string]ContainerDefinition{
+						"foo": {
+							Ports: map[string]string{
+								"8080": "80",
+							},
+						},
+						"bar": {
+							Ports: map[string]string{
+								"9000": "90",
+							},
+						},
+					},
+				}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
+					Host: "remote-foo",
+					Port: "80",
+				}))
+
+				// don't stop until Run() has been called for foo
+				<-sync
+			},
+			errs: []string{`proxy connection to remote-foo:80 closed: some error`},
+		},
 	}
 
 	for name, tc := range tests {
