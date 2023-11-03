@@ -1,3 +1,5 @@
+//go:build integration || localintegration
+
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -38,6 +40,10 @@ func TestRecursiveWatcher(t *testing.T) {
 			Op:   fsnotify.Write,
 		},
 		{
+			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
+			Op:   fsnotify.Write,
+		},
+		{
 			Name: fmt.Sprintf("%s/watch/subdir", tmp),
 			Op:   fsnotify.Rename,
 		},
@@ -67,7 +73,7 @@ func TestRecursiveWatcher(t *testing.T) {
 		err := os.MkdirAll(fmt.Sprintf("%s/watch/subdir", tmp), 0755)
 		require.NoError(t, err)
 
-		watcher, err = file.NewRecursiveWatcher()
+		watcher, err = file.NewRecursiveWatcher(10)
 		require.NoError(t, err)
 	})
 
@@ -90,6 +96,7 @@ func TestRecursiveWatcher(t *testing.T) {
 
 		err = os.WriteFile(fmt.Sprintf("%s/watch/subdir/testfile", tmp), []byte("write to file"), fs.ModeAppend)
 		require.NoError(t, err)
+		eventsActual = append(eventsActual, <-eventsCh)
 		eventsActual = append(eventsActual, <-eventsCh)
 
 		err = file.Close()

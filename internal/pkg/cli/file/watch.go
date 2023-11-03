@@ -20,14 +20,14 @@ type RecursiveWatcher struct {
 }
 
 // NewRecursiveWatcher returns a RecursiveWatcher which notifies when changes are made to files inside a recursive directory tree.
-func NewRecursiveWatcher() (*RecursiveWatcher, error) {
-	watcher, err := fsnotify.NewBufferedWatcher(1)
+func NewRecursiveWatcher(buffer uint) (*RecursiveWatcher, error) {
+	watcher, err := fsnotify.NewBufferedWatcher(buffer)
 	if err != nil {
 		return nil, err
 	}
 
 	rw := &RecursiveWatcher{
-		events:          make(chan fsnotify.Event, 1),
+		events:          make(chan fsnotify.Event, buffer),
 		errors:          make(chan error),
 		fsnotifyWatcher: watcher,
 		done:            make(chan struct{}),

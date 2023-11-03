@@ -236,7 +236,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	}
 	o.debounceTime = 5 * time.Second
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
-		return file.NewRecursiveWatcher()
+		return file.NewRecursiveWatcher(0)
 	}
 	return o, nil
 }
