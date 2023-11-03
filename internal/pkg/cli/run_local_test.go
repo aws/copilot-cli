@@ -578,7 +578,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedError: errors.New(`no running tasks have running containers with esc exec enabled`),
+			wantedError: errors.New(`get running container IDs: no running tasks have running containers with ecs exec enabled`),
 		},
 		"success, one run task call": {
 			inputAppName:  testAppName,

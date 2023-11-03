@@ -347,7 +347,11 @@ func (o *runLocalOpts) Execute() error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
-	o.orchestrator.RunTask(task, orchestrator.RunTaskWithProxy(remoteContainerID, o.proxyNetwork, hosts...))
+	var runTaskOpts []orchestrator.RunTaskOption
+	if o.proxy {
+		runTaskOpts = append(runTaskOpts, orchestrator.RunTaskWithProxy(remoteContainerID, o.proxyNetwork, hosts...))
+	}
+	o.orchestrator.RunTask(task, runTaskOpts...)
 
 	for {
 		select {
