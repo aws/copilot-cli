@@ -5,10 +5,8 @@ package file
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -22,14 +20,14 @@ type RecursiveWatcher struct {
 }
 
 // NewRecursiveWatcher returns a RecursiveWatcher which notifies when changes are made to files inside a recursive directory tree.
-func NewRecursiveWatcher() (*RecursiveWatcher, error) {
-	watcher, err := fsnotify.NewWatcher()
+func NewRecursiveWatcher(buffer uint) (*RecursiveWatcher, error) {
+	watcher, err := fsnotify.NewBufferedWatcher(buffer)
 	if err != nil {
 		return nil, err
 	}
 
 	rw := &RecursiveWatcher{
-		events:          make(chan fsnotify.Event),
+		events:          make(chan fsnotify.Event, buffer),
 		errors:          make(chan error),
 		fsnotifyWatcher: watcher,
 		done:            make(chan struct{}),
@@ -46,37 +44,15 @@ func (rw *RecursiveWatcher) Add(path string) error {
 	if rw.closed {
 		return fsnotify.ErrClosed
 	}
-	if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+	return filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return nil
 		}
 		if d.IsDir() {
-			return rw.fsnotifyWatcher.Add(path)
+			return rw.fsnotifyWatcher.Add(p)
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Remove recursively removes a directory tree from the list of watched files.
-func (rw *RecursiveWatcher) Remove(path string) error {
-	if rw.closed {
-		return nil
-	}
-	if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return rw.fsnotifyWatcher.Remove(path)
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 // Events returns the events channel.
@@ -100,37 +76,15 @@ func (rw *RecursiveWatcher) start() {
 	for {
 		select {
 		case event := <-rw.fsnotifyWatcher.Events:
-			if event.Has(fsnotify.Write) {
-				// cannot be a directory, skip call to os.Stat
-				rw.events <- event
-				return
-			}
+			rw.events <- event
 
-			info, err := os.Stat(event.Name)
-			if err != nil {
-				log.Error(err)
-				break
-			}
-
-			if info.IsDir() {
-				// handle recursive watch
-				switch event.Op {
-				case fsnotify.Create:
-					err := rw.Add(event.Name)
-					if err != nil {
-						rw.errors <- err
-					}
-				case fsnotify.Rename:
-					fallthrough
-				case fsnotify.Remove:
-					err := rw.Remove(event.Name)
-					if err != nil {
-						rw.errors <- err
-					}
+			// handle recursive watch
+			switch event.Op {
+			case fsnotify.Create:
+				err := rw.Add(event.Name)
+				if err != nil {
+					rw.errors <- err
 				}
-			} else {
-				// not a directory, pass event
-				rw.events <- event
 			}
 		case err := <-rw.fsnotifyWatcher.Errors:
 			rw.errors <- err

@@ -236,7 +236,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	}
 	o.debounceTime = 5 * time.Second
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
-		return file.NewRecursiveWatcher()
+		return file.NewRecursiveWatcher(1)
 	}
 	return o, nil
 }
@@ -494,7 +494,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					break
 				}
 
-				// check if any subdirectories within copilotDir are hidden
+				// check if any subdirectories within copilot directory are hidden
 				isHidden := false
 				parent := copilotDir
 				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
