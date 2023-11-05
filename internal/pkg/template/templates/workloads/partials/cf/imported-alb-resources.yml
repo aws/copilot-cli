@@ -1,3 +1,4 @@
+# If there's an HTTPS listener on the imported ALB, forward traffic to tasks.
 {{$httpsARN := .ImportedALB.HTTPSListenerARN}}
 {{- if ne $httpsARN ""}}
 HTTPSRulePriorityAction:
@@ -45,6 +46,7 @@ HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
     Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
   {{- end}}
 
+# If there's a second listener that's HTTP, redirect to the HTTPS listener.
   {{$httpARN := .ImportedALB.HTTPListenerARN}}
   {{- if ne $httpARN ""}}
   HTTPRedirectRulePriorityAction:
@@ -98,6 +100,8 @@ HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
       Priority: !GetAtt HTTPRedirectRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end}}
   {{- end}}
+
+# If there's only an HTTP listener, forward traffic to tasks.
   {{- else}}
   {{$httpARN := .ImportedALB.HTTPListenerARN}}
   HTTPRulePriorityAction:
