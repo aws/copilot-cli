@@ -888,8 +888,9 @@ type ImportedALB struct {
 	ARN                  string
 	DNSName              string
 	HasMultipleListeners bool
-	Listeners            []LBListener
-	SecurityGroups       []LBSecurityGroup
+
+	Listeners      []LBListener
+	SecurityGroups []LBSecurityGroup
 }
 
 // LBListener struct represents the listener of a load balancer. // TODO(jwh): instead, reuse ALBListener
@@ -902,6 +903,28 @@ type LBListener struct {
 // LBSecurityGroup struct represents the security group of a load balancer.
 type LBSecurityGroup struct {
 	ID string
+}
+
+// HTTPListenerARN returns the listener ARN if the protocol is HTTP.
+func (alb *ImportedALB) HTTPListenerARN() string {
+	var arn string
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTP" {
+			arn = listener.Protocol
+		}
+	}
+	return arn
+}
+
+// HTTPSListenerARN returns the listener ARN if the protocol is HTTPS.
+func (alb *ImportedALB) HTTPSListenerARN() string {
+	var arn string
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTPS" {
+			arn = listener.Protocol
+		}
+	}
+	return arn
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template

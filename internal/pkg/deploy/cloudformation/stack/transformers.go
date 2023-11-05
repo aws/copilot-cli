@@ -730,7 +730,7 @@ func (s *LoadBalancedWebService) convertImportedALB() (*template.ImportedALB, er
 		return nil, nil
 	}
 	var hasMultipleListeners bool
-	if len(s.importedALB.Listeners) >= 2 {
+	if len(s.importedALB.Listeners) == 2 {
 		hasMultipleListeners = true
 	}
 	var listeners []template.LBListener

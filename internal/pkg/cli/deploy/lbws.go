@@ -244,19 +244,19 @@ func (d *lbWebSvcDeployer) validateImportedALBConfig() error {
 		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB), err)
 	}
 	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
-		return fmt.Errorf(`imported ALB %q must have exactly two listeners`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
+		return fmt.Errorf(`imported ALB %q must either one or two listeners`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
 	}
 	if len(alb.Listeners) == 2 {
-		var has80, has443 bool
+		var isHTTP, isHTTPS bool
 		for _, listener := range alb.Listeners {
-			if listener.Port == 80 {
-				has80 = true
-			} else if listener.Port == 443 {
-				has443 = true
+			if listener.Protocol == "HTTP" {
+				isHTTP = true
+			} else if listener.Protocol == "HTTPS" {
+				isHTTP = true
 			}
 		}
-		if !(has80 && has443) {
-			return fmt.Errorf("imported ALB must have listeners on ports 80 and 443")
+		if !(isHTTP && isHTTPS) {
+			return fmt.Errorf("imported ALB must have listeners of protocol HTTP and HTTPS")
 		}
 	}
 	return nil
