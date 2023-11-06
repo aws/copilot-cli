@@ -139,10 +139,12 @@ func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
 }
 
 type runTaskAction struct {
-	task      Task
+	task Task
+
+	// optional vars for proxy
 	hosts     []Host
 	ssmTarget string
-	network   net.IPNet
+	network   *net.IPNet
 }
 
 // RunTaskOption adds optional data to RunTask.
@@ -159,7 +161,7 @@ func RunTaskWithProxy(ssmTarget string, network net.IPNet, hosts ...Host) RunTas
 	return func(r *runTaskAction) {
 		r.ssmTarget = ssmTarget
 		r.hosts = hosts
-		r.network = network
+		r.network = &network
 	}
 }
 
@@ -282,7 +284,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			return fmt.Errorf("update /etc/hosts: %w", err)
 		}
 
-		ip, err = ipv4Increment(ip, &a.network)
+		ip, err = ipv4Increment(ip, a.network)
 		if err != nil {
 			return fmt.Errorf("increment ip: %w", err)
 		}
