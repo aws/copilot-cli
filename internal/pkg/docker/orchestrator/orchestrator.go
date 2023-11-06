@@ -4,7 +4,6 @@
 package orchestrator
 
 import (
-	"bufio"
 	"context"
 	_ "embed"
 	"errors"
@@ -13,13 +12,12 @@ import (
 	"maps"
 	"net"
 	"os"
-	"strings"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"golang.org/x/sync/errgroup"
 )
 
 // Orchestrator manages running a Task. Only a single Task
@@ -233,29 +231,33 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 // the host's name is mapped to its assigned IP in /etc/hosts.
 func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer string, a *runTaskAction) error {
 	fmt.Printf("\nSetting up proxy connections...\n")
-	g, gctx := errgroup.WithContext(ctx)
-	ports := make(map[Host]string)
-	portsMu := &sync.Mutex{}
+
+	ports := make(map[Host]uint16)
+	port := uint16(50000)
+	for i := range a.hosts {
+		ports[a.hosts[i]] = port
+		port++
+	}
 
 	for _, host := range a.hosts {
 		host := host
+		portForHost := ports[host]
+
 		o.wg.Add(1)
-		g.Go(func() error {
+		go func() {
 			defer o.wg.Done()
-			port, err := o.setupProxyConnection(gctx, a.ssmTarget, pauseContainer, host)
+
+			err := o.docker.Exec(context.Background(), pauseContainer, io.Discard, "aws", "ssm", "start-session",
+				"--target", a.ssmTarget,
+				"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
+				"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"],"localPortNumber":["%d"]}`, host.Name, host.Port, portForHost))
 			if err != nil {
-				return fmt.Errorf("setup proxy connection for %q: %w", host.Name, err)
+				// report err as a runtime error from the pause container
+				if o.curTaskID.Load() != orchestratorStoppedTaskID {
+					o.runErrs <- fmt.Errorf("proxy to %v:%v: %w", host.Name, host.Port, err)
+				}
 			}
-
-			portsMu.Lock()
-			defer portsMu.Unlock()
-			ports[host] = port
-			return nil
-		})
-	}
-
-	if err := g.Wait(); err != nil {
-		return err
+		}()
 	}
 
 	ip := a.network.IP
@@ -268,7 +270,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			"--match", "tcp",
 			"--dport", host.Port,
 			"--jump", "REDIRECT",
-			"--to-ports", port)
+			"--to-ports", strconv.Itoa(int(port)))
 		if err != nil {
 			return fmt.Errorf("modify iptables: %w", err)
 		}
@@ -325,89 +327,6 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 		return nil, fmt.Errorf("no more addresses in network")
 	}
 	return ipv4, nil
-}
-
-// setupProxyConnection establishes an AWS SSM Port Forwarding connection to
-// host in pauseContainer via ssmTarget. Since this command is long-running,
-// errors that occur before discovering the epheremal port assigned to the
-// connection are returned. If an error occurs after the port is returned by
-// this function, it is reported as a runtime error to the main Orchestrator routine.
-func (o *Orchestrator) setupProxyConnection(ctx context.Context, ssmTarget, pauseContainer string, host Host) (string, error) {
-	errCh := make(chan error)
-	returned := make(chan struct{})
-	defer close(returned)
-
-	reportError := func(err error) {
-		select {
-		case errCh <- err:
-			// if setupProxyConnection() hasn't returned yet, report the error.
-			// this will never happen if setupProxyConnection() has already
-			// returned, as no goroutine will be able to read from errCh.
-		case <-returned:
-			// if setupProxyConnection() has already returned, we report
-			// this as a runtime error from the pause container
-			if o.curTaskID.Load() != orchestratorStoppedTaskID {
-				o.runErrs <- err
-			}
-		}
-	}
-
-	pr, pw := io.Pipe()
-	o.wg.Add(1)
-	go func() {
-		defer o.wg.Done()
-
-		err := o.docker.Exec(context.Background(), pauseContainer, pw, "aws", "ssm", "start-session",
-			"--target", ssmTarget,
-			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
-			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Name, host.Port))
-		if err != nil {
-			reportError(fmt.Errorf("proxy to %v:%v: %w", host.Name, host.Port, err))
-		}
-	}()
-
-	scanner := bufio.NewScanner(pr)
-	lines := make(chan string)
-
-	// read the output of exec, so the buffer doesn't
-	// fill up and block the ssm session process. until setupProxyConnection()
-	// returns, we'll send the output to lines.
-	o.wg.Add(1)
-	go func() {
-		defer o.wg.Done()
-		for scanner.Scan() {
-			line := scanner.Text()
-			select {
-			case lines <- line:
-			default:
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			reportError(fmt.Errorf("process output for proxy to %v:%v: %w", host.Name, host.Port, err))
-		}
-	}()
-
-	var port string
-	for port == "" {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case err := <-errCh:
-			return "", err
-		case line := <-lines:
-			// the line we want looks like:
-			// Port 61972 opened for sessionId mySessionId
-			if strings.HasPrefix(strings.TrimSpace(line), "Port ") {
-				split := strings.Split(line, " ")
-				if len(split) > 2 {
-					port = split[1]
-					break
-				}
-			}
-		}
-	}
-
-	return port, nil
 }
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {

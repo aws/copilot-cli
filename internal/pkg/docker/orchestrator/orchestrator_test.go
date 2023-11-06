@@ -193,7 +193,6 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
 							return errors.New("some error")
 						}
 						return nil
@@ -210,34 +209,7 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: setup proxy connection for "remote-foo": proxy to remote-foo:80: some error`},
-		},
-		"proxy setup, connection error writing lines": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
-				de := &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
-						if cmd == "aws" {
-							w.(*io.PipeWriter).CloseWithError(errors.New("some error"))
-						}
-						return nil
-					},
-				}
-				return func(t *testing.T, o *Orchestrator) {
-					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
-					require.NoError(t, err)
-
-					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
-						Name: "remote-foo",
-						Port: "80",
-					}))
-				}, de
-			},
-			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: setup proxy connection for "remote-foo": process output for proxy to remote-foo:80: some error`},
+			errs:           []string{`proxy to remote-foo:80: some error`},
 		},
 		"proxy setup, ip increment error": {
 			logOptions: noLogs,
@@ -248,7 +220,6 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
 							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
 						}
 						return nil
@@ -273,7 +244,6 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
 							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
 						} else if cmd == "iptables" {
 							return errors.New("some error")
@@ -303,7 +273,6 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
 							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
 						} else if cmd == "iptables-save" {
 							return errors.New("some error")
@@ -333,7 +302,6 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
 							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
 						} else if cmd == "/bin/bash" {
 							return errors.New("some error")
@@ -364,7 +332,6 @@ func TestOrchestrator(t *testing.T) {
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
 							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
 						}
 						return nil
@@ -392,47 +359,6 @@ func TestOrchestrator(t *testing.T) {
 					<-waitUntilRun
 				}, de
 			},
-		},
-		"proxy success, connection runtime error": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
-				runCalled := make(chan struct{})
-				de := &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
-						if cmd == "aws" {
-							defer w.(io.WriteCloser).Close()
-							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
-							<-runCalled // wait to return error after Run() is called
-							return errors.New("some error")
-						}
-						return nil
-					},
-					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
-						if opts.ContainerName == "prefix-foo" {
-							close(runCalled)
-						}
-						return nil
-					},
-				}
-				return func(t *testing.T, o *Orchestrator) {
-					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
-					require.NoError(t, err)
-
-					o.RunTask(Task{
-						Containers: map[string]ContainerDefinition{
-							"foo": {},
-						},
-					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
-						Name: "remote-foo",
-						Port: "80",
-					}))
-				}, de
-			},
-			stopAfterNErrs: 1,
-			errs:           []string{`proxy to remote-foo:80: some error`},
 		},
 	}
 
