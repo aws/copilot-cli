@@ -563,7 +563,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
 					Tasks: []*awsecs.Task{
 						{
-							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/cluster/hash"),
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName"),
 							Containers: []*sdkecs.Container{
 								{
 									RuntimeId:  aws.String("runtime-id"),
@@ -620,7 +620,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
 					Tasks: []*awsecs.Task{
 						{
-							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/cluster/hash"),
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName"),
 							Containers: []*sdkecs.Container{
 								{
 									RuntimeId:  aws.String("runtime-id"),

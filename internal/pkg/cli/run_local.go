@@ -374,6 +374,7 @@ func (o *runLocalOpts) getSSMTarget(ctx context.Context) (string, error) {
 	}
 
 	for _, task := range svc.Tasks {
+		// TaskArn should have the format: arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName
 		taskARN, err := arn.Parse(aws.StringValue(task.TaskArn))
 		if err != nil {
 			return "", fmt.Errorf("parse task arn: %w", err)
