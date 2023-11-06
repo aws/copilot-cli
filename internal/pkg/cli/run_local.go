@@ -476,8 +476,11 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 	watcherEvents := watcher.Events()
 	watcherErrors := watcher.Errors()
 
-	debounceTimer := time.NewTimer(0)
-	<-debounceTimer.C // flush channel to create timer for later use with Reset()
+	debounceTimer := time.NewTimer(o.debounceTime)
+	if !debounceTimer.Stop() {
+		// flush the timer in case stop is called after the timer finishes
+		<-debounceTimer.C
+	}
 
 	go func() {
 		for {

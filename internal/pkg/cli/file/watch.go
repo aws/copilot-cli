@@ -46,6 +46,7 @@ func (rw *RecursiveWatcher) Add(path string) error {
 	}
 	return filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
+			// swallow error from WalkDir, don't attempt to add to watcher.
 			return nil
 		}
 		if d.IsDir() {
@@ -84,6 +85,10 @@ func (rw *RecursiveWatcher) Close() error {
 func (rw *RecursiveWatcher) start() {
 	for {
 		select {
+		case <-rw.done:
+			close(rw.events)
+			close(rw.errors)
+			return
 		case event := <-rw.fsnotifyWatcher.Events:
 			// handle recursive watch
 			switch event.Op {
@@ -97,10 +102,6 @@ func (rw *RecursiveWatcher) start() {
 			rw.events <- event
 		case err := <-rw.fsnotifyWatcher.Errors:
 			rw.errors <- err
-		case <-rw.done:
-			close(rw.events)
-			close(rw.errors)
-			return
 		}
 	}
 }
