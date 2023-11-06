@@ -68,18 +68,12 @@ func (rw *RecursiveWatcher) Errors() <-chan error {
 
 // Close closes the RecursiveWatcher.
 func (rw *RecursiveWatcher) Close() error {
-	for {
-		select {
-		case event := <-rw.fsnotifyWatcher.Events:
-			rw.events <- event
-		case err := <-rw.fsnotifyWatcher.Errors:
-			rw.errors <- err
-		default:
-			rw.closed = true
-			close(rw.done)
-			return rw.fsnotifyWatcher.Close()
-		}
+	if !rw.closed {
+		rw.closed = true
+		close(rw.done)
+		return rw.fsnotifyWatcher.Close()
 	}
+	return nil
 }
 
 func (rw *RecursiveWatcher) start() {
