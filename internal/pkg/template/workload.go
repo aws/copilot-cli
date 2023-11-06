@@ -910,7 +910,7 @@ func (alb *ImportedALB) HTTPListenerARN() string {
 	var arn string
 	for _, listener := range alb.Listeners {
 		if listener.Protocol == "HTTP" {
-			arn = listener.Protocol
+			arn = listener.ARN
 		}
 	}
 	return arn
@@ -921,7 +921,7 @@ func (alb *ImportedALB) HTTPSListenerARN() string {
 	var arn string
 	for _, listener := range alb.Listeners {
 		if listener.Protocol == "HTTPS" {
-			arn = listener.Protocol
+			arn = listener.ARN
 		}
 	}
 	return arn
