@@ -487,7 +487,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				}
 				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(nil, errors.New("some error"))
 			},
-			wantedError: errors.New("get running container IDs: describe service: some error"),
+			wantedError: errors.New("get proxy target container: describe service: some error"),
 		},
 		"error, proxy, parse arn": {
 			inputAppName:  testAppName,
@@ -514,7 +514,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedError: errors.New(`get running container IDs: parse task arn: arn: invalid prefix`),
+			wantedError: errors.New(`get proxy target container: parse task arn: arn: invalid prefix`),
 		},
 		"error, proxy, process task": {
 			inputAppName:  testAppName,
@@ -541,7 +541,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedError: errors.New(`get running container IDs: task ARN in unexpected format: "arn:aws:ecs:us-west-2:123456789:task/asdf"`),
+			wantedError: errors.New(`get proxy target container: task ARN in unexpected format: "arn:aws:ecs:us-west-2:123456789:task/asdf"`),
 		},
 		"error, proxy, no valid containers": {
 			inputAppName:  testAppName,
@@ -574,7 +574,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedError: errors.New(`get running container IDs: no running tasks have running containers with ecs exec enabled`),
+			wantedError: errors.New(`get proxy target container: no running tasks have running containers with ecs exec enabled`),
 		},
 		"success, one run task call": {
 			inputAppName:  testAppName,

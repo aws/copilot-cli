@@ -139,10 +139,10 @@ func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
 }
 
 type runTaskAction struct {
-	task              Task
-	hosts             []Host
-	remoteContainerID string
-	network           net.IPNet
+	task      Task
+	hosts     []Host
+	ssmTarget string
+	network   net.IPNet
 }
 
 // RunTaskOption adds optional data to RunTask.
@@ -155,9 +155,9 @@ type Host struct {
 }
 
 // RunTaskWithProxy returns a RunTaskOption that sets up a proxy connection to hosts.
-func RunTaskWithProxy(remoteContainerID string, network net.IPNet, hosts ...Host) RunTaskOption {
+func RunTaskWithProxy(ssmTarget string, network net.IPNet, hosts ...Host) RunTaskOption {
 	return func(r *runTaskAction) {
-		r.remoteContainerID = remoteContainerID
+		r.ssmTarget = ssmTarget
 		r.hosts = hosts
 		r.network = network
 	}
@@ -225,7 +225,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 // setupProxyConnections creates proxy connections to a.hosts in pauseContainer.
 // It assumes that pauseContainer is already running. A unique proxy connection
 // is created for each host (in parallel) using AWS SSM Port Forwarding through
-// a.remoteContainerID. Then, each connection is assigned an IP from a.network,
+// a.ssmTarget. Then, each connection is assigned an IP from a.network,
 // starting at the bottom of the IP range. Using iptables, TCP packets destined
 // for the connection's assigned IP are redirected to the connection. Finally,
 // the host's name is mapped to its assigned IP in /etc/hosts.
@@ -240,7 +240,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 		o.wg.Add(1)
 		g.Go(func() error {
 			defer o.wg.Done()
-			port, err := o.setupProxyConnection(gctx, pauseContainer, a.remoteContainerID, host)
+			port, err := o.setupProxyConnection(gctx, a.ssmTarget, pauseContainer, host)
 			if err != nil {
 				return fmt.Errorf("setup proxy connection for %q: %w", host.Name, err)
 			}
@@ -326,11 +326,11 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 }
 
 // setupProxyConnection establishes an AWS SSM Port Forwarding connection to
-// host in pauseContainer via remoteContainer. Since this command is long-running,
+// host in pauseContainer via ssmTarget. Since this command is long-running,
 // errors that occur before discovering the epheremal port assigned to the
 // connection are returned. If an error occurs after the port is returned by
 // this function, it is reported as a runtime error to the main Orchestrator routine.
-func (o *Orchestrator) setupProxyConnection(ctx context.Context, pauseContainer, remoteContainer string, host Host) (string, error) {
+func (o *Orchestrator) setupProxyConnection(ctx context.Context, ssmTarget, pauseContainer string, host Host) (string, error) {
 	errCh := make(chan error)
 	returned := make(chan struct{})
 	defer close(returned)
@@ -356,7 +356,7 @@ func (o *Orchestrator) setupProxyConnection(ctx context.Context, pauseContainer,
 		defer o.wg.Done()
 
 		err := o.docker.Exec(context.Background(), pauseContainer, pw, "aws", "ssm", "start-session",
-			"--target", remoteContainer,
+			"--target", ssmTarget,
 			"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
 			"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"]}`, host.Name, host.Port))
 		if err != nil {
