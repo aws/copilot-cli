@@ -315,7 +315,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 		},
 	}
-	alteredTaskDef := &ecs.TaskDefinition{
+	alteredTaskDef := &awsecs.TaskDefinition{
 		ContainerDefinitions: []*sdkecs.ContainerDefinition{
 			{
 				Name: aws.String("foo"),
@@ -526,7 +526,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
-				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return nil, fmt.Errorf("some error")
 				}
 			},
@@ -783,7 +783,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return errCh
 				}
 
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 				}
 
@@ -825,7 +825,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				}
 
 				count := 1
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					switch count {
 					case 1:
 						require.Equal(t, expectedTask, task)
@@ -869,7 +869,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return errCh
 				}
 
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					require.Equal(t, expectedTask, task)
 				}
 
@@ -909,7 +909,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return errCh
 				}
 				runCount := 1
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					require.Equal(t, expectedTask, task)
 					if runCount > 1 {
 						syscall.Kill(syscall.Getpid(), syscall.SIGINT)
