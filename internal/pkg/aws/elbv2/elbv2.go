@@ -210,17 +210,27 @@ type Listener struct {
 
 // listeners returns select information about all listeners on a given load balancer.
 func (e *ELBV2) listeners(lbARN string) ([]Listener, error) {
-	output, err := e.client.DescribeListeners(&elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)})
-	if err != nil {
-		return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)
-	}
 	var listeners []Listener
-	for _, listener := range output.Listeners {
-		listeners = append(listeners, Listener{
-			ARN:      aws.StringValue(listener.ListenerArn),
-			Port:     aws.Int64Value(listener.Port),
-			Protocol: aws.StringValue(listener.Protocol),
-		})
+	in := &elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)}
+	for {
+		output, err := e.client.DescribeListeners(in)
+		if err != nil {
+			return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)
+		}
+		if output == nil {
+			break
+		}
+		for _, listener := range output.Listeners {
+			listeners = append(listeners, Listener{
+				ARN:      aws.StringValue(listener.ListenerArn),
+				Port:     aws.Int64Value(listener.Port),
+				Protocol: aws.StringValue(listener.Protocol),
+			})
+		}
+		if output.NextMarker == nil {
+			break
+		}
+		in.Marker = output.NextMarker
 	}
 	return listeners, nil
 }
