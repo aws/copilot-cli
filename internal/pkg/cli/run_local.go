@@ -356,18 +356,18 @@ func (o *runLocalOpts) Execute() error {
 				return nil
 			}
 
-			fmt.Printf("error: %s\n", err)
+			log.Errorf("error: %s\n", err)
 			o.orchestrator.Stop()
 		case <-sigCh:
 			signal.Stop(sigCh)
 			o.orchestrator.Stop()
 		case <-watchErrCh:
-			fmt.Printf("watch: %s\n", err)
+			log.Errorf("watch: %s\n", err)
 			o.orchestrator.Stop()
 		case <-watchCh:
 			task, err = o.prepareTask(ctx)
 			if err != nil {
-				fmt.Printf("rerun task: %s\n", err)
+				log.Errorf("rerun task: %s\n", err)
 				o.orchestrator.Stop()
 				break
 			}
@@ -505,17 +505,17 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 }
 
 func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
-	copilotDir := o.ws.Path()
+	workspacePath := o.ws.Path()
 
 	watchCh := make(chan interface{})
 	watchErrCh := make(chan error)
 
 	watcher, err := o.newRecursiveWatcher()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("file: %w", err)
 	}
 
-	if err = watcher.Add(copilotDir); err != nil {
+	if err = watcher.Add(workspacePath); err != nil {
 		return nil, nil, err
 	}
 
@@ -553,8 +553,9 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 
 				// check if any subdirectories within copilot directory are hidden
 				isHidden := false
-				parent := copilotDir
+				parent := workspacePath
 				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
+				// fsnotify events are always of form /a/b/c, don't use filepath.Split as that's OS dependent
 				for _, child := range strings.Split(suffix, "/") {
 					parent = filepath.Join(parent, child)
 					subdirHidden, err := file.IsHiddenFile(child)

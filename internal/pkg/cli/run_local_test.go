@@ -540,6 +540,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
@@ -561,6 +563,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
@@ -588,6 +592,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{
@@ -615,6 +621,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
 				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
 					return []orchestrator.Host{

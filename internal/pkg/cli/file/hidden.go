@@ -7,7 +7,7 @@ package file
 
 import "path/filepath"
 
-// IsHiddenFile returns true if the file is hidden on non-windows.
+// IsHiddenFile returns true if the file is hidden on non-windows. The filename must be non-empty.
 func IsHiddenFile(filename string) (bool, error) {
 	return filepath.Base(filename)[0] == '.', nil
 }
