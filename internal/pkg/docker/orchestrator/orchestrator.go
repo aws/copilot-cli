@@ -323,7 +323,7 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 		return nil
 	}
 
-	err := inc(len(ip) - 1)
+	err := inc(len(ipv4) - 1)
 	if err != nil {
 		return nil, err
 	}
