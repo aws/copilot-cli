@@ -1738,6 +1738,21 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
+// DescribeService mocks base method.
+func (m *MockecsClient) DescribeService(app, env, svc string) (*ecs0.ServiceDesc, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeService", app, env, svc)
+	ret0, _ := ret[0].(*ecs0.ServiceDesc)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeService indicates an expected call of DescribeService.
+func (mr *MockecsClientMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockecsClient)(nil).DescribeService), app, env, svc)
+}
+
 // ServiceConnectServices mocks base method.
 func (m *MockecsClient) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, error) {
 	m.ctrl.T.Helper()
@@ -7691,6 +7706,25 @@ func (m *MockdockerEngineRunner) CheckDockerEngineRunning() error {
 func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).CheckDockerEngineRunning))
+}
+
+// Exec mocks base method.
+func (m *MockdockerEngineRunner) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, container, out, cmd}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Exec", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Exec indicates an expected call of Exec.
+func (mr *MockdockerEngineRunnerMockRecorder) Exec(ctx, container, out, cmd interface{}, args ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, container, out, cmd}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockdockerEngineRunner)(nil).Exec), varargs...)
 }
 
 // IsContainerRunning mocks base method.

@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,6 +49,7 @@ type DockerEngine interface {
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
+	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
 }
 
 const (
@@ -57,6 +60,10 @@ const (
 const (
 	pauseCtrURI = "aws-copilot-pause"
 	pauseCtrTag = "latest"
+)
+
+const (
+	proxyPortStart = uint16(50000)
 )
 
 //go:embed Pause-Dockerfile
@@ -114,22 +121,50 @@ func (o *Orchestrator) Start() <-chan error {
 }
 
 // RunTask stops the current running task and starts task.
-func (o *Orchestrator) RunTask(task Task) {
+func (o *Orchestrator) RunTask(task Task, opts ...RunTaskOption) {
+	r := &runTaskAction{
+		task: task,
+	}
+	for _, opt := range opts {
+		opt(r)
+	}
+
 	// this guarantees the following:
-	// - if runTaskAction{} is pulled by the Orchestrator, any errors
+	// - if r is pulled by the Orchestrator, any errors
 	//   returned by it are reported by the Orchestrator.
 	// - if Stop() is called _before_ the Orchestrator picks up this
 	//   action, then this action is skipped.
 	select {
 	case <-o.stopped:
-	case o.actions <- &runTaskAction{
-		task: task,
-	}:
+	case o.actions <- r:
 	}
 }
 
 type runTaskAction struct {
 	task Task
+
+	// optional vars for proxy
+	hosts     []Host
+	ssmTarget string
+	network   *net.IPNet
+}
+
+// RunTaskOption adds optional data to RunTask.
+type RunTaskOption func(*runTaskAction)
+
+// Host represents a service reachable via the network.
+type Host struct {
+	Name string
+	Port string
+}
+
+// RunTaskWithProxy returns a RunTaskOption that sets up a proxy connection to hosts.
+func RunTaskWithProxy(ssmTarget string, network net.IPNet, hosts ...Host) RunTaskOption {
+	return func(r *runTaskAction) {
+		r.ssmTarget = ssmTarget
+		r.hosts = hosts
+		r.network = &network
+	}
 }
 
 func (a *runTaskAction) Do(o *Orchestrator) error {
@@ -161,6 +196,12 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		if err := o.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
+
+		if len(a.hosts) > 0 {
+			if err := o.setupProxyConnections(ctx, opts.ContainerName, a); err != nil {
+				return fmt.Errorf("setup proxy connections: %w", err)
+			}
+		}
 	} else {
 		// ensure no pause container changes
 		curOpts := o.pauseRunOptions(o.curTask)
@@ -183,6 +224,113 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 
 	o.curTask = a.task
 	return nil
+}
+
+// setupProxyConnections creates proxy connections to a.hosts in pauseContainer.
+// It assumes that pauseContainer is already running. A unique proxy connection
+// is created for each host (in parallel) using AWS SSM Port Forwarding through
+// a.ssmTarget. Then, each connection is assigned an IP from a.network,
+// starting at the bottom of the IP range. Using iptables, TCP packets destined
+// for the connection's assigned IP are redirected to the connection. Finally,
+// the host's name is mapped to its assigned IP in /etc/hosts.
+func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer string, a *runTaskAction) error {
+	fmt.Printf("\nSetting up proxy connections...\n")
+
+	ports := make(map[Host]uint16)
+	port := proxyPortStart
+	for i := range a.hosts {
+		ports[a.hosts[i]] = port
+		port++
+	}
+
+	for _, host := range a.hosts {
+		host := host
+		portForHost := ports[host]
+
+		o.wg.Add(1)
+		go func() {
+			defer o.wg.Done()
+
+			err := o.docker.Exec(context.Background(), pauseContainer, io.Discard, "aws", "ssm", "start-session",
+				"--target", a.ssmTarget,
+				"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
+				"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"],"localPortNumber":["%d"]}`, host.Name, host.Port, portForHost))
+			if err != nil {
+				// report err as a runtime error from the pause container
+				if o.curTaskID.Load() != orchestratorStoppedTaskID {
+					o.runErrs <- fmt.Errorf("proxy to %v:%v: %w", host.Name, host.Port, err)
+				}
+			}
+		}()
+	}
+
+	ip := a.network.IP
+	for host, port := range ports {
+		err := o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables",
+			"--table", "nat",
+			"--append", "OUTPUT",
+			"--destination", ip.String(),
+			"--protocol", "tcp",
+			"--match", "tcp",
+			"--dport", host.Port,
+			"--jump", "REDIRECT",
+			"--to-ports", strconv.Itoa(int(port)))
+		if err != nil {
+			return fmt.Errorf("modify iptables: %w", err)
+		}
+
+		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables-save")
+		if err != nil {
+			return fmt.Errorf("save iptables: %w", err)
+		}
+
+		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "/bin/bash",
+			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Name))
+		if err != nil {
+			return fmt.Errorf("update /etc/hosts: %w", err)
+		}
+
+		ip, err = ipv4Increment(ip, a.network)
+		if err != nil {
+			return fmt.Errorf("increment ip: %w", err)
+		}
+
+		fmt.Printf("Created connection to %v:%v\n", host.Name, host.Port)
+	}
+
+	fmt.Printf("Finished setting up proxy connections\n\n")
+	return nil
+}
+
+// ipv4Increment returns a copy of ip that has been incremented.
+func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
+	// make a copy of the previous ip
+	cpy := make(net.IP, len(ip))
+	copy(cpy, ip)
+
+	ipv4 := cpy.To4()
+
+	var inc func(idx int) error
+	inc = func(idx int) error {
+		if idx == -1 {
+			return errors.New("max ipv4 address")
+		}
+
+		ipv4[idx]++
+		if ipv4[idx] == 0 { // overflow occured
+			return inc(idx - 1)
+		}
+		return nil
+	}
+
+	err := inc(len(ipv4) - 1)
+	if err != nil {
+		return nil, err
+	}
+	if !network.Contains(ipv4) {
+		return nil, fmt.Errorf("no more addresses in network")
+	}
+	return ipv4, nil
 }
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
@@ -298,11 +446,12 @@ type ContainerDefinition struct {
 // among all of the containers in the task.
 func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 	opts := dockerengine.RunOptions{
-		ImageURI:       fmt.Sprintf("%s:%s", pauseCtrURI, pauseCtrTag),
-		ContainerName:  o.containerID("pause"),
-		Command:        []string{"sleep", "infinity"},
-		ContainerPorts: make(map[string]string),
-		Secrets:        t.PauseSecrets,
+		ImageURI:             fmt.Sprintf("%s:%s", pauseCtrURI, pauseCtrTag),
+		ContainerName:        o.containerID("pause"),
+		Command:              []string{"sleep", "infinity"},
+		ContainerPorts:       make(map[string]string),
+		Secrets:              t.PauseSecrets,
+		AddLinuxCapabilities: []string{"NET_ADMIN"},
 	}
 
 	for _, ctr := range t.Containers {
