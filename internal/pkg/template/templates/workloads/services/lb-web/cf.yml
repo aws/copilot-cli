@@ -179,7 +179,7 @@ Resources:
 
 {{- if .ImportedALB}}
 {{- range $i, $secgrp := .ImportedALB.SecurityGroups }}
-  EnvironmentSecurityGroupIngressFromImportedALB:
+  EnvironmentSecurityGroupIngressFromImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !GetAtt EnvControllerAction.EnvironmentSecurityGroup
