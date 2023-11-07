@@ -18,6 +18,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/rds"
@@ -71,11 +72,11 @@ type hostFinder interface {
 }
 
 type taggedResourceGetter interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
+	GetResourcesByTags(string, map[string]string) ([]*resourcegroups.Resource, error)
 }
 
 type rdsDescriber interface {
-	DescribeDBInstancesPages(input *rds.DescribeDBInstancesInput, fn func(*rds.DescribeDBInstancesOutput, bool) bool) error
+	DescribeDBInstancesPagesWithContext(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
 }
 
 type runLocalVars struct {
@@ -718,7 +719,7 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 	})
 	switch {
 	case err != nil:
-		return nil, fmt.Errorf("unable to get tagged rds instances: %w", err)
+		return nil, fmt.Errorf("get tagged rds instances: %w", err)
 	case len(dbs) == 0:
 		return hosts, nil
 	}
@@ -730,7 +731,7 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 		filter.Values = append(filter.Values, aws.String(dbs[i].ARN))
 	}
 
-	err = h.rds.DescribeDBInstancesPages(&rds.DescribeDBInstancesInput{
+	err = h.rds.DescribeDBInstancesPagesWithContext(ctx, &rds.DescribeDBInstancesInput{
 		Filters: []*rds.Filter{filter},
 	}, func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
 		for _, db := range out.DBInstances {
@@ -741,11 +742,10 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 				})
 			}
 		}
-
 		return true
 	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to describe db instances: %w\n", err)
+		return nil, fmt.Errorf("describe db instances: %w", err)
 	}
 
 	return hosts, nil

@@ -12,9 +12,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/rds"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
@@ -481,7 +484,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return []orchestrator.Host{
 						{
 							Name: "a-different-service",
-							Port: "80",
+							Port: 80,
 						},
 					}, nil
 				}
@@ -502,7 +505,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return []orchestrator.Host{
 						{
 							Name: "a-different-service",
-							Port: "80",
+							Port: 80,
 						},
 					}, nil
 				}
@@ -529,7 +532,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return []orchestrator.Host{
 						{
 							Name: "a-different-service",
-							Port: "80",
+							Port: 80,
 						},
 					}, nil
 				}
@@ -556,7 +559,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return []orchestrator.Host{
 						{
 							Name: "a-different-service",
-							Port: "80",
+							Port: 80,
 						},
 					}, nil
 				}
@@ -613,7 +616,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					return []orchestrator.Host{
 						{
 							Name: "a-different-service",
-							Port: "80",
+							Port: 80,
 						},
 					}, nil
 				}
@@ -1172,9 +1175,91 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 	}
 }
 
+type taggedResourceGetterDouble struct {
+	GetResourcesByTagsFn func(string, map[string]string) ([]*resourcegroups.Resource, error)
+}
+
+func (d *taggedResourceGetterDouble) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
+	if d.GetResourcesByTagsFn == nil {
+		return nil, nil
+	}
+	return d.GetResourcesByTagsFn(resourceType, tags)
+}
+
+type rdsDescriberDouble struct {
+	DescribeDBInstancesPagesWithContextFn func(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
+}
+
+func (d *rdsDescriberDouble) DescribeDBInstancesPagesWithContext(ctx context.Context, in *rds.DescribeDBInstancesInput, fn func(*rds.DescribeDBInstancesOutput, bool) bool, opts ...request.Option) error {
+	if d.DescribeDBInstancesPagesWithContextFn == nil {
+		return nil
+	}
+	return d.DescribeDBInstancesPagesWithContextFn(ctx, in, fn, opts...)
+}
+
 func TestRunLocal_HostDiscovery(t *testing.T) {
 	type testMocks struct {
 		ecs *mocks.MockecsClient
+		rg  *taggedResourceGetterDouble
+		rds *rdsDescriberDouble
+	}
+	ecsServices := []*awsecs.Service{
+		{
+			Deployments: []*sdkecs.Deployment{
+				{
+					Status: aws.String("ACTIVE"),
+					ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+						Enabled: aws.Bool(true),
+						Services: []*sdkecs.ServiceConnectService{
+							{
+								ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+									{
+										DnsName: aws.String("old"),
+										Port:    aws.Int64(80),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Status: aws.String("PRIMARY"),
+					ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+						Enabled: aws.Bool(true),
+						Services: []*sdkecs.ServiceConnectService{
+							{
+								ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+									{
+										DnsName: aws.String("primary"),
+										Port:    aws.Int64(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Deployments: []*sdkecs.Deployment{
+				{
+					Status: aws.String("INACTIVE"),
+					ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+						Enabled: aws.Bool(true),
+						Services: []*sdkecs.ServiceConnectService{
+							{
+								ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+									{
+										DnsName: aws.String("inactive"),
+										Port:    aws.Int64(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	tests := map[string]struct {
@@ -1191,69 +1276,86 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 		},
 		"ignores non-primary deployments": {
 			setupMocks: func(t *testing.T, m *testMocks) {
-				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*awsecs.Service{
-					{
-						Deployments: []*sdkecs.Deployment{
-							{
-								Status: aws.String("ACTIVE"),
-								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
-									Enabled: aws.Bool(true),
-									Services: []*sdkecs.ServiceConnectService{
-										{
-											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
-												{
-													DnsName: aws.String("old"),
-													Port:    aws.Int64(80),
-												},
-											},
-										},
-									},
-								},
-							},
-							{
-								Status: aws.String("PRIMARY"),
-								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
-									Enabled: aws.Bool(true),
-									Services: []*sdkecs.ServiceConnectService{
-										{
-											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
-												{
-													DnsName: aws.String("primary"),
-													Port:    aws.Int64(80),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						Deployments: []*sdkecs.Deployment{
-							{
-								Status: aws.String("INACTIVE"),
-								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
-									Enabled: aws.Bool(true),
-									Services: []*sdkecs.ServiceConnectService{
-										{
-											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
-												{
-													DnsName: aws.String("inactive"),
-													Port:    aws.Int64(80),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}, nil)
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
 			},
 			wantHosts: []orchestrator.Host{
 				{
 					Name: "primary",
-					Port: "80",
+					Port: 80,
+				},
+			},
+		},
+		"error getting rds resources": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return nil, errors.New("some error")
+				}
+			},
+			wantError: "get tagged rds instances: some error",
+		},
+		"no db instances found": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return nil, nil
+				}
+			},
+			wantHosts: []orchestrator.Host{
+				{
+					Name: "primary",
+					Port: 80,
+				},
+			},
+		},
+		"error describing db instances": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:asdf",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					return errors.New("some error")
+				}
+			},
+			wantError: "describe db instances: some error",
+		},
+		"gets db instance": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:asdf",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBInstancesOutput{
+						DBInstances: []*rds.DBInstance{
+							{
+								Endpoint: &rds.Endpoint{
+									Address: aws.String("db"),
+									Port:    aws.Int64(3306),
+								},
+							},
+						},
+					}, true)
+					return nil
+				}
+			},
+			wantHosts: []orchestrator.Host{
+				{
+					Name: "primary",
+					Port: 80,
+				},
+				{
+					Name: "db",
+					Port: 3306,
 				},
 			},
 		},
@@ -1264,11 +1366,15 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 			defer ctrl.Finish()
 			m := &testMocks{
 				ecs: mocks.NewMockecsClient(ctrl),
+				rg:  &taggedResourceGetterDouble{},
+				rds: &rdsDescriberDouble{},
 			}
 			tc.setupMocks(t, m)
 
 			h := &hostDiscoverer{
 				ecs: m.ecs,
+				rg:  m.rg,
+				rds: m.rds,
 			}
 
 			hosts, err := h.Hosts(context.Background())
