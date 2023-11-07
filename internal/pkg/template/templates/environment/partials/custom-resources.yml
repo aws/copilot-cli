@@ -45,7 +45,7 @@ HTTPSCert:
 CustomDomainAction:
   Metadata:
     'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
-  Condition: ManagedAliases
+  Condition: CreateCerts
   Type: Custom::CustomDomainFunction
   Properties:
     ServiceToken: !GetAtt CustomDomainFunction.Arn
