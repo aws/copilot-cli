@@ -87,8 +87,7 @@ func (rw *RecursiveWatcher) start() {
 			// handle recursive watch
 			switch event.Op {
 			case fsnotify.Create:
-				err := rw.Add(event.Name)
-				if err != nil {
+				if err := rw.Add(event.Name); err != nil {
 					rw.errors <- err
 				}
 			}
