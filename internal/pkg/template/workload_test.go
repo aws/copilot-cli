@@ -377,7 +377,7 @@ func TestEnvControllerParameters(t *testing.T) {
 					Name: "MyExistingALB",
 				},
 			},
-			expected: []string{"Aliases,"},
+			expected: []string{},
 		},
 		"LBWS with ALB and private placement": {
 			opts: WorkloadOpts{

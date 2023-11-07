@@ -1045,10 +1045,12 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		if o.ALBEnabled && o.ImportedALB == nil {
-			parameters = append(parameters, "ALBWorkloads,")
+		if o.ImportedALB == nil {
+			if o.ALBEnabled {
+				parameters = append(parameters, "ALBWorkloads,")
+			}
+			parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 		}
-		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.WorkloadType == "Backend Service" {
 		if o.ALBEnabled {
