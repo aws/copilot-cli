@@ -10,11 +10,13 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -33,6 +35,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/cli/file"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -52,6 +55,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -79,12 +83,20 @@ type rdsDescriber interface {
 	DescribeDBInstancesPagesWithContext(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
 }
 
+type recursiveWatcher interface {
+	Add(path string) error
+	Close() error
+	Events() <-chan fsnotify.Event
+	Errors() <-chan error
+}
+
 type runLocalVars struct {
 	wkldName      string
 	wkldType      string
 	appName       string
 	envName       string
 	envOverrides  map[string]string
+	watch         bool
 	portOverrides portOverrides
 	proxy         bool
 	proxyNetwork  net.IPNet
@@ -93,24 +105,26 @@ type runLocalVars struct {
 type runLocalOpts struct {
 	runLocalVars
 
-	sel            deploySelector
-	ecsClient      ecsClient
-	ssm            secretGetter
-	secretsManager secretGetter
-	sessProvider   sessionProvider
-	sess           *session.Session
-	envManagerSess *session.Session
-	targetEnv      *config.Environment
-	targetApp      *config.Application
-	store          store
-	ws             wsWlDirReader
-	cmd            execRunner
-	dockerEngine   dockerEngineRunner
-	repository     repositoryService
-	prog           progress
-	orchestrator   containerOrchestrator
-	hostFinder     hostFinder
-	envChecker     versionCompatibilityChecker
+	sel                 deploySelector
+	ecsClient           ecsClient
+	ssm                 secretGetter
+	secretsManager      secretGetter
+	sessProvider        sessionProvider
+	sess                *session.Session
+	envManagerSess      *session.Session
+	targetEnv           *config.Environment
+	targetApp           *config.Application
+	store               store
+	ws                  wsWlDirReader
+	cmd                 execRunner
+	dockerEngine        dockerEngineRunner
+	repository          repositoryService
+	prog                progress
+	orchestrator        containerOrchestrator
+	hostFinder          hostFinder
+	envChecker          versionCompatibilityChecker
+	debounceTime        time.Duration
+	newRecursiveWatcher func() (recursiveWatcher, error)
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
@@ -236,6 +250,10 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		}
 		return containerURIs, nil
 	}
+	o.debounceTime = 5 * time.Second
+	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
+		return file.NewRecursiveWatcher(0)
+	}
 	return o, nil
 }
 
@@ -298,9 +316,9 @@ func (o *runLocalOpts) Execute() error {
 
 	ctx := context.Background()
 
-	task, err := o.getTask(ctx)
+	task, err := o.prepareTask(ctx)
 	if err != nil {
-		return fmt.Errorf("get task: %w", err)
+		return err
 	}
 
 	var hosts []orchestrator.Host
@@ -321,35 +339,6 @@ func (o *runLocalOpts) Execute() error {
 		}
 	}
 
-	mft, _, err := workloadManifest(&workloadManifestInput{
-		name:         o.wkldName,
-		appName:      o.appName,
-		envName:      o.envName,
-		ws:           o.ws,
-		interpolator: o.newInterpolator(o.appName, o.envName),
-		unmarshal:    o.unmarshal,
-		sess:         o.envManagerSess,
-	})
-	if err != nil {
-		return err
-	}
-
-	containerURIs, err := o.buildContainerImages(mft)
-	if err != nil {
-		return fmt.Errorf("build images: %w", err)
-	}
-
-	// replace built images with the local built URI
-	for name, uri := range containerURIs {
-		ctr, ok := task.Containers[name]
-		if !ok {
-			return fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
-		}
-
-		ctr.ImageURI = uri
-		task.Containers[name] = ctr
-	}
-
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
@@ -360,20 +349,42 @@ func (o *runLocalOpts) Execute() error {
 	}
 	o.orchestrator.RunTask(task, runTaskOpts...)
 
+	var watchCh <-chan interface{}
+	var watchErrCh <-chan error
+	stopCh := make(chan struct{})
+	if o.watch {
+		watchCh, watchErrCh, err = o.watchLocalFiles(stopCh)
+		if err != nil {
+			return fmt.Errorf("setup watch: %s", err)
+		}
+	}
+
 	for {
 		select {
 		case err, ok := <-errCh:
 			// we loop until errCh closes, since Start()
 			// closes errCh when the orchestrator is completely done.
 			if !ok {
+				close(stopCh)
 				return nil
 			}
 
-			fmt.Printf("error: %s\n", err)
+			log.Errorf("error: %s\n", err)
 			o.orchestrator.Stop()
 		case <-sigCh:
 			signal.Stop(sigCh)
 			o.orchestrator.Stop()
+		case <-watchErrCh:
+			log.Errorf("watch: %s\n", err)
+			o.orchestrator.Stop()
+		case <-watchCh:
+			task, err = o.prepareTask(ctx)
+			if err != nil {
+				log.Errorf("rerun task: %s\n", err)
+				o.orchestrator.Stop()
+				break
+			}
+			o.orchestrator.RunTask(task)
 		}
 	}
 }
@@ -466,6 +477,120 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	return task, nil
+}
+
+func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, error) {
+	task, err := o.getTask(ctx)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("get task: %w", err)
+	}
+
+	mft, _, err := workloadManifest(&workloadManifestInput{
+		name:         o.wkldName,
+		appName:      o.appName,
+		envName:      o.envName,
+		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		unmarshal:    o.unmarshal,
+		sess:         o.envManagerSess,
+	})
+	if err != nil {
+		return orchestrator.Task{}, err
+	}
+
+	containerURIs, err := o.buildContainerImages(mft)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("build images: %w", err)
+	}
+
+	// replace built images with the local built URI
+	for name, uri := range containerURIs {
+		ctr, ok := task.Containers[name]
+		if !ok {
+			return orchestrator.Task{}, fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
+		}
+
+		ctr.ImageURI = uri
+		task.Containers[name] = ctr
+	}
+
+	return task, nil
+}
+
+func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
+	workspacePath := o.ws.Path()
+
+	watchCh := make(chan interface{})
+	watchErrCh := make(chan error)
+
+	watcher, err := o.newRecursiveWatcher()
+	if err != nil {
+		return nil, nil, fmt.Errorf("file: %w", err)
+	}
+
+	if err = watcher.Add(workspacePath); err != nil {
+		return nil, nil, err
+	}
+
+	watcherEvents := watcher.Events()
+	watcherErrors := watcher.Errors()
+
+	debounceTimer := time.NewTimer(o.debounceTime)
+	if !debounceTimer.Stop() {
+		// flush the timer in case stop is called after the timer finishes
+		<-debounceTimer.C
+	}
+
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				watcher.Close()
+				return
+			case err, ok := <-watcherErrors:
+				watchErrCh <- err
+				if !ok {
+					watcher.Close()
+					return
+				}
+			case event, ok := <-watcherEvents:
+				if !ok {
+					watcher.Close()
+					return
+				}
+
+				// skip chmod events
+				if event.Has(fsnotify.Chmod) {
+					break
+				}
+
+				// check if any subdirectories within copilot directory are hidden
+				isHidden := false
+				parent := workspacePath
+				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
+				// fsnotify events are always of form /a/b/c, don't use filepath.Split as that's OS dependent
+				for _, child := range strings.Split(suffix, "/") {
+					parent = filepath.Join(parent, child)
+					subdirHidden, err := file.IsHiddenFile(child)
+					if err != nil {
+						break
+					}
+					if subdirHidden {
+						isHidden = true
+					}
+				}
+
+				// TODO(Aiden): implement dockerignore blacklist for update
+				if !isHidden {
+					debounceTimer.Reset(o.debounceTime)
+				}
+			case <-debounceTimer.C:
+				watchCh <- nil
+			}
+		}
+	}()
+
+	return watchCh, watchErrCh, nil
 }
 
 func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]string, error) {
@@ -774,6 +899,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
