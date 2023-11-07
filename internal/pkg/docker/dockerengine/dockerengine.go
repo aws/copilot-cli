@@ -78,14 +78,15 @@ type BuildArguments struct {
 
 // RunOptions holds the options for running a Docker container.
 type RunOptions struct {
-	ImageURI         string            // Required. The image name to run.
-	Secrets          map[string]string // Optional. Secrets to pass to the container as environment variables.
-	EnvVars          map[string]string // Optional. Environment variables to pass to the container.
-	ContainerName    string            // Optional. The name for the container.
-	ContainerPorts   map[string]string // Optional. Contains host and container ports.
-	Command          []string          // Optional. The command to run in the container.
-	ContainerNetwork string            // Optional. Network mode for the container.
-	LogOptions       RunLogOptions
+	ImageURI             string            // Required. The image name to run.
+	Secrets              map[string]string // Optional. Secrets to pass to the container as environment variables.
+	EnvVars              map[string]string // Optional. Environment variables to pass to the container.
+	ContainerName        string            // Optional. The name for the container.
+	ContainerPorts       map[string]string // Optional. Contains host and container ports.
+	Command              []string          // Optional. The command to run in the container.
+	ContainerNetwork     string            // Optional. Network mode for the container.
+	LogOptions           RunLogOptions     // Optional. Configure logging for output from the container
+	AddLinuxCapabilities []string          // Optional. Adds linux capabilities to the container.
 }
 
 // RunLogOptions holds the logging configuration for Run().
@@ -204,6 +205,15 @@ func (c DockerCmdClient) Login(uri, username, password string) error {
 	return nil
 }
 
+// Exec runs cmd in container with args and writes stderr/stdout to out.
+func (c DockerCmdClient) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
+	return c.runner.RunWithContext(ctx, "docker", append([]string{
+		"exec",
+		container,
+		cmd,
+	}, args...), exec.Stdout(out), exec.Stderr(out))
+}
+
 // Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
 func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags ...string) (digest string, err error) {
 	images := []string{}
@@ -258,6 +268,10 @@ func (in *RunOptions) generateRunArguments() []string {
 
 	for key, value := range in.EnvVars {
 		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	for _, cap := range in.AddLinuxCapabilities {
+		args = append(args, "--cap-add", cap)
 	}
 
 	args = append(args, in.ImageURI)

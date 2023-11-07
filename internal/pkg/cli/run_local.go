@@ -5,7 +5,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -62,12 +64,12 @@ const (
 
 type containerOrchestrator interface {
 	Start() <-chan error
-	RunTask(orchestrator.Task)
+	RunTask(orchestrator.Task, ...orchestrator.RunTaskOption)
 	Stop()
 }
 
 type hostFinder interface {
-	Hosts(context.Context) ([]host, error)
+	Hosts(context.Context) ([]orchestrator.Host, error)
 }
 
 type recursiveWatcher interface {
@@ -86,6 +88,7 @@ type runLocalVars struct {
 	watch         bool
 	portOverrides portOverrides
 	proxy         bool
+	proxyNetwork  net.IPNet
 }
 
 type runLocalOpts struct {
@@ -305,25 +308,33 @@ func (o *runLocalOpts) Execute() error {
 		return err
 	}
 
+	var hosts []orchestrator.Host
+	var ssmTarget string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
 			return err
 		}
 
-		hosts, err := o.hostFinder.Hosts(ctx)
+		hosts, err = o.hostFinder.Hosts(ctx)
 		if err != nil {
 			return fmt.Errorf("find hosts to connect to: %w", err)
 		}
 
-		// TODO(dannyrandall): inject into orchestrator and use in pause container
-		fmt.Printf("hosts: %+v\n", hosts)
+		ssmTarget, err = o.getSSMTarget(ctx)
+		if err != nil {
+			return fmt.Errorf("get proxy target container: %w", err)
+		}
 	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
-	o.orchestrator.RunTask(task)
+	var runTaskOpts []orchestrator.RunTaskOption
+	if o.proxy {
+		runTaskOpts = append(runTaskOpts, orchestrator.RunTaskWithProxy(ssmTarget, o.proxyNetwork, hosts...))
+	}
+	o.orchestrator.RunTask(task, runTaskOpts...)
 
 	var watchCh <-chan interface{}
 	var watchErrCh <-chan error
@@ -363,6 +374,41 @@ func (o *runLocalOpts) Execute() error {
 			o.orchestrator.RunTask(task)
 		}
 	}
+}
+
+// getSSMTarget returns a AWS SSM target for a running container
+// that supports ECS Service Exec.
+func (o *runLocalOpts) getSSMTarget(ctx context.Context) (string, error) {
+	svc, err := o.ecsClient.DescribeService(o.appName, o.envName, o.wkldName)
+	if err != nil {
+		return "", fmt.Errorf("describe service: %w", err)
+	}
+
+	for _, task := range svc.Tasks {
+		// TaskArn should have the format: arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName
+		taskARN, err := arn.Parse(aws.StringValue(task.TaskArn))
+		if err != nil {
+			return "", fmt.Errorf("parse task arn: %w", err)
+		}
+
+		split := strings.Split(taskARN.Resource, "/")
+		if len(split) != 3 {
+			return "", fmt.Errorf("task ARN in unexpected format: %q", taskARN)
+		}
+		taskName := split[2]
+
+		for _, ctr := range task.Containers {
+			id := aws.StringValue(ctr.RuntimeId)
+			hasECSExec := slices.ContainsFunc(ctr.ManagedAgents, func(a *sdkecs.ManagedAgent) bool {
+				return aws.StringValue(a.Name) == "ExecuteCommandAgent" && aws.StringValue(a.LastStatus) == "RUNNING"
+			})
+			if id != "" && hasECSExec && aws.StringValue(ctr.LastStatus) == "RUNNING" {
+				return fmt.Sprintf("ecs:%s_%s_%s", svc.ClusterName, taskName, aws.StringValue(ctr.RuntimeId)), nil
+			}
+		}
+	}
+
+	return "", errors.New("no running tasks have running containers with ecs exec enabled")
 }
 
 func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
@@ -741,11 +787,6 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	return getter.GetSecretValue(ctx, valueFrom)
 }
 
-type host struct {
-	host string
-	port string
-}
-
 type hostDiscoverer struct {
 	ecs  ecsClient
 	app  string
@@ -753,13 +794,13 @@ type hostDiscoverer struct {
 	wkld string
 }
 
-func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
+func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error) {
 	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
 	if err != nil {
 		return nil, fmt.Errorf("get service connect services: %w", err)
 	}
 
-	var hosts []host
+	var hosts []orchestrator.Host
 	for _, svc := range svcs {
 		// find the primary deployment with service connect enabled
 		idx := slices.IndexFunc(svc.Deployments, func(dep *sdkecs.Deployment) bool {
@@ -771,9 +812,9 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
 
 		for _, sc := range svc.Deployments[idx].ServiceConnectConfiguration.Services {
 			for _, alias := range sc.ClientAliases {
-				hosts = append(hosts, host{
-					host: aws.StringValue(alias.DnsName),
-					port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+				hosts = append(hosts, orchestrator.Host{
+					Name: aws.StringValue(alias.DnsName),
+					Port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
 				})
 			}
 		}
@@ -809,5 +850,12 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
+	cmd.Flags().IPNetVar(&vars.proxyNetwork, proxyNetworkFlag, net.IPNet{
+		// docker uses 172.17.0.0/16 for networking by default
+		// so we'll default to different /16 from the 172.16.0.0/12
+		// private network defined by RFC 1918.
+		IP:   net.IPv4(172, 20, 0, 0),
+		Mask: net.CIDRMask(16, 32),
+	}, proxyNetworkFlag)
 	return cmd
 }
