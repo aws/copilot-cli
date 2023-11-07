@@ -45,7 +45,7 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- end}}{{/* range $i, $rule := .ALBListener.Rules */}}
+{{- end}}{{/* endrange $i, $rule := .ALBListener.Rules */}}
 RulePriorityFunction:
   Type: AWS::Lambda::Function
   Properties:

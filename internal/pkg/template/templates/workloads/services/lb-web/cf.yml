@@ -122,9 +122,9 @@ Resources:
         {{- if $.ImportedALB.HasMultipleListeners}}
       - HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPListenerRedirectRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
-        {{- else if ne .ImportedALB.HTTPListenerARN ""}}
+        {{- else if ne $.ImportedALB.HTTPListenerARN ""}}
       - HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
-        {{- else if ne .ImportedALB.HTTPSListenerARN ""}}
+        {{- else if ne $.ImportedALB.HTTPSListenerARN ""}}
       - HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
         {{- end}}
       {{- else if $.ALBListener.IsHTTPS }}
