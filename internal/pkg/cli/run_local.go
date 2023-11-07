@@ -26,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
@@ -66,6 +67,10 @@ type containerOrchestrator interface {
 
 type hostFinder interface {
 	Hosts(context.Context) ([]orchestrator.Host, error)
+}
+
+type taggedResourceGetter interface {
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
 }
 
 type runLocalVars struct {
@@ -181,6 +186,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			env:  o.envName,
 			wkld: o.wkldName,
 			ecs:  ecs.New(o.envManagerSess),
+			rg:   resourcegroups.New(o.envManagerSess),
 		}
 		envDesc, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:         o.appName,
@@ -294,7 +300,7 @@ func (o *runLocalOpts) Execute() error {
 	var ssmTarget string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
-			return err
+			// return err
 		}
 
 		hosts, err = o.hostFinder.Hosts(ctx)
@@ -416,7 +422,7 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	if o.proxy {
-		pauseSecrets, err := sessionEnvVars(ctx, o.sess)
+		pauseSecrets, err := sessionEnvVars(ctx, o.envManagerSess)
 		if err != nil {
 			return orchestrator.Task{}, fmt.Errorf("get pause container secrets: %w", err)
 		}
@@ -668,6 +674,8 @@ type hostDiscoverer struct {
 	app  string
 	env  string
 	wkld string
+
+	rg taggedResourceGetter
 }
 
 func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error) {
@@ -695,6 +703,19 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 			}
 		}
 	}
+
+	// get RDS instances
+	rds, err := h.rg.GetResourcesByTags(resourcegroups.ResourceTypeRDSInstance, map[string]string{
+		deploy.AppTagKey: h.app,
+		deploy.EnvTagKey: h.env,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to get tagged rds instances: %w", err)
+	}
+	for i, r := range rds {
+		fmt.Printf("%d: %v, %v\n", i, r.ARN, r.Tags)
+	}
+	os.Exit(1)
 
 	return hosts, nil
 }
