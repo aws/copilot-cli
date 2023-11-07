@@ -44,6 +44,9 @@ Parameters:
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
+  CreateCerts: !And
+    - !Condition CreateALB
+    - !Condition ManagedAliases
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
   DelegateDNS:

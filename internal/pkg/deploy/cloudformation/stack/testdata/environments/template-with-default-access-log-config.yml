@@ -44,6 +44,9 @@ Conditions:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
+  CreateCerts: !And
+    - !Condition CreateALB
+    - !Condition ManagedAliases
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And

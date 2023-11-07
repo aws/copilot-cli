@@ -65,6 +65,9 @@ Parameters:
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
+  CreateCerts: !And
+    - !Condition CreateALB
+    - !Condition ManagedAliases
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
