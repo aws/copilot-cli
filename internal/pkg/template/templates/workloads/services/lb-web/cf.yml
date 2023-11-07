@@ -121,7 +121,7 @@ Resources:
       {{- if $.ImportedALB}}
         {{- if $.ImportedALB.HasMultipleListeners}}
       - HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
-      - HTTPListenerRedirectRuleForImportedALB
+      - HTTPListenerRedirectRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
         {{- else if ne .ImportedALB.HTTPListenerARN ""}}
       - HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
         {{- else if ne .ImportedALB.HTTPSListenerARN ""}}

@@ -81,7 +81,6 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
-	elbGetter := elbv2.New(svcDeployer.envSess)
 	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
 		Env:         in.Env.Name,
@@ -100,7 +99,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		svcDeployer:            svcDeployer,
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
-		elbGetter:              elbGetter,
+		elbGetter:              elbv2.New(svcDeployer.envSess),
 		lbMft:                  lbMft,
 		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
 			sess := svcDeployer.envSess.Copy(&aws.Config{
@@ -244,20 +243,21 @@ func (d *lbWebSvcDeployer) validateImportedALBConfig() error {
 		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB), err)
 	}
 	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
-		return fmt.Errorf(`imported ALB %q must either one or two listeners`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
+		return fmt.Errorf(`imported ALB %q must have either one or two listeners`, alb.ARN)
 	}
-	if len(alb.Listeners) == 2 {
-		var isHTTP, isHTTPS bool
-		for _, listener := range alb.Listeners {
-			if listener.Protocol == "HTTP" {
-				isHTTP = true
-			} else if listener.Protocol == "HTTPS" {
-				isHTTP = true
-			}
+	if len(alb.Listeners) == 1 {
+		return nil
+	}
+	var isHTTP, isHTTPS bool
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTP" {
+			isHTTP = true
+		} else if listener.Protocol == "HTTPS" {
+			isHTTPS = true
 		}
-		if !(isHTTP && isHTTPS) {
-			return fmt.Errorf("imported ALB must have listeners of protocol HTTP and HTTPS")
-		}
+	}
+	if !(isHTTP && isHTTPS) {
+		return fmt.Errorf("imported ALB must have listeners of protocol HTTP and HTTPS")
 	}
 	return nil
 }

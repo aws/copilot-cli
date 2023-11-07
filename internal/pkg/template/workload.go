@@ -907,24 +907,22 @@ type LBSecurityGroup struct {
 
 // HTTPListenerARN returns the listener ARN if the protocol is HTTP.
 func (alb *ImportedALB) HTTPListenerARN() string {
-	var arn string
 	for _, listener := range alb.Listeners {
 		if listener.Protocol == "HTTP" {
-			arn = listener.ARN
+			return listener.ARN
 		}
 	}
-	return arn
+	return ""
 }
 
 // HTTPSListenerARN returns the listener ARN if the protocol is HTTPS.
 func (alb *ImportedALB) HTTPSListenerARN() string {
-	var arn string
 	for _, listener := range alb.Listeners {
 		if listener.Protocol == "HTTPS" {
-			arn = listener.ARN
+			return listener.ARN
 		}
 	}
-	return arn
+	return ""
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
