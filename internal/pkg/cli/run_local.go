@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/rds"
 	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
@@ -71,6 +72,10 @@ type hostFinder interface {
 
 type taggedResourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
+}
+
+type rdsDescriber interface {
+	DescribeDBInstancesPages(input *rds.DescribeDBInstancesInput, fn func(*rds.DescribeDBInstancesOutput, bool) bool) error
 }
 
 type runLocalVars struct {
@@ -187,6 +192,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			wkld: o.wkldName,
 			ecs:  ecs.New(o.envManagerSess),
 			rg:   resourcegroups.New(o.envManagerSess),
+			rds:  rds.New(o.envManagerSess),
 		}
 		envDesc, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:         o.appName,
@@ -675,7 +681,8 @@ type hostDiscoverer struct {
 	env  string
 	wkld string
 
-	rg taggedResourceGetter
+	rg  taggedResourceGetter
+	rds rdsDescriber
 }
 
 func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error) {
@@ -698,24 +705,48 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 			for _, alias := range sc.ClientAliases {
 				hosts = append(hosts, orchestrator.Host{
 					Name: aws.StringValue(alias.DnsName),
-					Port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+					Port: uint16(aws.Int64Value(alias.Port)),
 				})
 			}
 		}
 	}
 
-	// get RDS instances
-	rds, err := h.rg.GetResourcesByTags(resourcegroups.ResourceTypeRDSInstance, map[string]string{
+	// get rds instances
+	dbs, err := h.rg.GetResourcesByTags(resourcegroups.ResourceTypeRDSInstance, map[string]string{
 		deploy.AppTagKey: h.app,
 		deploy.EnvTagKey: h.env,
 	})
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, fmt.Errorf("unable to get tagged rds instances: %w", err)
+	case len(dbs) == 0:
+		return hosts, nil
 	}
-	for i, r := range rds {
-		fmt.Printf("%d: %v, %v\n", i, r.ARN, r.Tags)
+
+	filter := &rds.Filter{
+		Name: aws.String("db-instance-id"),
 	}
-	os.Exit(1)
+	for i := range dbs {
+		filter.Values = append(filter.Values, aws.String(dbs[i].ARN))
+	}
+
+	err = h.rds.DescribeDBInstancesPages(&rds.DescribeDBInstancesInput{
+		Filters: []*rds.Filter{filter},
+	}, func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
+		for _, db := range out.DBInstances {
+			if db.Endpoint != nil {
+				hosts = append(hosts, orchestrator.Host{
+					Name: aws.StringValue(db.Endpoint.Address),
+					Port: uint16(aws.Int64Value(db.Endpoint.Port)),
+				})
+			}
+		}
+
+		return true
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to describe db instances: %w\n", err)
+	}
 
 	return hosts, nil
 }

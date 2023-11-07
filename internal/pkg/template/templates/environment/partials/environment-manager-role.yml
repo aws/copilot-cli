@@ -306,3 +306,10 @@ EnvironmentManagerRole:
             - 'cloudformation:DeleteStack'
           Resource:
             - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+        - Sid: RDS
+          Effect: Allow
+          Action:
+            - 'rds:DescribeDBInstances'
+            - 'rds:DescribeDBClusters'
+            - 'rds:DescribeDBProxies'
+          Resource: "*"
