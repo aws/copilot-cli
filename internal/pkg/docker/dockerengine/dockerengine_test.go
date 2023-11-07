@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	osexec "os/exec"
 	"path/filepath"
 	"strings"
@@ -253,7 +254,7 @@ func TestDockerCommand_Login(t *testing.T) {
 
 		want error
 	}{
-		"wrap error returned from Run()": {
+		"wrap error returned from Login()": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 
@@ -839,6 +840,50 @@ func TestDockerCommand_IsContainerRunning(t *testing.T) {
 			_, err := s.IsContainerRunning(context.Background(), tc.inContainerName)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDockerCommand_Exec(t *testing.T) {
+	tests := map[string]struct {
+		setupMocks func(controller *gomock.Controller) *MockCmd
+
+		wantErr string
+	}{
+		"return error": {
+			setupMocks: func(ctrl *gomock.Controller) *MockCmd {
+				mockCmd := NewMockCmd(ctrl)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker",
+					[]string{"exec", "ctr", "sleep", "infinity"},
+					gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				return mockCmd
+			},
+			wantErr: "some error",
+		},
+		"happy path": {
+			setupMocks: func(ctrl *gomock.Controller) *MockCmd {
+				mockCmd := NewMockCmd(ctrl)
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker",
+					[]string{"exec", "ctr", "sleep", "infinity"},
+					gomock.Any(), gomock.Any()).Return(nil)
+				return mockCmd
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			s := DockerCmdClient{
+				runner: tc.setupMocks(ctrl),
+			}
+
+			err := s.Exec(context.Background(), "ctr", io.Discard, "sleep", "infinity")
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
 			} else {
 				require.NoError(t, err)
 			}
