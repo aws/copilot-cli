@@ -62,6 +62,10 @@ const (
 	pauseCtrTag = "latest"
 )
 
+const (
+	proxyPortStart = uint16(50000)
+)
+
 //go:embed Pause-Dockerfile
 var pauseDockerfile string
 
@@ -233,7 +237,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 	fmt.Printf("\nSetting up proxy connections...\n")
 
 	ports := make(map[Host]uint16)
-	port := uint16(50000)
+	port := proxyPortStart
 	for i := range a.hosts {
 		ports[a.hosts[i]] = port
 		port++
@@ -319,7 +323,7 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 		return nil
 	}
 
-	err := inc(3) // 3 since this is an ipv4 address
+	err := inc(len(ip) - 1)
 	if err != nil {
 		return nil, err
 	}
