@@ -5,7 +5,7 @@ EnvControllerAction:
   Properties:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
-{{- if and (.ALBListener .ALBListener.Aliases) (not .ImportedALB) }}
+{{- if and (and .ALBListener .ALBListener.Aliases) (not .ImportedALB) }}
     Aliases: {{ fmtSlice (quoteSlice .ALBListener.Aliases) }}
 {{- end}}
     EnvStack: !Sub '${AppName}-${EnvName}'

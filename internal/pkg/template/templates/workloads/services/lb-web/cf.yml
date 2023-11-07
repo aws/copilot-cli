@@ -117,13 +117,19 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
     {{- if .ALBListener}}
-    {{- range $i, $rule := .ALBListener.Rules }}
-      {{- if $.ImportedALB}}
-        {{- if $.ImportedALB.HasMultipleListeners}}
+      {{- range $i, $rule := .ALBListener.Rules }}
+        {{- if $.ImportedALB}}
+          {{- if ne $.ImportedALB.HTTPSListenerARN ""}}
       - HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+            {{- if ne $.ImportedALB.HTTPListenerARN ""}}
       - HTTPListenerRedirectRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
-        {{- else if ne $.ImportedALB.HTTPListenerARN ""}}
+            {{- end}}
+          {{- end}}
+          {{- if ne $.ImportedALB.HTTPListenerARN ""}}
       - HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+          {{- end}}
+        {{- end}}
+
         {{- else if ne $.ImportedALB.HTTPSListenerARN ""}}
       - HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
         {{- end}}
