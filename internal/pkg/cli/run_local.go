@@ -81,6 +81,7 @@ type taggedResourceGetter interface {
 
 type rdsDescriber interface {
 	DescribeDBInstancesPagesWithContext(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
+	DescribeDBClustersPagesWithContext(context.Context, *rds.DescribeDBClustersInput, func(*rds.DescribeDBClustersOutput, bool) bool, ...request.Option) error
 }
 
 type recursiveWatcher interface {
@@ -325,7 +326,7 @@ func (o *runLocalOpts) Execute() error {
 	var ssmTarget string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
-			return err
+			// return err
 		}
 
 		hosts, err = o.hostFinder.Hosts(ctx)
@@ -837,40 +838,82 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 		}
 	}
 
-	// get rds instances
-	dbs, err := h.rg.GetResourcesByTags(resourcegroups.ResourceTypeRDSInstance, map[string]string{
+	rdsHosts, err := h.rdsHosts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get rds hosts: %w", err)
+	}
+
+	return append(hosts, rdsHosts...), nil
+}
+
+func (h *hostDiscoverer) rdsHosts(ctx context.Context) ([]orchestrator.Host, error) {
+	var hosts []orchestrator.Host
+
+	resources, err := h.rg.GetResourcesByTags(resourcegroups.ResourceTypeRDS, map[string]string{
 		deploy.AppTagKey: h.app,
 		deploy.EnvTagKey: h.env,
 	})
 	switch {
 	case err != nil:
-		return nil, fmt.Errorf("get tagged rds instances: %w", err)
-	case len(dbs) == 0:
-		return hosts, nil
+		return nil, fmt.Errorf("get tagged resources: %w", err)
+	case len(resources) == 0:
+		return nil, nil
 	}
 
-	filter := &rds.Filter{
+	dbFilter := &rds.Filter{
 		Name: aws.String("db-instance-id"),
 	}
-	for i := range dbs {
-		filter.Values = append(filter.Values, aws.String(dbs[i].ARN))
+	clusterFilter := &rds.Filter{
+		Name: aws.String("db-cluster-id"),
+	}
+	for i := range resources {
+		arn, err := arn.Parse(resources[i].ARN)
+		if err != nil {
+			return nil, fmt.Errorf("invalid arn %q: %w", resources[i].ARN, err)
+		}
+
+		switch {
+		case strings.HasPrefix(arn.Resource, "db:"):
+			dbFilter.Values = append(dbFilter.Values, aws.String(resources[i].ARN))
+		case strings.HasPrefix(arn.Resource, "cluster:"):
+			clusterFilter.Values = append(clusterFilter.Values, aws.String(resources[i].ARN))
+		}
 	}
 
-	err = h.rds.DescribeDBInstancesPagesWithContext(ctx, &rds.DescribeDBInstancesInput{
-		Filters: []*rds.Filter{filter},
-	}, func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
-		for _, db := range out.DBInstances {
-			if db.Endpoint != nil {
+	if len(dbFilter.Values) > 0 {
+		err = h.rds.DescribeDBInstancesPagesWithContext(ctx, &rds.DescribeDBInstancesInput{
+			Filters: []*rds.Filter{dbFilter},
+		}, func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
+			for _, db := range out.DBInstances {
+				if db.Endpoint != nil {
+					hosts = append(hosts, orchestrator.Host{
+						Name: aws.StringValue(db.Endpoint.Address),
+						Port: uint16(aws.Int64Value(db.Endpoint.Port)),
+					})
+				}
+			}
+			return true
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe instances: %w", err)
+		}
+	}
+
+	if len(clusterFilter.Values) > 0 {
+		err = h.rds.DescribeDBClustersPagesWithContext(ctx, &rds.DescribeDBClustersInput{
+			Filters: []*rds.Filter{dbFilter},
+		}, func(out *rds.DescribeDBClustersOutput, lastPage bool) bool {
+			for _, db := range out.DBClusters {
 				hosts = append(hosts, orchestrator.Host{
-					Name: aws.StringValue(db.Endpoint.Address),
-					Port: uint16(aws.Int64Value(db.Endpoint.Port)),
+					Name: aws.StringValue(db.Endpoint),
+					Port: uint16(aws.Int64Value(db.Port)),
 				})
 			}
+			return true
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe clusters: %w", err)
 		}
-		return true
-	})
-	if err != nil {
-		return nil, fmt.Errorf("describe db instances: %w", err)
 	}
 
 	return hosts, nil

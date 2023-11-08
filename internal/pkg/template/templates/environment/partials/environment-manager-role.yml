@@ -318,5 +318,4 @@ EnvironmentManagerRole:
           Action:
             - 'rds:DescribeDBInstances'
             - 'rds:DescribeDBClusters'
-            - 'rds:DescribeDBProxies'
           Resource: "*"

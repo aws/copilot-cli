@@ -1436,6 +1436,7 @@ func (d *taggedResourceGetterDouble) GetResourcesByTags(resourceType string, tag
 
 type rdsDescriberDouble struct {
 	DescribeDBInstancesPagesWithContextFn func(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
+	DescribeDBClustersPagesWithContextFn  func(context.Context, *rds.DescribeDBClustersInput, func(*rds.DescribeDBClustersOutput, bool) bool, ...request.Option) error
 }
 
 func (d *rdsDescriberDouble) DescribeDBInstancesPagesWithContext(ctx context.Context, in *rds.DescribeDBInstancesInput, fn func(*rds.DescribeDBInstancesOutput, bool) bool, opts ...request.Option) error {
@@ -1443,6 +1444,13 @@ func (d *rdsDescriberDouble) DescribeDBInstancesPagesWithContext(ctx context.Con
 		return nil
 	}
 	return d.DescribeDBInstancesPagesWithContextFn(ctx, in, fn, opts...)
+}
+
+func (d *rdsDescriberDouble) DescribeDBClustersPagesWithContext(ctx context.Context, in *rds.DescribeDBClustersInput, fn func(*rds.DescribeDBClustersOutput, bool) bool, opts ...request.Option) error {
+	if d.DescribeDBClustersPagesWithContextFn == nil {
+		return nil
+	}
+	return d.DescribeDBClustersPagesWithContextFn(ctx, in, fn, opts...)
 }
 
 func TestRunLocal_HostDiscovery(t *testing.T) {
@@ -1540,7 +1548,7 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 					return nil, errors.New("some error")
 				}
 			},
-			wantError: "get tagged rds instances: some error",
+			wantError: "get rds hosts: get tagged resources: some error",
 		},
 		"no db instances found": {
 			setupMocks: func(t *testing.T, m *testMocks) {
@@ -1556,13 +1564,26 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 				},
 			},
 		},
-		"error describing db instances": {
+		"invalid db arn": {
 			setupMocks: func(t *testing.T, m *testMocks) {
 				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
 				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
 					return []*resourcegroups.Resource{
 						{
-							ARN: "arn:asdf",
+							ARN: "arn:invalid",
+						},
+					}, nil
+				}
+			},
+			wantError: `get rds hosts: invalid arn "arn:invalid": arn: not enough sections`,
+		},
+		"error describing rds instances": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
 						},
 					}, nil
 				}
@@ -1570,15 +1591,18 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 					return errors.New("some error")
 				}
 			},
-			wantError: "describe db instances: some error",
+			wantError: "get rds hosts: describe instances: some error",
 		},
-		"gets db instance": {
+		"gets rds instance": {
 			setupMocks: func(t *testing.T, m *testMocks) {
 				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
 				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
 					return []*resourcegroups.Resource{
 						{
-							ARN: "arn:asdf",
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:subgrp:subgrpID",
 						},
 					}, nil
 				}
@@ -1604,6 +1628,97 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 				{
 					Name: "db",
 					Port: 3306,
+				},
+			},
+		},
+		"error describing db cluster": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:subgrp:subgrpID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:cluster:clusterID",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBInstancesOutput{
+						DBInstances: []*rds.DBInstance{
+							{
+								Endpoint: &rds.Endpoint{
+									Address: aws.String("db"),
+									Port:    aws.Int64(3306),
+								},
+							},
+						},
+					}, true)
+					return nil
+				}
+				m.rds.DescribeDBClustersPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBClustersInput, f func(*rds.DescribeDBClustersOutput, bool) bool, o ...request.Option) error {
+					return errors.New("some error")
+				}
+			},
+			wantError: "get rds hosts: describe clusters: some error",
+		},
+		"gets db cluster": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:subgrp:subgrpID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:cluster:clusterID",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBInstancesOutput{
+						DBInstances: []*rds.DBInstance{
+							{
+								Endpoint: &rds.Endpoint{
+									Address: aws.String("db"),
+									Port:    aws.Int64(3306),
+								},
+							},
+						},
+					}, true)
+					return nil
+				}
+				m.rds.DescribeDBClustersPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBClustersInput, f func(*rds.DescribeDBClustersOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBClustersOutput{
+						DBClusters: []*rds.DBCluster{
+							{
+								Endpoint: aws.String("cluster"),
+								Port:     aws.Int64(5432),
+							},
+						},
+					}, true)
+					return nil
+				}
+			},
+			wantHosts: []orchestrator.Host{
+				{
+					Name: "primary",
+					Port: 80,
+				},
+				{
+					Name: "db",
+					Port: 3306,
+				},
+				{
+					Name: "cluster",
+					Port: 5432,
 				},
 			},
 		},
