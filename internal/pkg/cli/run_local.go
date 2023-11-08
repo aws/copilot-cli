@@ -867,6 +867,12 @@ func (h *hostDiscoverer) rdsHosts(ctx context.Context) ([]orchestrator.Host, err
 		Name: aws.String("db-cluster-id"),
 	}
 	for i := range resources {
+		// we don't want resources that belong to other services
+		// but we do want env level services
+		if wkld, ok := resources[i].Tags[deploy.ServiceTagKey]; ok && wkld != h.wkld {
+			continue
+		}
+
 		arn, err := arn.Parse(resources[i].ARN)
 		if err != nil {
 			return nil, fmt.Errorf("invalid arn %q: %w", resources[i].ARN, err)
@@ -901,13 +907,28 @@ func (h *hostDiscoverer) rdsHosts(ctx context.Context) ([]orchestrator.Host, err
 
 	if len(clusterFilter.Values) > 0 {
 		err = h.rds.DescribeDBClustersPagesWithContext(ctx, &rds.DescribeDBClustersInput{
-			Filters: []*rds.Filter{dbFilter},
+			Filters: []*rds.Filter{clusterFilter},
 		}, func(out *rds.DescribeDBClustersOutput, lastPage bool) bool {
 			for _, db := range out.DBClusters {
-				hosts = append(hosts, orchestrator.Host{
-					Name: aws.StringValue(db.Endpoint),
-					Port: uint16(aws.Int64Value(db.Port)),
-				})
+				port := uint16(aws.Int64Value(db.Port))
+				if db.Endpoint != nil {
+					hosts = append(hosts, orchestrator.Host{
+						Name: aws.StringValue(db.Endpoint),
+						Port: port,
+					})
+				}
+				if db.ReaderEndpoint != nil {
+					hosts = append(hosts, orchestrator.Host{
+						Name: aws.StringValue(db.ReaderEndpoint),
+						Port: port,
+					})
+				}
+				for _, endpoint := range db.CustomEndpoints {
+					hosts = append(hosts, orchestrator.Host{
+						Name: aws.StringValue(endpoint),
+						Port: port,
+					})
+				}
 			}
 			return true
 		})

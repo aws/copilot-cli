@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/file/filetest"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator/orchestratortest"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -1666,7 +1667,7 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 			},
 			wantError: "get rds hosts: describe clusters: some error",
 		},
-		"gets db cluster": {
+		"gets db cluster, skips other service resources": {
 			setupMocks: func(t *testing.T, m *testMocks) {
 				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
 				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
@@ -1679,6 +1680,15 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 						},
 						{
 							ARN: "arn:aws:rds:us-west-2:123456789:cluster:clusterID",
+							Tags: map[string]string{
+								deploy.ServiceTagKey: "foo",
+							},
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:cluster:otherServiceCluster",
+							Tags: map[string]string{
+								deploy.ServiceTagKey: "bar",
+							},
 						},
 					}, nil
 				}
@@ -1696,11 +1706,15 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 					return nil
 				}
 				m.rds.DescribeDBClustersPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBClustersInput, f func(*rds.DescribeDBClustersOutput, bool) bool, o ...request.Option) error {
+					require.NotContains(t, ddi.Filters[0].Values, aws.String("arn:aws:rds:us-west-2:123456789:cluster:otherServiceCluster"))
+
 					f(&rds.DescribeDBClustersOutput{
 						DBClusters: []*rds.DBCluster{
 							{
-								Endpoint: aws.String("cluster"),
-								Port:     aws.Int64(5432),
+								Endpoint:        aws.String("cluster"),
+								Port:            aws.Int64(5432),
+								ReaderEndpoint:  aws.String("cluster-ro"),
+								CustomEndpoints: []*string{aws.String("cluster-custom")},
 							},
 						},
 					}, true)
@@ -1720,6 +1734,14 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 					Name: "cluster",
 					Port: 5432,
 				},
+				{
+					Name: "cluster-ro",
+					Port: 5432,
+				},
+				{
+					Name: "cluster-custom",
+					Port: 5432,
+				},
 			},
 		},
 	}
@@ -1735,9 +1757,10 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 			tc.setupMocks(t, m)
 
 			h := &hostDiscoverer{
-				ecs: m.ecs,
-				rg:  m.rg,
-				rds: m.rds,
+				wkld: "foo",
+				ecs:  m.ecs,
+				rg:   m.rg,
+				rds:  m.rds,
 			}
 
 			hosts, err := h.Hosts(context.Background())
