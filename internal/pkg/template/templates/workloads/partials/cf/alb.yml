@@ -1,5 +1,9 @@
 {{- range $i, $rule := .ALBListener.Rules}}
+{{- if $.ImportedALB}}
+TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
+{{- else}}
 TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
+{{- end}}
   Metadata:
     'aws:copilot:description': "A target group to connect the load balancer to your service on port {{$rule.TargetPort}}"
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
