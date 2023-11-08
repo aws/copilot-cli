@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"slices"
+	"sort"
 	"strconv"
 	"text/template"
 
@@ -505,11 +506,18 @@ func (cfg *ALBListener) Aliases() []string {
 
 // RulePaths returns a slice consisting of all the routing paths mentioned across multiple listener rules.
 func (cfg *ALBListener) RulePaths() []string {
-	var rulePaths []string
+	rulePaths := make(map[string]struct{})
 	for _, rule := range cfg.Rules {
-		rulePaths = append(rulePaths, rule.Path)
+		if rule.Path != "" {
+			rulePaths[rule.Path] = struct{}{}
+		}
 	}
-	return rulePaths
+	uniqueRulePaths := make([]string, 0, len(rulePaths))
+	for path := range rulePaths {
+		uniqueRulePaths = append(uniqueRulePaths, path)
+	}
+	sort.SliceStable(uniqueRulePaths, func(i, j int) bool { return uniqueRulePaths[i] < uniqueRulePaths[j] })
+	return uniqueRulePaths
 }
 
 // ServiceConnectOpts defines the options for service connect.

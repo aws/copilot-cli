@@ -50,6 +50,15 @@ variables:                    # Pass environment variables as key value pairs.
 # You can override any of the values defined above by environment.
 environments:
   test:
+    http:
+      path: '/'
+      alias: example.com
+      alb: arn:aws:elasticloadbalancing:us-west-2:1234567890:loadbalancer/app/demo-t-Publi-MqfbfMJgLPZ0/5ea280ee3a7eff37
+      allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32", "67.170.82.49/32"]
+      additional_rules:
+        - path: "/"
+          allowed_source_ips: ["67.170.82.40/32", "0.0.0.0/0"]
+          alias: example.com
     network:
       vpc:
         security_groups:
