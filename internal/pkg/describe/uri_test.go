@@ -151,6 +151,37 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 
 			wantedURI: "http://abc.us-west-1.elb.amazonaws.com/mySvc",
 		},
+		"swallow error if fail to get env vars with imported ALB": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceListenerRuleForImportedALBLogicalID,
+						},
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil).Times(1),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "/",
+					}, nil),
+					m.ecsDescriber.EXPECT().StackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceListenerRuleForImportedALBLogicalID,
+						},
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil).Times(1),
+					m.lbDescriber.EXPECT().ListenerRulesHostHeaders(nil).
+						Return(nil, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return(nil, errors.New("some error")),
+					m.envDescriber.EXPECT().Outputs().Return(nil, nil),
+				)
+			},
+
+			wantedURI: "http://",
+		},
 		"http web service with imported ALB": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(

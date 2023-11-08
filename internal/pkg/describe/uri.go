@@ -312,10 +312,7 @@ func (d *uriDescriber) uri() (accessURI, error) {
 		return accessURI{}, fmt.Errorf("get host headers for listener rules %s: %w", strings.Join(ruleARNs, ","), err)
 	}
 	if len(dnsNames) == 0 {
-		envVars, err := d.svcDescriber.EnvVars()
-		if err != nil {
-			return accessURI{}, fmt.Errorf("get service environment variables: %w", err)
-		}
+		envVars, _ := d.svcDescriber.EnvVars()
 		var lbDNS string
 		for _, envVar := range envVars {
 			if envVar.Name == LBDNS {
