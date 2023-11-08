@@ -46,3 +46,4 @@ Copilot now supports the new field `http.alb` in the [Load-Balanced Web Service 
 http:
   alb: [name or ARN]
 ```
+For imported ALBs, Copilot does not manage DNS-related resources like certificates.  
