@@ -6,11 +6,12 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template/templatetest"
-	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -981,11 +982,10 @@ func Test_convertImportedALB(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, &template.ImportedALB{
-			Name:                 "mockName",
-			ARN:                  "mockARN",
-			DNSName:              "mockDNSName",
-			HasMultipleListeners: true,
-			HostedZoneID:         "mockHostedZoneID",
+			Name:         "mockName",
+			ARN:          "mockARN",
+			DNSName:      "mockDNSName",
+			HostedZoneID: "mockHostedZoneID",
 			Listeners: []template.LBListener{
 				{
 					ARN:      "mockListenerARN",
