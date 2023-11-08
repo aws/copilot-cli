@@ -44,9 +44,6 @@ Conditions:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
-  CreateCerts: !And
-    - !Condition CreateALB
-    - !Condition ManagedAliases
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
@@ -64,6 +61,7 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+    - !Condition CreateALB
 Mappings:
   RegionalConfigs:
     us-east-1:
@@ -1090,7 +1088,7 @@ Resources:
   CustomDomainAction:
     Metadata:
       'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
-    Condition: CreateCerts
+    Condition: ManagedAliases
     Type: Custom::CustomDomainFunction
     Properties:
       ServiceToken: !GetAtt CustomDomainFunction.Arn
