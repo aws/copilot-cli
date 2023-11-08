@@ -39,9 +39,6 @@ Parameters:
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
-  CreateCerts: !And
-    - !Condition CreateALB
-    - !Condition ManagedAliases
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
   DelegateDNS:
@@ -61,6 +58,7 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+    - !Condition CreateALB
 Resources:
   # The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain.
   # See #1533.
@@ -982,7 +980,7 @@ Resources:
   CustomDomainAction:
     Metadata:
       'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
-    Condition: CreateCerts
+    Condition: ManagedAliases
     Type: Custom::CustomDomainFunction
     Properties:
       ServiceToken: !GetAtt CustomDomainFunction.Arn

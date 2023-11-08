@@ -40,7 +40,7 @@ HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
-      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+      - TargetGroupArn: !Ref TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
         Type: forward
     Conditions:
       {{- if $rule.AllowedSourceIps}}

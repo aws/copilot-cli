@@ -130,15 +130,15 @@ Resources:
         {{- else if $.ALBListener.IsHTTPS }}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
-      {{- else}}
+        {{- else}}
       - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
+        {{- end}}
       {{- end}}
-    {{- end}}
     {{- end }}
     {{- if .NLB}}
-    {{- range $i, $listener := .NLB.Listener }}
+      {{- range $i, $listener := .NLB.Listener }}
       - NLBListener{{ if ne $i 0 }}{{ $i }}{{ end }}
-    {{- end }}
+      {{- end }}
     {{- end}}
     Properties:
 {{include "service-base-properties" . | indent 6}}
@@ -148,11 +148,17 @@ Resources:
       {{- end }}
       LoadBalancers:
   {{- if .ALBListener}}
-  {{- range $i, $rule := .ALBListener.Rules}}
+    {{- range $i, $rule := .ALBListener.Rules}}
+      {{- if $.ImportedALB}}
+        - ContainerName: {{$rule.TargetContainer}}
+          ContainerPort: {{$rule.TargetPort}}
+          TargetGroupArn: !Ref TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+      {{- else}}
         - ContainerName: {{$rule.TargetContainer}}
           ContainerPort: {{$rule.TargetPort}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
-  {{- end}}
+      {{- end}}
+    {{- end}}
   {{- end}}
   {{- if .NLB}}
     {{- if .NLB.UDPListenerExists }}

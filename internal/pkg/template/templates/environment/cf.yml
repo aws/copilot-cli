@@ -41,9 +41,6 @@ Parameters:
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
-  CreateCerts: !And
-    - !Condition CreateALB
-    - !Condition ManagedAliases
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
   DelegateDNS:
@@ -63,6 +60,7 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+    - !Condition CreateALB
 {{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
 {{ include "mappings-regional-configs" . }}
 {{- end }}
