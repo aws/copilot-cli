@@ -141,8 +141,8 @@ HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
             {{- if eq $rule.Path "/"}}
             - /*
             {{- else}}
-            -{{ $rule.Path}}
-            -{{ $rule.Path}}/*
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
             {{- end }}
     ListenerArn: {{$httpARN}}
     Priority: !GetAtt HTTPRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
