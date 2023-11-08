@@ -264,35 +264,6 @@ func TestOrchestrator(t *testing.T) {
 			stopAfterNErrs: 1,
 			errs:           []string{`setup proxy connections: modify iptables: some error`},
 		},
-		"proxy setup, ip tables save error": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
-				de := &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						return true, nil
-					},
-					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
-						if cmd == "aws" {
-							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
-						} else if cmd == "iptables-save" {
-							return errors.New("some error")
-						}
-						return nil
-					},
-				}
-				return func(t *testing.T, o *Orchestrator) {
-					_, ipNet, err := net.ParseCIDR("172.20.0.0/16")
-					require.NoError(t, err)
-
-					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
-						Name: "remote-foo",
-						Port: "80",
-					}))
-				}, de
-			},
-			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: save iptables: some error`},
-		},
 		"proxy setup, /etc/hosts error": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, DockerEngine) {

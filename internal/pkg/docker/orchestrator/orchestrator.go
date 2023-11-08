@@ -283,11 +283,6 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			return fmt.Errorf("modify iptables: %w", err)
 		}
 
-		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables-save")
-		if err != nil {
-			return fmt.Errorf("save iptables: %w", err)
-		}
-
 		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "/bin/bash",
 			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Name))
 		if err != nil {
