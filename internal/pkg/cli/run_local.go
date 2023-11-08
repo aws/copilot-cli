@@ -846,6 +846,8 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 	return append(hosts, rdsHosts...), nil
 }
 
+// rdsHosts gets rds endpoints for workloads tagged for this workload
+// or for the environment using direct AWS SDK calls.
 func (h *hostDiscoverer) rdsHosts(ctx context.Context) ([]orchestrator.Host, error) {
 	var hosts []orchestrator.Host
 
