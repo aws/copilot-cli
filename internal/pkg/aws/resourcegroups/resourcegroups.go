@@ -16,7 +16,8 @@ import (
 const (
 	// ResourceTypeStateMachine is the resource type for the state machine of a job.
 	ResourceTypeStateMachine = "states:stateMachine"
-	ResourceTypeRDS          = "rds"
+	// ResourceTypeRDS is the resource type for any rds resources.
+	ResourceTypeRDS = "rds"
 )
 
 type api interface {
