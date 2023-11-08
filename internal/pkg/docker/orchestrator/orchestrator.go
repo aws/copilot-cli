@@ -356,6 +356,7 @@ func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
 func (o *Orchestrator) Stop() {
 	o.stopOnce.Do(func() {
 		close(o.stopped)
+		fmt.Printf("\nStopping task...\n")
 		o.actions <- &stopAction{}
 	})
 }
@@ -373,9 +374,11 @@ func (a *stopAction) Do(o *Orchestrator) error {
 	}
 
 	// stop pause container
+	fmt.Printf("Stopping %q\n", "pause")
 	if err := o.docker.Stop(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
+	fmt.Printf("Stopped %q\n", "pause")
 
 	return errors.Join(errs...)
 }
@@ -391,10 +394,12 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
+			fmt.Printf("Stopping %q\n", name)
 			if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
+			fmt.Printf("Stopped %q\n", name)
 			errCh <- nil
 		}()
 	}
