@@ -416,11 +416,12 @@ func TestELBV2_LoadBalancer(t *testing.T) {
 	mockOutput := &elbv2.DescribeLoadBalancersOutput{
 		LoadBalancers: []*elbv2.LoadBalancer{
 			{
-				LoadBalancerArn:  aws.String("mockLBARN"),
-				LoadBalancerName: aws.String("mockLBName"),
-				DNSName:          aws.String("mockDNSName"),
-				Scheme:           aws.String("internet-facing"),
-				SecurityGroups:   aws.StringSlice([]string{"sg1", "sg2"}),
+				LoadBalancerArn:       aws.String("mockLBARN"),
+				LoadBalancerName:      aws.String("mockLBName"),
+				DNSName:               aws.String("mockDNSName"),
+				Scheme:                aws.String("internet-facing"),
+				CanonicalHostedZoneId: aws.String("mockHostedZoneID"),
+				SecurityGroups:        aws.StringSlice([]string{"sg1", "sg2"}),
 			},
 		},
 	}
@@ -452,10 +453,11 @@ func TestELBV2_LoadBalancer(t *testing.T) {
 			},
 
 			expectedLB: &LoadBalancer{
-				ARN:     "mockLBARN",
-				Name:    "mockLBName",
-				DNSName: "mockDNSName",
-				Scheme:  "internet-facing",
+				ARN:          "mockLBARN",
+				Name:         "mockLBName",
+				DNSName:      "mockDNSName",
+				Scheme:       "internet-facing",
+				HostedZoneID: "mockHostedZoneID",
 				Listeners: []Listener{
 					{
 						ARN:      "mockListenerARN",
@@ -485,10 +487,11 @@ func TestELBV2_LoadBalancer(t *testing.T) {
 				}, nil)
 			},
 			expectedLB: &LoadBalancer{
-				ARN:     "mockLBARN",
-				Name:    "mockLBName",
-				DNSName: "mockDNSName",
-				Scheme:  "internet-facing",
+				ARN:          "mockLBARN",
+				Name:         "mockLBName",
+				DNSName:      "mockDNSName",
+				Scheme:       "internet-facing",
+				HostedZoneID: "mockHostedZoneID",
 				Listeners: []Listener{
 					{
 						ARN:      "mockListenerARN",

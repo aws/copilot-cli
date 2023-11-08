@@ -752,6 +752,7 @@ func (s *LoadBalancedWebService) convertImportedALB() (*template.ImportedALB, er
 		ARN:                  s.importedALB.ARN,
 		DNSName:              s.importedALB.DNSName,
 		HasMultipleListeners: hasMultipleListeners,
+		HostedZoneID:         s.importedALB.HostedZoneID,
 		Listeners:            listeners,
 		SecurityGroups:       securityGroups,
 	}, nil
