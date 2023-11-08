@@ -270,7 +270,7 @@ func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule)
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
 	if rule.Alias.IsEmpty() {
-		if hasImportedCerts {
+		if hasImportedCerts && d.lbMft.HTTPOrBool.ImportedALB == nil {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
 				envName: d.env.Name,
