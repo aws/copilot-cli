@@ -12,7 +12,9 @@ import (
 	"maps"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -333,10 +335,18 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 }
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
+	arch := "64bit"
+	if strings.Contains(runtime.GOARCH, "arm") {
+		arch = "arm64"
+	}
+
 	return o.docker.Build(ctx, &dockerengine.BuildArguments{
 		URI:               pauseCtrURI,
 		Tags:              []string{pauseCtrTag},
 		DockerfileContent: pauseDockerfile,
+		Args: map[string]string{
+			"ARCH": arch,
+		},
 	}, os.Stderr)
 }
 
