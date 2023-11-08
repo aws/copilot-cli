@@ -1,5 +1,9 @@
 {{- range $i, $rule := .ALBListener.Rules}}
+{{- if $.ImportedALB}}
+TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
+{{- else}}
 TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
+{{- end}}
   Metadata:
     'aws:copilot:description': "A target group to connect the load balancer to your service on port {{$rule.TargetPort}}"
   Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -45,7 +49,7 @@ TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}:
     VpcId:
       Fn::ImportValue:
         !Sub "${AppName}-${EnvName}-VpcId"
-{{- end}}{{/* range $i, $rule := .ALBListener.Rules */}}
+{{- end}}{{/* endrange $i, $rule := .ALBListener.Rules */}}
 RulePriorityFunction:
   Type: AWS::Lambda::Function
   Properties:
@@ -90,7 +94,9 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{- if .ALBListener.IsHTTPS}}
+{{- if $.ImportedALB}}
+{{include "imported-alb-resources" .}}
+{{- else if .ALBListener.IsHTTPS}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}
