@@ -59,6 +59,7 @@ func (r *HTTPOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // HTTP holds options for application load balancer.
 type HTTP struct {
+	ImportedALB              *string       `yaml:"alb"`
 	Main                     RoutingRule   `yaml:",inline"`
 	TargetContainerCamelCase *string       `yaml:"targetContainer"` // Deprecated. Maintained for backwards compatibility, use [RoutingRule.TargetContainer] instead.
 	AdditionalRoutingRules   []RoutingRule `yaml:"additional_rules"`
