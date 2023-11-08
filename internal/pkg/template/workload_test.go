@@ -66,6 +66,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/vpc-connector.yml", []byte("vpc-connector"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/alb.yml", []byte("alb"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/rollback-alarms.yml", []byte("rollback-alarms"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/imported-alb-resources.yml", []byte("imported-alb-resources"), 0644)
 
 				return fs
 			},
@@ -102,6 +103,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   vpc-connector
   alb
   rollback-alarms
+  imported-alb-resources
 `,
 		},
 	}
@@ -372,10 +374,10 @@ func TestEnvControllerParameters(t *testing.T) {
 				WorkloadType: "Load Balanced Web Service",
 				ALBEnabled:   true,
 				ImportedALB: &ImportedALB{
-					Name: aws.String("MyExistingALB"),
+					Name: "MyExistingALB",
 				},
 			},
-			expected: []string{"Aliases,"},
+			expected: []string{},
 		},
 		"LBWS with ALB and private placement": {
 			opts: WorkloadOpts{

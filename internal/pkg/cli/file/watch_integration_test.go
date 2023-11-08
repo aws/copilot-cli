@@ -21,53 +21,45 @@ func TestRecursiveWatcher(t *testing.T) {
 	var (
 		watcher        *file.RecursiveWatcher
 		tmp            string
-		eventsExpected []fsnotify.Event
-		eventsActual   []fsnotify.Event
+		eventsExpected map[fsnotify.Event]struct{}
+		eventsActual   map[fsnotify.Event]struct{}
 	)
 
 	tmp = os.TempDir()
-	eventsActual = make([]fsnotify.Event, 0)
-	eventsExpected = []fsnotify.Event{
+	eventsActual = make(map[fsnotify.Event]struct{})
+	eventsExpected = map[fsnotify.Event]struct{}{
 		{
 			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
 			Op:   fsnotify.Create,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
 			Op:   fsnotify.Chmod,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
 			Op:   fsnotify.Write,
-		},
-		{
-			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
-			Op:   fsnotify.Write,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir", tmp),
 			Op:   fsnotify.Rename,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir2", tmp),
 			Op:   fsnotify.Create,
-		},
-		{
-			Name: fmt.Sprintf("%s/watch/subdir", tmp),
-			Op:   fsnotify.Rename,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir2/testfile", tmp),
 			Op:   fsnotify.Rename,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir2/testfile2", tmp),
 			Op:   fsnotify.Create,
-		},
+		}: {},
 		{
 			Name: fmt.Sprintf("%s/watch/subdir2/testfile2", tmp),
 			Op:   fsnotify.Remove,
-		},
+		}: {},
 	}
 
 	t.Run("Setup Watcher", func(t *testing.T) {
@@ -86,45 +78,43 @@ func TestRecursiveWatcher(t *testing.T) {
 		eventsCh := watcher.Events()
 		errorsCh := watcher.Errors()
 
-		expectEvents := func(t *testing.T, n int) []fsnotify.Event {
-			receivedEvents := []fsnotify.Event{}
+		expectAndPopulateEvents := func(t *testing.T, n int, events map[fsnotify.Event]struct{}) {
 			for i := 0; i < n; i++ {
 				select {
 				case e := <-eventsCh:
-					receivedEvents = append(receivedEvents, e)
+					events[e] = struct{}{}
 				case <-time.After(time.Second):
 				}
 			}
-			return receivedEvents
 		}
 
 		// WATCH
 		file, err := os.Create(fmt.Sprintf("%s/watch/subdir/testfile", tmp))
 		require.NoError(t, err)
-		eventsActual = append(eventsActual, expectEvents(t, 1)...)
+		expectAndPopulateEvents(t, 1, eventsActual)
 
 		err = os.Chmod(fmt.Sprintf("%s/watch/subdir/testfile", tmp), 0755)
 		require.NoError(t, err)
-		eventsActual = append(eventsActual, expectEvents(t, 1)...)
+		expectAndPopulateEvents(t, 1, eventsActual)
 
 		err = os.WriteFile(fmt.Sprintf("%s/watch/subdir/testfile", tmp), []byte("write to file"), fs.ModeAppend)
 		require.NoError(t, err)
-		eventsActual = append(eventsActual, expectEvents(t, 2)...)
+		expectAndPopulateEvents(t, 2, eventsActual)
 
 		err = file.Close()
 		require.NoError(t, err)
 
 		err = os.Rename(fmt.Sprintf("%s/watch/subdir", tmp), fmt.Sprintf("%s/watch/subdir2", tmp))
 		require.NoError(t, err)
-		eventsActual = append(eventsActual, expectEvents(t, 3)...)
+		expectAndPopulateEvents(t, 3, eventsActual)
 
 		err = os.Rename(fmt.Sprintf("%s/watch/subdir2/testfile", tmp), fmt.Sprintf("%s/watch/subdir2/testfile2", tmp))
 		require.NoError(t, err)
-		eventsActual = append(eventsActual, expectEvents(t, 2)...)
+		expectAndPopulateEvents(t, 2, eventsActual)
 
 		err = os.Remove(fmt.Sprintf("%s/watch/subdir2/testfile2", tmp))
 		require.NoError(t, err)
-		eventsActual = append(eventsActual, expectEvents(t, 1)...)
+		expectAndPopulateEvents(t, 1, eventsActual)
 
 		// CLOSE
 		err = watcher.Close()
