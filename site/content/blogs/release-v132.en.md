@@ -19,7 +19,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.32 brings big enhancements to help you develop more flexibly and efficiently:
 
 - **`copilot run local --proxy`**:
-- **`copilot run local --watch`**: Watches your workspace for file changes and rebuilds your containers when you make changes to your code so you can develop continuously.
+- **`copilot run local --watch`**: Automatically rebuilds your containers when you make changes to your code. [See detailed section](#copilot-run-local---watch)
 - **Importing ALBs**: You can front your Load-Balanced Web Services with existing ALBs. [See detailed section](#imported-ALBs)
 
 ???+ note "What’s AWS Copilot?"
@@ -33,6 +33,10 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## 
+
+## `copilot run local --watch`
+
+The `--watch` flag watches your workspace and rebuilds your containers when you make changes to your code so you can develop continuously. This is extremely useful when used with `--proxy` as it allows you to save the overhead time required to setup proxy each time you would rebuild your application!
 
 ## Imported ALBs
 
