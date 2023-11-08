@@ -676,7 +676,8 @@ Resources:
               - Sid: ExecuteCommand
                 Effect: Allow
                 Action: [
-                  "ecs:ExecuteCommand"
+                  "ecs:ExecuteCommand",
+                  "ssm:StartSession"
                 ]
                 Resource: "*"
                 Condition:
@@ -765,6 +766,12 @@ Resources:
                 ]
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/${AppName}/${EnvironmentName}/secrets/*'
+              - Sid: SSMSession
+                Effect: Allow
+                Action:
+                  - ssm:StartSession
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-StartPortForwardingSessionToRemoteHost"
               - Sid: ELBv2
                 Effect: Allow
                 Action: [
@@ -887,6 +894,12 @@ Resources:
                   - 'cloudformation:DeleteStack'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+              - Sid: RDS
+                Effect: Allow
+                Action:
+                  - 'rds:DescribeDBInstances'
+                  - 'rds:DescribeDBClusters'
+                Resource: "*"
   AppRunnerVpcEndpointSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for App Runner private services'
