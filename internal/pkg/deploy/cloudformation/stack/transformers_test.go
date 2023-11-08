@@ -981,11 +981,10 @@ func Test_convertImportedALB(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, &template.ImportedALB{
-			Name:                 "mockName",
-			ARN:                  "mockARN",
-			DNSName:              "mockDNSName",
-			HasMultipleListeners: true,
-			HostedZoneID:         "mockHostedZoneID",
+			Name:         "mockName",
+			ARN:          "mockARN",
+			DNSName:      "mockDNSName",
+			HostedZoneID: "mockHostedZoneID",
 			Listeners: []template.LBListener{
 				{
 					ARN:      "mockListenerARN",
