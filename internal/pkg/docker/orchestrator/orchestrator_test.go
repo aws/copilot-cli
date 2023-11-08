@@ -29,7 +29,7 @@ func TestOrchestrator(t *testing.T) {
 		hosts := make([]Host, n)
 		for i := 0; i < n; i++ {
 			hosts[i].Name = strconv.Itoa(i)
-			hosts[i].Port = strconv.Itoa(i)
+			hosts[i].Port = uint16(i)
 		}
 		return hosts
 	}
@@ -204,7 +204,7 @@ func TestOrchestrator(t *testing.T) {
 
 					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
-						Port: "80",
+						Port: 80,
 					}))
 				}, de
 			},
@@ -257,7 +257,7 @@ func TestOrchestrator(t *testing.T) {
 
 					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
-						Port: "80",
+						Port: 80,
 					}))
 				}, de
 			},
@@ -286,7 +286,7 @@ func TestOrchestrator(t *testing.T) {
 
 					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
-						Port: "80",
+						Port: 80,
 					}))
 				}, de
 			},
@@ -315,7 +315,7 @@ func TestOrchestrator(t *testing.T) {
 
 					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
-						Port: "80",
+						Port: 80,
 					}))
 				}, de
 			},
@@ -353,7 +353,7 @@ func TestOrchestrator(t *testing.T) {
 						},
 					}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, Host{
 						Name: "remote-foo",
-						Port: "80",
+						Port: 80,
 					}))
 
 					<-waitUntilRun
