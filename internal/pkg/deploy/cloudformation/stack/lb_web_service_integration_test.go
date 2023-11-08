@@ -62,16 +62,16 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 				HostedZoneID:   "mockHostedZoneID",
 			},
 		},
-		// "staging env": {
-		// 	envName:       "staging",
-		// 	svcStackPath:  "svc-staging.stack.yml",
-		// 	svcParamsPath: "svc-staging.params.json",
-		// },
-		// "prod env": {
-		// 	envName:       "prod",
-		// 	svcStackPath:  "svc-prod.stack.yml",
-		// 	svcParamsPath: "svc-prod.params.json",
-		// },
+		"staging env": {
+			envName:       "staging",
+			svcStackPath:  "svc-staging.stack.yml",
+			svcParamsPath: "svc-staging.params.json",
+		},
+		"prod env": {
+			envName:       "prod",
+			svcStackPath:  "svc-prod.stack.yml",
+			svcParamsPath: "svc-prod.params.json",
+		},
 	}
 	val, exist := os.LookupEnv("TAG")
 	require.NoError(t, os.Setenv("TAG", "cicdtest"))
@@ -151,7 +151,6 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 			// Cut random GUID from template.
 			actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
 			mActual := make(map[interface{}]interface{})
-			fmt.Println(string(actualBytes))
 			require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
 			expected, err := os.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
