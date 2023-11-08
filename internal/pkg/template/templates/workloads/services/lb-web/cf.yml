@@ -185,7 +185,7 @@ Resources:
       GroupId: !GetAtt EnvControllerAction.EnvironmentSecurityGroup
       Description: Ingress from the imported ALB
       SourceSecurityGroupId: {{ $secgrp.ID }}
-      IpProtocol: -1{{ if ne $i 0 }}{{ $i }}{{ end }}
+      IpProtocol: -1
 {{- end}}
 {{- end}}
 
