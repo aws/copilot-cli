@@ -37,19 +37,20 @@ func TestOrchestrator(t *testing.T) {
 	type test func(*testing.T, *Orchestrator)
 
 	tests := map[string]struct {
-		logOptions     logOptionsFunc
-		test           func(t *testing.T) (test, DockerEngine)
-		stopAfterNErrs int
+		logOptions      logOptionsFunc
+		test            func(t *testing.T) (test, *dockerenginetest.Double)
+		runUntilStopped bool
 
-		errs []string
+		stopAfterNErrs int
+		errs           []string
 	}{
 		"stop and start": {
-			test: func(t *testing.T) (test, DockerEngine) {
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				return func(t *testing.T, o *Orchestrator) {}, &dockerenginetest.Double{}
 			},
 		},
 		"error if fail to build pause container": {
-			test: func(t *testing.T) (test, DockerEngine) {
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					BuildFn: func(ctx context.Context, ba *dockerengine.BuildArguments, w io.Writer) error {
 						return errors.New("some error")
@@ -64,7 +65,8 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 		"error if unable to check if pause container is running": {
-			test: func(t *testing.T) (test, DockerEngine) {
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return false, errors.New("some error")
@@ -79,8 +81,9 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 		"error stopping task": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -109,8 +112,9 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 		"error restarting new task due to pause changes": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -142,8 +146,9 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 		"success with a task": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -159,6 +164,9 @@ func TestOrchestrator(t *testing.T) {
 								"A_SECRET": "very secret",
 							}, opts.Secrets)
 						}
+						return nil
+					},
+					StopFn: func(ctx context.Context, name string) error {
 						return nil
 					},
 				}
@@ -182,11 +190,81 @@ func TestOrchestrator(t *testing.T) {
 					})
 				}, de
 			},
-			errs: []string{},
+		},
+		"container run stops early with error": {
+			logOptions: noLogs,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				stopPause := make(chan struct{})
+				de := &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-foo" {
+							return errors.New("some error")
+						} else {
+							// block pause container until Stop(pause)
+							<-stopPause
+						}
+						return nil
+					},
+					StopFn: func(ctx context.Context, s string) error {
+						if s == "prefix-pause" {
+							stopPause <- struct{}{}
+						}
+						return nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {},
+						},
+					})
+				}, de
+			},
+			stopAfterNErrs: 1,
+			errs:           []string{`run "prefix-foo": some error`},
+		},
+		"container run stops early with nil error": {
+			logOptions: noLogs,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				stopPause := make(chan struct{})
+				de := &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-foo" {
+							return nil
+						} else {
+							// block pause container until Stop(pause)
+							<-stopPause
+						}
+						return nil
+					},
+					StopFn: func(ctx context.Context, s string) error {
+						if s == "prefix-pause" {
+							stopPause <- struct{}{}
+						}
+						return nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {},
+						},
+					})
+				}, de
+			},
+			stopAfterNErrs: 1,
+			errs:           []string{`run "prefix-foo": container stopped unexpectedly`},
 		},
 		"proxy setup, connection returns error": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -212,8 +290,9 @@ func TestOrchestrator(t *testing.T) {
 			errs:           []string{`proxy to remote-foo:80: some error`},
 		},
 		"proxy setup, ip increment error": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -232,12 +311,12 @@ func TestOrchestrator(t *testing.T) {
 					o.RunTask(Task{}, RunTaskWithProxy("ecs:cluster_task_ctr", *ipNet, generateHosts(3)...))
 				}, de
 			},
-			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: increment ip: max ipv4 address`},
+			errs: []string{`setup proxy connections: increment ip: max ipv4 address`},
 		},
 		"proxy setup, ip tables error": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -261,12 +340,12 @@ func TestOrchestrator(t *testing.T) {
 					}))
 				}, de
 			},
-			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: modify iptables: some error`},
+			errs: []string{`setup proxy connections: modify iptables: some error`},
 		},
 		"proxy setup, /etc/hosts error": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -290,13 +369,12 @@ func TestOrchestrator(t *testing.T) {
 					}))
 				}, de
 			},
-			stopAfterNErrs: 1,
-			errs:           []string{`setup proxy connections: update /etc/hosts: some error`},
+			errs: []string{`setup proxy connections: update /etc/hosts: some error`},
 		},
 		"proxy success": {
-			logOptions: noLogs,
-			test: func(t *testing.T) (test, DockerEngine) {
-				waitUntilRun := make(chan struct{})
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
@@ -304,12 +382,6 @@ func TestOrchestrator(t *testing.T) {
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
 							fmt.Fprintf(w, "Port 61972 opened for sessionId mySessionId\n")
-						}
-						return nil
-					},
-					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
-						if opts.ContainerName == "prefix-foo" {
-							close(waitUntilRun)
 						}
 						return nil
 					},
@@ -326,8 +398,6 @@ func TestOrchestrator(t *testing.T) {
 						Name: "remote-foo",
 						Port: "80",
 					}))
-
-					<-waitUntilRun
 				}, de
 			},
 		},
@@ -336,6 +406,41 @@ func TestOrchestrator(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			test, dockerEngine := tc.test(t)
+
+			if tc.runUntilStopped {
+				// make Run(x) not return until until Stop(x) is called
+				stopChs := make(map[string]chan struct{})
+				mu := &sync.Mutex{}
+				getCh := func(name string) chan struct{} {
+					mu.Lock()
+					defer mu.Unlock()
+
+					_, ok := stopChs[name]
+					if !ok {
+						stopChs[name] = make(chan struct{})
+					}
+					return stopChs[name]
+				}
+
+				ogRun := dockerEngine.RunFn
+				dockerEngine.RunFn = func(ctx context.Context, ro *dockerengine.RunOptions) error {
+					<-getCh(ro.ContainerName)
+					if ogRun != nil {
+						return ogRun(ctx, ro)
+					}
+					return nil
+				}
+
+				ogStop := dockerEngine.StopFn
+				dockerEngine.StopFn = func(ctx context.Context, name string) error {
+					getCh(name) <- struct{}{}
+					if ogStop != nil {
+						return ogStop(ctx, name)
+					}
+					return nil
+				}
+			}
+
 			o := New(dockerEngine, "prefix-", tc.logOptions)
 
 			wg := &sync.WaitGroup{}

@@ -496,18 +496,22 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
+		err := o.docker.Run(context.Background(), &opts)
 
-		if err := o.docker.Run(context.Background(), &opts); err != nil {
-			curTaskID := o.curTaskID.Load()
-			if curTaskID == orchestratorStoppedTaskID {
-				return
-			}
+		// if the orchestrator has already stopped,
+		// we don't want to report the error
+		curTaskID := o.curTaskID.Load()
+		if curTaskID == orchestratorStoppedTaskID {
+			return
+		}
 
-			// the error is from the pause container
-			// or from the currently running task
-			if taskID == pauseCtrTaskID || taskID == curTaskID {
-				o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
+		// the error is from the pause container
+		// or from the currently running task
+		if taskID == pauseCtrTaskID || taskID == curTaskID {
+			if err == nil {
+				err = errors.New("container stopped unexpectedly")
 			}
+			o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 		}
 	}()
 }
