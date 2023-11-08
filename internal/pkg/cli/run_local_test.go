@@ -410,9 +410,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 	expectedProxyTask := orchestrator.Task{
 		Containers: expectedTask.Containers,
 		PauseSecrets: map[string]string{
-			"AWS_ACCESS_KEY_ID":     "myID",
-			"AWS_SECRET_ACCESS_KEY": "mySecret",
-			"AWS_SESSION_TOKEN":     "myToken",
+			"AWS_ACCESS_KEY_ID":     "myEnvID",
+			"AWS_SECRET_ACCESS_KEY": "myEnvSecret",
+			"AWS_SESSION_TOKEN":     "myEnvToken",
 		},
 	}
 
@@ -996,6 +996,11 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				sess: &session.Session{
 					Config: &aws.Config{
 						Credentials: credentials.NewStaticCredentials("myID", "mySecret", "myToken"),
+					},
+				},
+				envManagerSess: &session.Session{
+					Config: &aws.Config{
+						Credentials: credentials.NewStaticCredentials("myEnvID", "myEnvSecret", "myEnvToken"),
 					},
 				},
 				cmd:          m.mockRunner,
