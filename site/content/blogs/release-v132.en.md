@@ -20,7 +20,7 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
 
 - **`copilot run local --proxy`**:
 - **`copilot run local --watch`**:
-- **Importing ALBs**: You can front your Load-Balanced Web Services with existing ALBs. [See detailed section](#imported-albs)
+- **Importing ALBs**: You can front your Load-Balanced Web Services with existing ALBs. [See detailed section](#imported-ALBs)
 
 ???+ note "What’s AWS Copilot?"
 
@@ -38,12 +38,11 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
 ## 
 
 
-## Importing an ALB for your Load-Balanced Web Service
+## Imported ALBs
 
-Copilot now introduces a new field `http.alb` in the [Load-Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md). You can specify the ARN or name of an ALB that is already in your VPC:
+Copilot now supports the new field `http.alb` in the [Load-Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md). Rather than letting Copilot create a new Application Load Balancer in your environment to be shared among all load-balanced services, you may designate an existing public-facing ALB for a specific Load-Balanced Web Service (LBWS). Specify the ARN or name of an ALB from your VPC in your LBWS manifest:
 
 ```yaml
 http:
   alb: [name or ARN]
 ```
-
