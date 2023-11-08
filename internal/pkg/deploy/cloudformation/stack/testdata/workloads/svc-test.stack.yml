@@ -539,7 +539,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["/"]
+      RulePath: ["/", "/"]
       ListenerArn: MockListenerARN1
   HTTPSListenerRuleForImportedALB:
     Metadata:
@@ -595,7 +595,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      RulePath: ["/"]
+      RulePath: ["/", "/"]
       ListenerArn: MockListenerARN1
   HTTPListenerRedirectRuleForImportedALB:
     Metadata:
