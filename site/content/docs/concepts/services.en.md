@@ -45,8 +45,8 @@ This option is suitable for HTTP or TCP services with steady request volumes tha
 require advanced configuration. 
 
 Note that a Copilot-managed Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Services
-within the environment. To learn more, go [here](environments.en.md#load-balancers-and-dns). In contrast, a Network Load Balancer 
-is a service-level resource, and hence is not shared across services. As of v1.32.0, you have the option to import an existing ALB by specifying it in the [workload manifest](../manifest/lb-web-service.en.md#http-alb).  
+within the environment. As of v1.32.0, you have the option to import an existing ALB at the service level by specifying it in your [workload manifest](../manifest/lb-web-service.en.md#http-alb). To learn more, go [here](environments.en.md#load-balancers-and-dns). In contrast, a Network Load Balancer 
+is a service-level resource, and hence is not shared across services.  
 
 Below is a diagram for a Load Balanced Web Service that involves an Application Load Balancer only.
 
