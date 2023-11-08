@@ -910,24 +910,19 @@ func (h *hostDiscoverer) rdsHosts(ctx context.Context) ([]orchestrator.Host, err
 			Filters: []*rds.Filter{clusterFilter},
 		}, func(out *rds.DescribeDBClustersOutput, lastPage bool) bool {
 			for _, db := range out.DBClusters {
-				port := uint16(aws.Int64Value(db.Port))
-				if db.Endpoint != nil {
-					hosts = append(hosts, orchestrator.Host{
-						Name: aws.StringValue(db.Endpoint),
-						Port: port,
-					})
+				add := func(s *string) {
+					if s != nil {
+						hosts = append(hosts, orchestrator.Host{
+							Name: aws.StringValue(s),
+							Port: uint16(aws.Int64Value(db.Port)),
+						})
+					}
 				}
-				if db.ReaderEndpoint != nil {
-					hosts = append(hosts, orchestrator.Host{
-						Name: aws.StringValue(db.ReaderEndpoint),
-						Port: port,
-					})
-				}
-				for _, endpoint := range db.CustomEndpoints {
-					hosts = append(hosts, orchestrator.Host{
-						Name: aws.StringValue(endpoint),
-						Port: port,
-					})
+
+				add(db.Endpoint)
+				add(db.ReaderEndpoint)
+				for i := range db.CustomEndpoints {
+					add(db.CustomEndpoints[i])
 				}
 			}
 			return true
