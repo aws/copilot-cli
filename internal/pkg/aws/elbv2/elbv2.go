@@ -162,6 +162,7 @@ type LoadBalancer struct {
 	ARN            string
 	Name           string
 	DNSName        string
+	HostedZoneID   string
 	Listeners      []Listener
 	Scheme         string // "internet-facing" or "internal"
 	SecurityGroups []string
@@ -196,6 +197,7 @@ func (e *ELBV2) LoadBalancer(nameOrARN string) (*LoadBalancer, error) {
 		Name:           aws.StringValue(lb.LoadBalancerName),
 		DNSName:        aws.StringValue(lb.DNSName),
 		Scheme:         aws.StringValue(lb.Scheme),
+		HostedZoneID:   aws.StringValue(lb.CanonicalHostedZoneId),
 		Listeners:      listeners,
 		SecurityGroups: aws.StringValueSlice(lb.SecurityGroups),
 	}, nil

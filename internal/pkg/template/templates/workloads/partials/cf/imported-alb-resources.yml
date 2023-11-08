@@ -1,3 +1,25 @@
+{{- if .ALBListener.Aliases}}
+  {{$albHostedZoneID := $.ImportedALB.HostedZoneID}}
+  {{$dnsName := $.ImportedALB.DNSName}}
+  {{- range $hostedZoneID, $aliases := .ALBListener.HostedZoneAliases}}
+LoadBalancerDNSAlias{{$hostedZoneID}}:
+  Metadata:
+    'aws:copilot:description': 'Alias records for the application load balancer in hosted zone {{$hostedZoneID}}'
+  Type: AWS::Route53::RecordSetGroup
+  Properties:
+    HostedZoneId: {{$hostedZoneID}}
+    Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone {{$hostedZoneID}}"
+    RecordSets:
+    {{- range $alias := $aliases}}
+    - Name: {{quote $alias}}
+      Type: A
+      AliasTarget:
+        HostedZoneId: {{$albHostedZoneID}}
+        DNSName: {{$dnsName}}
+    {{- end}}
+  {{- end}}
+{{- end}}
+
 # If there's an HTTPS listener on the imported ALB, forward traffic to tasks.
 {{$httpsARN := .ImportedALB.HTTPSListenerARN}}
 {{$httpARN := .ImportedALB.HTTPListenerARN}}

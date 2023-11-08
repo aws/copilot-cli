@@ -954,9 +954,10 @@ func Test_convertImportedALB(t *testing.T) {
 				},
 			},
 		}, WithImportedALB(&elbv2.LoadBalancer{
-			ARN:     "mockARN",
-			Name:    "mockName",
-			DNSName: "mockDNSName",
+			ARN:          "mockARN",
+			Name:         "mockName",
+			DNSName:      "mockDNSName",
+			HostedZoneID: "mockHostedZoneID",
 			Listeners: []elbv2.Listener{
 				{
 					ARN:      "mockListenerARN",
@@ -984,6 +985,7 @@ func Test_convertImportedALB(t *testing.T) {
 			ARN:                  "mockARN",
 			DNSName:              "mockDNSName",
 			HasMultipleListeners: true,
+			HostedZoneID:         "mockHostedZoneID",
 			Listeners: []template.LBListener{
 				{
 					ARN:      "mockListenerARN",

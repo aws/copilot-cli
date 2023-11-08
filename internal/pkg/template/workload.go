@@ -887,6 +887,7 @@ type ImportedALB struct {
 	Name                 string
 	ARN                  string
 	DNSName              string
+	HostedZoneID         string
 	HasMultipleListeners bool
 
 	Listeners      []LBListener
