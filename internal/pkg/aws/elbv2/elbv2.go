@@ -162,6 +162,8 @@ type LoadBalancer struct {
 	ARN            string
 	Name           string
 	DNSName        string
+	HostedZoneID   string
+	Listeners      []Listener
 	Scheme         string // "internet-facing" or "internal"
 	SecurityGroups []string
 }
@@ -186,11 +188,17 @@ func (e *ELBV2) LoadBalancer(nameOrARN string) (*LoadBalancer, error) {
 		return nil, fmt.Errorf("no load balancer %q found", nameOrARN)
 	}
 	lb := output.LoadBalancers[0]
+	listeners, err := e.listeners(aws.StringValue(lb.LoadBalancerArn))
+	if err != nil {
+		return nil, err
+	}
 	return &LoadBalancer{
 		ARN:            aws.StringValue(lb.LoadBalancerArn),
 		Name:           aws.StringValue(lb.LoadBalancerName),
 		DNSName:        aws.StringValue(lb.DNSName),
 		Scheme:         aws.StringValue(lb.Scheme),
+		HostedZoneID:   aws.StringValue(lb.CanonicalHostedZoneId),
+		Listeners:      listeners,
 		SecurityGroups: aws.StringValueSlice(lb.SecurityGroups),
 	}, nil
 }
@@ -202,19 +210,29 @@ type Listener struct {
 	Protocol string
 }
 
-// Listeners returns select information about all listeners on a given load balancer.
-func (e *ELBV2) Listeners(lbARN string) ([]Listener, error) {
-	output, err := e.client.DescribeListeners(&elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)})
-	if err != nil {
-		return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)
-	}
+// listeners returns select information about all listeners on a given load balancer.
+func (e *ELBV2) listeners(lbARN string) ([]Listener, error) {
 	var listeners []Listener
-	for _, listener := range output.Listeners {
-		listeners = append(listeners, Listener{
-			ARN:      aws.StringValue(listener.ListenerArn),
-			Port:     aws.Int64Value(listener.Port),
-			Protocol: aws.StringValue(listener.Protocol),
-		})
+	in := &elbv2.DescribeListenersInput{LoadBalancerArn: aws.String(lbARN)}
+	for {
+		output, err := e.client.DescribeListeners(in)
+		if err != nil {
+			return nil, fmt.Errorf("describe listeners on load balancer %q: %w", lbARN, err)
+		}
+		if output == nil {
+			break
+		}
+		for _, listener := range output.Listeners {
+			listeners = append(listeners, Listener{
+				ARN:      aws.StringValue(listener.ListenerArn),
+				Port:     aws.Int64Value(listener.Port),
+				Protocol: aws.StringValue(listener.Protocol),
+			})
+		}
+		if output.NextMarker == nil {
+			break
+		}
+		in.Marker = output.NextMarker
 	}
 	return listeners, nil
 }

@@ -70,6 +70,7 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+    - !Condition CreateALB
 Resources:
   # The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain.
   # See #1533.

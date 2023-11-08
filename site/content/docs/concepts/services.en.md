@@ -44,9 +44,9 @@ An ECS Service running tasks on Fargate with an Application Load Balancer, a Net
 This option is suitable for HTTP or TCP services with steady request volumes that need to access resources in a VPC or 
 require advanced configuration. 
 
-Note that an Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Services
+Note that a Copilot-managed Application Load Balancer is an environment-level resource, and is shared by all Load Balanced Web Services
 within the environment. To learn more, go [here](environments.en.md#load-balancers-and-dns). In contrast, a Network Load Balancer 
-is a service-level resource, and hence is not shared across services.
+is a service-level resource, and hence is not shared across services. As of v1.32.0, you have the option to import an existing ALB.
 
 Below is a diagram for a Load Balanced Web Service that involves an Application Load Balancer only.
 

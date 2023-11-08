@@ -1,0 +1,172 @@
+{{- if .ALBListener.Aliases}}
+  {{$albHostedZoneID := $.ImportedALB.HostedZoneID}}
+  {{$dnsName := $.ImportedALB.DNSName}}
+  {{- range $hostedZoneID, $aliases := .ALBListener.HostedZoneAliases}}
+LoadBalancerDNSAlias{{$hostedZoneID}}:
+  Metadata:
+    'aws:copilot:description': 'Alias records for the application load balancer in hosted zone {{$hostedZoneID}}'
+  Type: AWS::Route53::RecordSetGroup
+  Properties:
+    HostedZoneId: {{$hostedZoneID}}
+    Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone {{$hostedZoneID}}"
+    RecordSets:
+    {{- range $alias := $aliases}}
+    - Name: {{quote $alias}}
+      Type: A
+      AliasTarget:
+        HostedZoneId: {{$albHostedZoneID}}
+        DNSName: {{$dnsName}}
+    {{- end}}
+  {{- end}}
+{{- end}}
+
+# If there's an HTTPS listener on the imported ALB, forward traffic to tasks.
+{{$httpsARN := .ImportedALB.HTTPSListenerARN}}
+{{$httpARN := .ImportedALB.HTTPListenerARN}}
+{{- if ne $httpsARN ""}}
+HTTPSRulePriorityAction:
+  Metadata:
+    'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths) }}
+    ListenerArn: {{$httpsARN}}
+
+  {{- range $i, $rule := .ALBListener.Rules}}
+HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
+  Metadata:
+    'aws:copilot:description': 'An HTTPS listener rule for path `{{$rule.Path}}` that forwards HTTPS traffic to your tasks'
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - TargetGroupArn: !Ref TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+        Type: forward
+    Conditions:
+      {{- if $rule.AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
+          - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      {{- if $rule.Aliases}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{fmtSlice (quoteSlice $rule.Aliases)}}
+      {{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            {{- if eq $rule.Path "/" }}
+            - /*
+            {{- else }}
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
+            {{- end }}
+    ListenerArn: {{$httpsARN}}
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+  {{- end}}{{/* endrange $i, $rule := .ALBListener.Rules */}}
+
+# If there's a second listener that's HTTP, redirect to the HTTPS listener.
+  {{- if ne $httpARN ""}}
+HTTPRedirectRulePriorityAction:
+  Metadata:
+    'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: {{fmtSlice (quoteSlice .ALBListener.RulePaths)}}
+    ListenerArn: {{$httpARN}}
+
+    {{- range $i, $rule := .ALBListener.Rules}}
+HTTPListenerRedirectRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
+  Metadata:
+    'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          Port: 443
+          Host: "#{host}"
+          Path: "/#{path}"
+          Query: "#{query}"
+          StatusCode: HTTP_301
+    Conditions:
+      {{- if $rule.AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
+          - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      {{- if $rule.Aliases}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{fmtSlice (quoteSlice $rule.Aliases)}}
+      {{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            {{- if eq $rule.Path "/"}}
+            - /*
+            {{- else}}
+            - {{$rule.Path}}
+            - {{$rule.Path}}/*
+            {{- end }}
+    ListenerArn: {{$httpARN}}
+    Priority: !GetAtt HTTPRedirectRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+    {{- end}}{{/* endrange $i, $rule := .ALBListener.Rules */}}
+  {{- end}}{{/* endif ne $httpARN ""} */}}
+
+# If there's no HTTPS listener, forward HTTP traffic to tasks.
+{{- else}}
+HTTPRulePriorityAction:
+  Metadata:
+    'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: {{ fmtSlice (quoteSlice .ALBListener.RulePaths)}}
+    ListenerArn: {{$httpARN}}
+
+  {{- range $i, $rule := .ALBListener.Rules}}
+HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}:
+  Metadata:
+    'aws:copilot:description': 'An HTTP listener rule for path `{{$rule.Path}}` that forwards HTTP traffic to your tasks'
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+        Type: forward
+    Conditions:
+      {{- if $rule.AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+          {{- range $sourceIP := $rule.AllowedSourceIps}}
+          - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      {{- if $rule.Aliases}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{fmtSlice (quoteSlice $rule.Aliases)}}
+      {{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            {{- if eq $rule.Path "/"}}
+            - /*
+            {{- else}}
+            - {{ $rule.Path }}
+            - {{ $rule.Path }}/*
+            {{- end }}
+    ListenerArn: {{$httpARN}}
+    Priority: !GetAtt HTTPRulePriorityAction.Priority{{ if ne $i 0 }}{{ $i }}{{ end }}
+  {{- end}}{{/* endrange $i, $rule := .ALBListener.Rules */}}
+{{- end }}
