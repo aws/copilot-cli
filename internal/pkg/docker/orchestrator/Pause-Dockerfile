@@ -1,4 +1,7 @@
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023
 
 RUN dnf install -y aws-cli iptables
-RUN dnf install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm
+
+ARG ARCH=64bit
+# url from https://docs.aws.amazon.com/systems-manager/latest/userguide/install-plugin-linux.html
+RUN dnf install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_${ARCH}/session-manager-plugin.rpm

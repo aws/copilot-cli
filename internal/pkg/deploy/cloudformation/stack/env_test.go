@@ -223,6 +223,10 @@ func TestEnv_Template(t *testing.T) {
 					Bucket: "mockbucket",
 					Key:    "manual/scripts/custom-resources/customdomainfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
 				},
+				"BucketCleanerFunction": {
+					Bucket: "mockbucket",
+					Key:    "manual/scripts/custom-resources/bucketcleanerfunction/8932747ba5dbff619d89b92d0033ef1d04f7dd1b055e073254907d4e38e3976d.zip",
+				},
 			}, data.CustomResources)
 			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})

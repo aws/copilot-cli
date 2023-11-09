@@ -12,7 +12,9 @@ import (
 	"maps"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -283,11 +285,6 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			return fmt.Errorf("modify iptables: %w", err)
 		}
 
-		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "iptables-save")
-		if err != nil {
-			return fmt.Errorf("save iptables: %w", err)
-		}
-
 		err = o.docker.Exec(ctx, pauseContainer, io.Discard, "/bin/bash",
 			"-c", fmt.Sprintf(`echo %s %s >> /etc/hosts`, ip.String(), host.Name))
 		if err != nil {
@@ -338,10 +335,18 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 }
 
 func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
+	arch := "64bit"
+	if strings.Contains(runtime.GOARCH, "arm") {
+		arch = "arm64"
+	}
+
 	return o.docker.Build(ctx, &dockerengine.BuildArguments{
 		URI:               pauseCtrURI,
 		Tags:              []string{pauseCtrTag},
 		DockerfileContent: pauseDockerfile,
+		Args: map[string]string{
+			"ARCH": arch,
+		},
 	}, os.Stderr)
 }
 
@@ -351,6 +356,7 @@ func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
 func (o *Orchestrator) Stop() {
 	o.stopOnce.Do(func() {
 		close(o.stopped)
+		fmt.Printf("\nStopping task...\n")
 		o.actions <- &stopAction{}
 	})
 }
@@ -368,9 +374,11 @@ func (a *stopAction) Do(o *Orchestrator) error {
 	}
 
 	// stop pause container
+	fmt.Printf("Stopping %q\n", "pause")
 	if err := o.docker.Stop(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
+	fmt.Printf("Stopped %q\n", "pause")
 
 	return errors.Join(errs...)
 }
@@ -386,10 +394,12 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
+			fmt.Printf("Stopping %q\n", name)
 			if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
+			fmt.Printf("Stopped %q\n", name)
 			errCh <- nil
 		}()
 	}
@@ -456,6 +466,7 @@ func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 		ContainerPorts:       make(map[string]string),
 		Secrets:              t.PauseSecrets,
 		AddLinuxCapabilities: []string{"NET_ADMIN"},
+		Init:                 true,
 	}
 
 	for _, ctr := range t.Containers {
@@ -486,18 +497,22 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
+		err := o.docker.Run(context.Background(), &opts)
 
-		if err := o.docker.Run(context.Background(), &opts); err != nil {
-			curTaskID := o.curTaskID.Load()
-			if curTaskID == orchestratorStoppedTaskID {
-				return
-			}
+		// if the orchestrator has already stopped,
+		// we don't want to report the error
+		curTaskID := o.curTaskID.Load()
+		if curTaskID == orchestratorStoppedTaskID {
+			return
+		}
 
-			// the error is from the pause container
-			// or from the currently running task
-			if taskID == pauseCtrTaskID || taskID == curTaskID {
-				o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
+		// the error is from the pause container
+		// or from the currently running task
+		if taskID == pauseCtrTaskID || taskID == curTaskID {
+			if err == nil {
+				err = errors.New("container stopped unexpectedly")
 			}
+			o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 		}
 	}()
 }
