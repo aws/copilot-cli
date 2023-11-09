@@ -87,7 +87,7 @@ type RunOptions struct {
 	ContainerNetwork     string            // Optional. Network mode for the container.
 	LogOptions           RunLogOptions     // Optional. Configure logging for output from the container
 	AddLinuxCapabilities []string          // Optional. Adds linux capabilities to the container.
-	Init                 bool
+	Init                 bool              // Optional. Adds an init process as an entrypoint.
 }
 
 // RunLogOptions holds the logging configuration for Run().
