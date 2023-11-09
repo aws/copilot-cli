@@ -283,8 +283,8 @@ at least one of Application Load Balancer or Network Load Balancer must be enabl
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each listener rule should listen on a unique path.
 
-<span class="parent-field">http.</span><a id="http-alb" href="#http-alb" class="field">`alb`</a> <span class="type">String</span>  
-The ARN or name of an existing public-facing ALB to import. Listener rules will be added to your listener(s).
+<span class="parent-field">http.</span><a id="http-alb" href="#http-alb" class="field">`alb`</a> <span class="type">String</span> <span class="version">Added in [v1.32.0](../../blogs/release-v132.en.md#imported-albs)</span>  
+The ARN or name of an existing public-facing ALB to import. Listener rules will be added to your listener(s). Copilot will not manage DNS-related resources like certificates. 
 
 {% include 'http-healthcheck.en.md' %}
 
