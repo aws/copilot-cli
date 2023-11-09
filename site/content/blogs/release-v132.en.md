@@ -18,7 +18,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.32 brings big enhancements to help you develop more flexibly and efficiently:
 
-- **`copilot run local --proxy`**:
+- **`copilot run local --proxy`**: Proxy outbound traffic from your local containers to services and RDS instances in your environment VPC. [See detailed section](#copilot-run-local---proxy)
 - **`copilot run local --watch`**: Automatically rebuilds your containers when you make changes to your code. [See detailed section](#copilot-run-local---watch)
 - **Importing ALBs**: You can front your Load-Balanced Web Services with existing ALBs. [See detailed section](#imported-ALBs)
 
@@ -32,7 +32,16 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## 
+## `copilot run local --proxy`
+
+The new `--proxy` flag on `copilot run local` enhances your local development experience by making to possible for your local containers to talk to services deployed in your environment's VPC.
+
+For example, imagine you have an environment with two services, `foo` and `bar`, who both have [Service Connect](TODO) enabled.
+Additionally, `foo` has an [RDS addon](TODO) deployed that it uses for storing data.
+To test `foo` locally, you can now run `copilot run local --proxy --name foo`, and your local `foo` containers can reach the following:
+
+- The `bar` service, using its service connect URL (which defaults to `http://bar:<port>`)
+- `foo`'s RDS addon, using any DB instance url (like `app-env-svc-random-characters.us-west-2.rds.amazonaws.com:5432`) or DB cluster URL.
 
 ## `copilot run local --watch`
 
