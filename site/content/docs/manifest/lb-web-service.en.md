@@ -283,6 +283,9 @@ at least one of Application Load Balancer or Network Load Balancer must be enabl
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each listener rule should listen on a unique path.
 
+<span class="parent-field">http.</span><a id="http-alb" href="#http-alb" class="field">`alb`</a> <span class="type">String</span>  
+The ARN or name of an existing public-facing ALB to import. Listener rules will be added to your listener(s).
+
 {% include 'http-healthcheck.en.md' %}
 
 <span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
