@@ -369,6 +369,9 @@ func TestEnv(t *testing.T) {
 			"custom-resources/unique-json-values.js": {
 				Buffer: bytes.NewBufferString("unique json values"),
 			},
+			"custom-resources/bucket-cleaner.js": {
+				Buffer: bytes.NewBufferString("bucket cleaner"),
+			},
 		},
 	}
 	fakePaths := map[string]string{
@@ -377,6 +380,7 @@ func TestEnv(t *testing.T) {
 		"DNSDelegationFunction":         "manual/scripts/custom-resources/dnsdelegationfunction/17ec5f580cdb9c1d7c6b5b91decee031592547629a6bfed7cd33b9229f61ab19.zip",
 		"CertificateReplicatorFunction": "manual/scripts/custom-resources/certificatereplicatorfunction/647f83437e4736ddf2915784e13d023a7d342d162ffb42a9eec3d7c842072030.zip",
 		"UniqueJSONValuesFunction":      "manual/scripts/custom-resources/uniquejsonvaluesfunction/68c7ace14491d82ac4bb5ad81b3371743d669a26638f419265c18e9bdfca8dd1.zip",
+		"BucketCleanerFunction":         "manual/scripts/custom-resources/bucketcleanerfunction/44c1eb88b269251952c25a0e17cd2c166d1de3f2340d60ad2d6b3899ceb058d9.zip",
 	}
 
 	// WHEN
@@ -384,14 +388,14 @@ func TestEnv(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 5, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 6, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
-		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction", "CertificateReplicatorFunction", "UniqueJSONValuesFunction"},
+		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction", "CertificateReplicatorFunction", "UniqueJSONValuesFunction", "BucketCleanerFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.

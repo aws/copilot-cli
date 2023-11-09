@@ -768,6 +768,57 @@ Resources:
                   - '/*'
             Principal:
               AWS: !Join [ "", [ !Ref 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ElbAccountId ], ":root" ] ]
+  ELBAccessLogsBucketCleanerAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource that empties the ELB access logs bucket'
+    Type: Custom::BucketCleanerFunction
+    Properties:
+      ServiceToken: !GetAtt BucketCleanerFunction.Arn
+      BucketName: !Ref ELBAccessLogsBucket
+
+  BucketCleanerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'ELBAccessLogsBucketCleanerRole.Arn'
+      Runtime: nodejs16.x
+
+  ELBAccessLogsBucketCleanerRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role to clean the ELB access logs bucket'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "CleanELBAccessLogs"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                Resource: 
+                  - !GetAtt ELBAccessLogsBucket.Arn
+                  - !Sub
+                    - ${ BucketARN }/*
+                    - BucketARN: !GetAtt ELBAccessLogsBucket.Arn
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   EnvironmentSecurityGroupIngressFromInternalALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateInternalALB
