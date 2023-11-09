@@ -49,9 +49,10 @@ The `--watch` flag watches your workspace and rebuilds your containers when you 
 
 ## Imported ALBs
 
-Copilot now introduces a new field `http.alb` in the [Load-Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md). Rather than letting Copilot create a new Application Load Balancer in your environment to be shared among all load-balanced services, you may designate an existing public-facing ALB for a specific Load-Balanced Web Service (LBWS). Specify the ARN or name of an ALB from your VPC in your LBWS manifest:
+Copilot now supports the new field `http.alb` in the [Load-Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md). Rather than letting Copilot create a new Application Load Balancer in your environment to be shared among all load-balanced services, you may designate an existing public-facing ALB for a specific Load-Balanced Web Service (LBWS). Specify the ARN or name of an ALB from your VPC in your LBWS manifest:
 
 ```yaml
 http:
   alb: [name or ARN]
 ```
+For imported ALBs, Copilot does not manage DNS-related resources like certificates.  
