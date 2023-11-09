@@ -32,13 +32,14 @@ const (
 	envOutputCloudFrontDomainName        = "CloudFrontDomainName"
 	envOutputPublicALBAccessible         = "PublicALBAccessible"
 
-	svcStackResourceALBTargetGroupLogicalID    = "TargetGroup"
-	svcStackResourceNLBTargetGroupLogicalID    = "NLBTargetGroup" // TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
-	svcStackResourceNLBTargetGroupV2LogicalID  = "NetworkLoadBalancerTargetGroup"
-	svcStackResourceHTTPSListenerRuleLogicalID = "HTTPSListenerRule"
-	svcStackResourceHTTPListenerRuleLogicalID  = "HTTPListenerRule"
-	svcStackResourceListenerRuleResourceType   = "AWS::ElasticLoadBalancingV2::ListenerRule"
-	svcOutputPublicNLBDNSName                  = "PublicNetworkLoadBalancerDNSName"
+	svcStackResourceALBTargetGroupLogicalID             = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID             = "NLBTargetGroup" // TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
+	svcStackResourceNLBTargetGroupV2LogicalID           = "NetworkLoadBalancerTargetGroup"
+	svcStackResourceHTTPSListenerRuleLogicalID          = "HTTPSListenerRule"
+	svcStackResourceHTTPListenerRuleLogicalID           = "HTTPListenerRule"
+	svcStackResourceListenerRuleForImportedALBLogicalID = "HTTPListenerRuleForImportedALB"
+	svcStackResourceListenerRuleResourceType            = "AWS::ElasticLoadBalancingV2::ListenerRule"
+	svcOutputPublicNLBDNSName                           = "PublicNetworkLoadBalancerDNSName"
 )
 
 type envDescriber interface {

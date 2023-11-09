@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -47,10 +48,15 @@ type publicCIDRBlocksGetter interface {
 	PublicCIDRBlocks() ([]string, error)
 }
 
+type elbGetter interface {
+	LoadBalancer(nameOrARN string) (*elbv2.LoadBalancer, error)
+}
+
 type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
+	elbGetter              elbGetter
 	lbMft                  *manifest.LoadBalancedWebService
 
 	// Overriden in tests.
@@ -93,6 +99,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		svcDeployer:            svcDeployer,
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
+		elbGetter:              elbv2.New(svcDeployer.envSess),
 		lbMft:                  lbMft,
 		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
 			sess := svcDeployer.envSess.Copy(&aws.Config{
@@ -154,6 +161,13 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 	if err := d.validateNLBRuntime(); err != nil {
 		return nil, err
 	}
+	var appHostedZoneID string
+	if d.app.Domain != "" {
+		appHostedZoneID, err = appDomainHostedZoneId(d.app.Name, d.app.Domain, d.domainHostedZoneGetter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	var opts []stack.LoadBalancedWebServiceOption
 	if !d.lbMft.NLBConfig.IsEmpty() {
 		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
@@ -162,12 +176,12 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	var appHostedZoneID string
-	if d.app.Domain != "" {
-		appHostedZoneID, err = appDomainHostedZoneId(d.app.Name, d.app.Domain, d.domainHostedZoneGetter)
+	if d.lbMft.HTTPOrBool.ImportedALB != nil {
+		lb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
 		if err != nil {
 			return nil, err
 		}
+		opts = append(opts, stack.WithImportedALB(lb))
 	}
 
 	var conf cloudformation.StackConfiguration
@@ -204,6 +218,10 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		return nil
 	}
 
+	if err := d.validateImportedALBConfig(); err != nil {
+		return fmt.Errorf(`validate imported ALB configuration for "http": %w`, err)
+	}
+
 	if err := d.validateRuntimeRoutingRule(d.lbMft.HTTPOrBool.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
 	}
@@ -216,6 +234,34 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	return nil
 }
 
+func (d *lbWebSvcDeployer) validateImportedALBConfig() error {
+	if d.lbMft.HTTPOrBool.ImportedALB == nil {
+		return nil
+	}
+	alb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB))
+	if err != nil {
+		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.lbMft.HTTPOrBool.ImportedALB), err)
+	}
+	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
+		return fmt.Errorf(`imported ALB %q must have either one or two listeners`, alb.ARN)
+	}
+	if len(alb.Listeners) == 1 {
+		return nil
+	}
+	var isHTTP, isHTTPS bool
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTP" {
+			isHTTP = true
+		} else if listener.Protocol == "HTTPS" {
+			isHTTPS = true
+		}
+	}
+	if !(isHTTP && isHTTPS) {
+		return fmt.Errorf("imported ALB must have listeners of protocol HTTP and HTTPS")
+	}
+	return nil
+}
+
 func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule) error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
@@ -224,7 +270,7 @@ func (d *lbWebSvcDeployer) validateRuntimeRoutingRule(rule manifest.RoutingRule)
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
 	if rule.Alias.IsEmpty() {
-		if hasImportedCerts {
+		if hasImportedCerts && d.lbMft.HTTPOrBool.ImportedALB == nil {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
 				envName: d.env.Name,

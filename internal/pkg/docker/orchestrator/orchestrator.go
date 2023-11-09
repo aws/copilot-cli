@@ -157,7 +157,7 @@ type RunTaskOption func(*runTaskAction)
 // Host represents a service reachable via the network.
 type Host struct {
 	Name string
-	Port string
+	Port uint16
 }
 
 // RunTaskWithProxy returns a RunTaskOption that sets up a proxy connection to hosts.
@@ -260,7 +260,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			err := o.docker.Exec(context.Background(), pauseContainer, io.Discard, "aws", "ssm", "start-session",
 				"--target", a.ssmTarget,
 				"--document-name", "AWS-StartPortForwardingSessionToRemoteHost",
-				"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%s"],"localPortNumber":["%d"]}`, host.Name, host.Port, portForHost))
+				"--parameters", fmt.Sprintf(`{"host":["%s"],"portNumber":["%d"],"localPortNumber":["%d"]}`, host.Name, host.Port, portForHost))
 			if err != nil {
 				// report err as a runtime error from the pause container
 				if o.curTaskID.Load() != orchestratorStoppedTaskID {
@@ -278,7 +278,7 @@ func (o *Orchestrator) setupProxyConnections(ctx context.Context, pauseContainer
 			"--destination", ip.String(),
 			"--protocol", "tcp",
 			"--match", "tcp",
-			"--dport", host.Port,
+			"--dport", strconv.Itoa(int(host.Port)),
 			"--jump", "REDIRECT",
 			"--to-ports", strconv.Itoa(int(port)))
 		if err != nil {

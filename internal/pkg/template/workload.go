@@ -111,6 +111,7 @@ var (
 		"vpc-connector",
 		"alb",
 		"rollback-alarms",
+		"imported-alb-resources",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -883,8 +884,45 @@ func (lr ALBListenerRule) HealthCheckProtocol() string {
 
 // ImportedALB holds the fields to import an existing ALB.
 type ImportedALB struct {
-	Name *string
-	ARN  *string
+	Name         string
+	ARN          string
+	DNSName      string
+	HostedZoneID string
+
+	Listeners      []LBListener
+	SecurityGroups []LBSecurityGroup
+}
+
+// LBListener struct represents the listener of a load balancer. // TODO(jwh): instead, reuse ALBListener
+type LBListener struct {
+	ARN      string
+	Port     int64
+	Protocol string
+}
+
+// LBSecurityGroup struct represents the security group of a load balancer.
+type LBSecurityGroup struct {
+	ID string
+}
+
+// HTTPListenerARN returns the listener ARN if the protocol is HTTP.
+func (alb *ImportedALB) HTTPListenerARN() string {
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTP" {
+			return listener.ARN
+		}
+	}
+	return ""
+}
+
+// HTTPSListenerARN returns the listener ARN if the protocol is HTTPS.
+func (alb *ImportedALB) HTTPSListenerARN() string {
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTPS" {
+			return listener.ARN
+		}
+	}
+	return ""
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -1007,10 +1045,12 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		if o.ALBEnabled && o.ImportedALB == nil {
-			parameters = append(parameters, "ALBWorkloads,")
+		if o.ImportedALB == nil {
+			if o.ALBEnabled {
+				parameters = append(parameters, "ALBWorkloads,")
+			}
+			parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 		}
-		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.WorkloadType == "Backend Service" {
 		if o.ALBEnabled {
