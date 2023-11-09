@@ -36,7 +36,7 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
 
 ## `copilot run local --watch`
 
-The `--watch` flag watches your workspace and rebuilds your containers when you make changes to your code so you can develop continuously. This is extremely useful when used with `--proxy` as it allows you to save the overhead time required to setup proxy each time you would rebuild your application!
+The `--watch` flag watches your workspace and rebuilds your containers when you make changes to your code so you can develop continuously. This is extremely useful when used with `--proxy`, as it allows you to save the overhead time required to set up proxy each time you would rebuild your application!
 
 ## Imported ALBs
 
