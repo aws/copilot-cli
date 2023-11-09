@@ -12,16 +12,22 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/aws-sdk-go/service/rds"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/cli/file/filetest"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator/orchestratortest"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/fsnotify/fsnotify"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -207,6 +213,7 @@ type runLocalExecuteMocks struct {
 	secretsManager *mocks.MocksecretGetter
 	prog           *mocks.Mockprogress
 	orchestrator   *orchestratortest.Double
+	watcher        *filetest.Double
 	hostFinder     *hostFinderDouble
 	envChecker     *mocks.MockversionCompatibilityChecker
 }
@@ -224,10 +231,10 @@ func (m *mockProvider) IsExpired() bool {
 }
 
 type hostFinderDouble struct {
-	HostsFn func(context.Context) ([]host, error)
+	HostsFn func(context.Context) ([]orchestrator.Host, error)
 }
 
-func (d *hostFinderDouble) Hosts(ctx context.Context) ([]host, error) {
+func (d *hostFinderDouble) Hosts(ctx context.Context) ([]orchestrator.Host, error) {
 	if d.HostsFn == nil {
 		return nil, nil
 	}
@@ -260,7 +267,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		"bar": "image2",
 	}
 
-	taskDef := &ecs.TaskDefinition{
+	taskDef := &awsecs.TaskDefinition{
 		ContainerDefinitions: []*sdkecs.ContainerDefinition{
 			{
 				Name: aws.String("foo"),
@@ -280,6 +287,58 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					{
 						HostPort:      aws.Int64(80),
 						ContainerPort: aws.Int64(8080),
+					},
+					{
+						HostPort: aws.Int64(9999),
+					},
+				},
+			},
+			{
+				Name: aws.String("bar"),
+				Environment: []*sdkecs.KeyValuePair{
+					{
+						Name:  aws.String("BAR_VAR"),
+						Value: aws.String("bar-value"),
+					},
+				},
+				Secrets: []*sdkecs.Secret{
+					{
+						Name:      aws.String("SHARED_SECRET"),
+						ValueFrom: aws.String("mysecret"),
+					},
+				},
+				PortMappings: []*sdkecs.PortMapping{
+					{
+						HostPort: aws.Int64(10000),
+					},
+					{
+						HostPort:      aws.Int64(77),
+						ContainerPort: aws.Int64(7777),
+					},
+				},
+			},
+		},
+	}
+	alteredTaskDef := &awsecs.TaskDefinition{
+		ContainerDefinitions: []*sdkecs.ContainerDefinition{
+			{
+				Name: aws.String("foo"),
+				Environment: []*sdkecs.KeyValuePair{
+					{
+						Name:  aws.String("FOO_VAR"),
+						Value: aws.String("foo-value"),
+					},
+				},
+				Secrets: []*sdkecs.Secret{
+					{
+						Name:      aws.String("SHARED_SECRET"),
+						ValueFrom: aws.String("mysecret"),
+					},
+				},
+				PortMappings: []*sdkecs.PortMapping{
+					{
+						HostPort:      aws.Int64(80),
+						ContainerPort: aws.Int64(8081),
 					},
 					{
 						HostPort: aws.Int64(9999),
@@ -351,9 +410,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 	expectedProxyTask := orchestrator.Task{
 		Containers: expectedTask.Containers,
 		PauseSecrets: map[string]string{
-			"AWS_ACCESS_KEY_ID":     "myID",
-			"AWS_SECRET_ACCESS_KEY": "mySecret",
-			"AWS_SESSION_TOKEN":     "myToken",
+			"AWS_ACCESS_KEY_ID":     "myEnvID",
+			"AWS_SECRET_ACCESS_KEY": "myEnvSecret",
+			"AWS_SESSION_TOKEN":     "myEnvToken",
 		},
 	}
 
@@ -363,6 +422,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		inputWkldName      string
 		inputEnvOverrides  map[string]string
 		inputPortOverrides []string
+		inputWatch         bool
 		inputProxy         bool
 		buildImagesError   error
 
@@ -393,49 +453,11 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
-		"error getting env version": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inputProxy:    true,
-			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
-			},
-			wantedError: errors.New(`retrieve version of environment stack "testEnv" in application "testApp": some error`),
-		},
-		"error due to old env version": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inputProxy:    true,
-			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
-			},
-			wantedError: errors.New(`environment "testEnv" is on version "v1.31.0" which does not support the "run local --proxy" feature`),
-		},
-		"error getting hosts to proxy to": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inputProxy:    true,
-			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
-				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
-				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
-				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
-				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
-					return nil, fmt.Errorf("some error")
-				}
-			},
-			wantedError: errors.New(`find hosts to connect to: some error`),
-		},
 		"error reading workload manifest": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
+			inputProxy:    true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
@@ -447,6 +469,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
+			inputProxy:    true,
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
@@ -468,6 +491,167 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`build images: some error`),
 		},
+		"error getting env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("", fmt.Errorf("some error"))
+			},
+			wantedError: errors.New(`retrieve version of environment stack "testEnv" in application "testApp": some error`),
+		},
+		"error due to old env version": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.31.0", nil)
+			},
+			wantedError: errors.New(`environment "testEnv" is on version "v1.31.0" which does not support the "run local --proxy" feature`),
+		},
+		"error getting hosts to proxy to": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return nil, fmt.Errorf("some error")
+				}
+			},
+			wantedError: errors.New(`find hosts to connect to: some error`),
+		},
+		"error, proxy, describe service": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+							Name: "a-different-service",
+							Port: 80,
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("get proxy target container: describe service: some error"),
+		},
+		"error, proxy, parse arn": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+							Name: "a-different-service",
+							Port: 80,
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("asdf"),
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New(`get proxy target container: parse task arn: arn: invalid prefix`),
+		},
+		"error, proxy, process task": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+							Name: "a-different-service",
+							Port: 80,
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/asdf"),
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New(`get proxy target container: task ARN in unexpected format: "arn:aws:ecs:us-west-2:123456789:task/asdf"`),
+		},
+		"error, proxy, no valid containers": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputProxy:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
+						{
+							Name: "a-different-service",
+							Port: 80,
+						},
+					}, nil
+				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName"),
+							Containers: []*sdkecs.Container{
+								{
+									RuntimeId:  aws.String("runtime-id"),
+									LastStatus: aws.String("RUNNING"),
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New(`get proxy target container: no running tasks have running containers with ecs exec enabled`),
+		},
 		"success, one run task call": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
@@ -483,7 +667,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					errCh <- errors.New("some error")
 					return errCh
 				}
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					require.Equal(t, expectedTask, task)
 				}
 				m.orchestrator.StopFn = func() {
@@ -501,14 +685,33 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.envChecker.EXPECT().Version().Return("v1.32.0", nil)
-				m.hostFinder.HostsFn = func(ctx context.Context) ([]host, error) {
-					return []host{
+				m.hostFinder.HostsFn = func(ctx context.Context) ([]orchestrator.Host, error) {
+					return []orchestrator.Host{
 						{
-							host: "a-different-service",
-							port: "80",
+							Name: "a-different-service",
+							Port: 80,
 						},
 					}, nil
 				}
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName"),
+							Containers: []*sdkecs.Container{
+								{
+									RuntimeId:  aws.String("runtime-id"),
+									LastStatus: aws.String("RUNNING"),
+									ManagedAgents: []*sdkecs.ManagedAgent{
+										{
+											Name:       aws.String("ExecuteCommandAgent"),
+											LastStatus: aws.String("RUNNING"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}, nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 
@@ -517,7 +720,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					errCh <- errors.New("some error")
 					return errCh
 				}
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					require.Equal(t, expectedProxyTask, task)
 				}
 				m.orchestrator.StopFn = func() {
@@ -540,7 +743,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.orchestrator.StartFn = func() <-chan error {
 					return errCh
 				}
-				m.orchestrator.RunTaskFn = func(task orchestrator.Task) {
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
 					require.Equal(t, expectedTask, task)
 					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 				}
@@ -558,6 +761,176 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 						t.Fatalf("Stop() called %v times, only expected 3 times", count)
 					}
 					count++
+				}
+			},
+		},
+		"watch flag receives hidden file update, doesn't restart": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.ws.EXPECT().Path().Return("")
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					eventCh <- fsnotify.Event{
+						Name: ".hiddensubdir/mockFilename",
+						Op:   fsnotify.Write,
+					}
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
+					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
+		"watch flag restarts, error for pause container definition update": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil).Times(2)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
+				m.ws.EXPECT().Path().Return("")
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(alteredTaskDef, nil)
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					eventCh <- fsnotify.Event{
+						Name: "mockFilename",
+						Op:   fsnotify.Write,
+					}
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+
+				count := 1
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
+					switch count {
+					case 1:
+						require.Equal(t, expectedTask, task)
+					case 2:
+						require.NotEqual(t, expectedTask, task)
+						errCh <- errors.New("new task requires recreating pause container")
+					}
+					count++
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
+		"watcher error succesfully stops all goroutines": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+				m.ws.EXPECT().Path().Return("")
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					watcherErrCh <- errors.New("some error")
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
+					require.Equal(t, expectedTask, task)
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
+				}
+			},
+		},
+		"watch flag restarts and finishes successfully": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputWatch:    true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil).Times(2)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil).Times(2)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
+				m.ws.EXPECT().Path().Return("")
+
+				eventCh := make(chan fsnotify.Event, 1)
+				m.watcher.EventsFn = func() <-chan fsnotify.Event {
+					eventCh <- fsnotify.Event{
+						Name: "mockFilename",
+						Op:   fsnotify.Write,
+					}
+					return eventCh
+				}
+
+				watcherErrCh := make(chan error, 1)
+				m.watcher.ErrorsFn = func() <-chan error {
+					return watcherErrCh
+				}
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					return errCh
+				}
+				runCount := 1
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
+					require.Equal(t, expectedTask, task)
+					if runCount > 1 {
+						syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+					}
+					runCount++
+				}
+
+				m.orchestrator.StopFn = func() {
+					close(errCh)
 				}
 			},
 		},
@@ -579,6 +952,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				repository:     mocks.NewMockrepositoryService(ctrl),
 				prog:           mocks.NewMockprogress(ctrl),
 				orchestrator:   &orchestratortest.Double{},
+				watcher:        &filetest.Double{},
 				hostFinder:     &hostFinderDouble{},
 				envChecker:     mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
@@ -589,6 +963,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					wkldName:     tc.inputWkldName,
 					envName:      tc.inputEnvName,
 					envOverrides: tc.inputEnvOverrides,
+					watch:        tc.inputWatch,
 					portOverrides: portOverrides{
 						{
 							host:      "777",
@@ -623,6 +998,11 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 						Credentials: credentials.NewStaticCredentials("myID", "mySecret", "myToken"),
 					},
 				},
+				envManagerSess: &session.Session{
+					Config: &aws.Config{
+						Credentials: credentials.NewStaticCredentials("myEnvID", "myEnvSecret", "myEnvToken"),
+					},
+				},
 				cmd:          m.mockRunner,
 				dockerEngine: m.dockerEngine,
 				repository:   m.repository,
@@ -632,6 +1012,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				orchestrator: m.orchestrator,
 				hostFinder:   m.hostFinder,
 				envChecker:   m.envChecker,
+				debounceTime: 0, // disable debounce during testing
+				newRecursiveWatcher: func() (recursiveWatcher, error) {
+					return m.watcher, nil
+				},
 			}
 			// WHEN
 			err := opts.Execute()
@@ -656,7 +1040,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		taskDef      *ecs.TaskDefinition
+		taskDef      *awsecs.TaskDefinition
 		envOverrides map[string]string
 		setupMocks   func(m *runLocalExecuteMocks)
 		credsError   error
@@ -666,14 +1050,14 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 		wantError string
 	}{
 		"invalid container in env override": {
-			taskDef: &ecs.TaskDefinition{},
+			taskDef: &awsecs.TaskDefinition{},
 			envOverrides: map[string]string{
 				"bad:OVERRIDE": "bad",
 			},
 			wantError: `parse env overrides: "bad:OVERRIDE" targets invalid container`,
 		},
 		"overrides parsed and applied correctly": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -706,7 +1090,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"overrides merged with existing env vars correctly": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -769,7 +1153,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"error getting secret": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -788,7 +1172,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			wantError: `get secrets: get secret "defaultSSM": some error`,
 		},
 		"error getting secret if invalid arn": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -804,7 +1188,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			wantError: `get secrets: get secret "arn:aws:ecs:us-west-2:123456789:service/mycluster/myservice": invalid ARN; not a SSM or Secrets Manager ARN`,
 		},
 		"error if secret redefines a var": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -826,7 +1210,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			wantError: `get secrets: secret names must be unique, but an environment variable "SHOULD_BE_A_VAR" already exists`,
 		},
 		"correct service used based on arn": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -864,7 +1248,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"only unique secrets pulled": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -917,7 +1301,7 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"secrets set via overrides not pulled": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name: aws.String("foo"),
@@ -974,12 +1358,12 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 			},
 		},
 		"error getting creds": {
-			taskDef:    &ecs.TaskDefinition{},
+			taskDef:    &awsecs.TaskDefinition{},
 			credsError: errors.New("some error"),
 			wantError:  `get IAM credentials: some error`,
 		},
 		"region env vars set": {
-			taskDef: &ecs.TaskDefinition{
+			taskDef: &awsecs.TaskDefinition{
 				ContainerDefinitions: []*sdkecs.ContainerDefinition{
 					{
 						Name:        aws.String("foo"),
@@ -1045,15 +1429,105 @@ func TestRunLocalOpts_getEnvVars(t *testing.T) {
 	}
 }
 
+type taggedResourceGetterDouble struct {
+	GetResourcesByTagsFn func(string, map[string]string) ([]*resourcegroups.Resource, error)
+}
+
+func (d *taggedResourceGetterDouble) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
+	if d.GetResourcesByTagsFn == nil {
+		return nil, nil
+	}
+	return d.GetResourcesByTagsFn(resourceType, tags)
+}
+
+type rdsDescriberDouble struct {
+	DescribeDBInstancesPagesWithContextFn func(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
+	DescribeDBClustersPagesWithContextFn  func(context.Context, *rds.DescribeDBClustersInput, func(*rds.DescribeDBClustersOutput, bool) bool, ...request.Option) error
+}
+
+func (d *rdsDescriberDouble) DescribeDBInstancesPagesWithContext(ctx context.Context, in *rds.DescribeDBInstancesInput, fn func(*rds.DescribeDBInstancesOutput, bool) bool, opts ...request.Option) error {
+	if d.DescribeDBInstancesPagesWithContextFn == nil {
+		return nil
+	}
+	return d.DescribeDBInstancesPagesWithContextFn(ctx, in, fn, opts...)
+}
+
+func (d *rdsDescriberDouble) DescribeDBClustersPagesWithContext(ctx context.Context, in *rds.DescribeDBClustersInput, fn func(*rds.DescribeDBClustersOutput, bool) bool, opts ...request.Option) error {
+	if d.DescribeDBClustersPagesWithContextFn == nil {
+		return nil
+	}
+	return d.DescribeDBClustersPagesWithContextFn(ctx, in, fn, opts...)
+}
+
 func TestRunLocal_HostDiscovery(t *testing.T) {
 	type testMocks struct {
 		ecs *mocks.MockecsClient
+		rg  *taggedResourceGetterDouble
+		rds *rdsDescriberDouble
+	}
+	ecsServices := []*awsecs.Service{
+		{
+			Deployments: []*sdkecs.Deployment{
+				{
+					Status: aws.String("ACTIVE"),
+					ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+						Enabled: aws.Bool(true),
+						Services: []*sdkecs.ServiceConnectService{
+							{
+								ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+									{
+										DnsName: aws.String("old"),
+										Port:    aws.Int64(80),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Status: aws.String("PRIMARY"),
+					ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+						Enabled: aws.Bool(true),
+						Services: []*sdkecs.ServiceConnectService{
+							{
+								ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+									{
+										DnsName: aws.String("primary"),
+										Port:    aws.Int64(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Deployments: []*sdkecs.Deployment{
+				{
+					Status: aws.String("INACTIVE"),
+					ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
+						Enabled: aws.Bool(true),
+						Services: []*sdkecs.ServiceConnectService{
+							{
+								ClientAliases: []*sdkecs.ServiceConnectClientAlias{
+									{
+										DnsName: aws.String("inactive"),
+										Port:    aws.Int64(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	tests := map[string]struct {
 		setupMocks func(t *testing.T, m *testMocks)
 
-		wantHosts []host
+		wantHosts []orchestrator.Host
 		wantError string
 	}{
 		"error getting services": {
@@ -1064,69 +1538,214 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 		},
 		"ignores non-primary deployments": {
 			setupMocks: func(t *testing.T, m *testMocks) {
-				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*awsecs.Service{
-					{
-						Deployments: []*sdkecs.Deployment{
-							{
-								Status: aws.String("ACTIVE"),
-								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
-									Enabled: aws.Bool(true),
-									Services: []*sdkecs.ServiceConnectService{
-										{
-											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
-												{
-													DnsName: aws.String("old"),
-													Port:    aws.Int64(80),
-												},
-											},
-										},
-									},
-								},
-							},
-							{
-								Status: aws.String("PRIMARY"),
-								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
-									Enabled: aws.Bool(true),
-									Services: []*sdkecs.ServiceConnectService{
-										{
-											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
-												{
-													DnsName: aws.String("primary"),
-													Port:    aws.Int64(80),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						Deployments: []*sdkecs.Deployment{
-							{
-								Status: aws.String("INACTIVE"),
-								ServiceConnectConfiguration: &sdkecs.ServiceConnectConfiguration{
-									Enabled: aws.Bool(true),
-									Services: []*sdkecs.ServiceConnectService{
-										{
-											ClientAliases: []*sdkecs.ServiceConnectClientAlias{
-												{
-													DnsName: aws.String("inactive"),
-													Port:    aws.Int64(80),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}, nil)
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
 			},
-			wantHosts: []host{
+			wantHosts: []orchestrator.Host{
 				{
-					host: "primary",
-					port: "80",
+					Name: "primary",
+					Port: 80,
+				},
+			},
+		},
+		"error getting rds resources": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return nil, errors.New("some error")
+				}
+			},
+			wantError: "get rds hosts: get tagged resources: some error",
+		},
+		"no db instances found": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return nil, nil
+				}
+			},
+			wantHosts: []orchestrator.Host{
+				{
+					Name: "primary",
+					Port: 80,
+				},
+			},
+		},
+		"invalid db arn": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:invalid",
+						},
+					}, nil
+				}
+			},
+			wantError: `get rds hosts: invalid arn "arn:invalid": arn: not enough sections`,
+		},
+		"error describing rds instances": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					return errors.New("some error")
+				}
+			},
+			wantError: "get rds hosts: describe instances: some error",
+		},
+		"gets rds instance": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:subgrp:subgrpID",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBInstancesOutput{
+						DBInstances: []*rds.DBInstance{
+							{
+								Endpoint: &rds.Endpoint{
+									Address: aws.String("db"),
+									Port:    aws.Int64(3306),
+								},
+							},
+						},
+					}, true)
+					return nil
+				}
+			},
+			wantHosts: []orchestrator.Host{
+				{
+					Name: "primary",
+					Port: 80,
+				},
+				{
+					Name: "db",
+					Port: 3306,
+				},
+			},
+		},
+		"error describing db cluster": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:subgrp:subgrpID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:cluster:clusterID",
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBInstancesOutput{
+						DBInstances: []*rds.DBInstance{
+							{
+								Endpoint: &rds.Endpoint{
+									Address: aws.String("db"),
+									Port:    aws.Int64(3306),
+								},
+							},
+						},
+					}, true)
+					return nil
+				}
+				m.rds.DescribeDBClustersPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBClustersInput, f func(*rds.DescribeDBClustersOutput, bool) bool, o ...request.Option) error {
+					return errors.New("some error")
+				}
+			},
+			wantError: "get rds hosts: describe clusters: some error",
+		},
+		"gets db cluster, skips other service resources": {
+			setupMocks: func(t *testing.T, m *testMocks) {
+				m.ecs.EXPECT().ServiceConnectServices(gomock.Any(), gomock.Any(), gomock.Any()).Return(ecsServices, nil)
+				m.rg.GetResourcesByTagsFn = func(s string, m map[string]string) ([]*resourcegroups.Resource, error) {
+					return []*resourcegroups.Resource{
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:db:instanceID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:subgrp:subgrpID",
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:cluster:clusterID",
+							Tags: map[string]string{
+								deploy.ServiceTagKey: "foo",
+							},
+						},
+						{
+							ARN: "arn:aws:rds:us-west-2:123456789:cluster:otherServiceCluster",
+							Tags: map[string]string{
+								deploy.ServiceTagKey: "bar",
+							},
+						},
+					}, nil
+				}
+				m.rds.DescribeDBInstancesPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBInstancesInput, f func(*rds.DescribeDBInstancesOutput, bool) bool, o ...request.Option) error {
+					f(&rds.DescribeDBInstancesOutput{
+						DBInstances: []*rds.DBInstance{
+							{
+								Endpoint: &rds.Endpoint{
+									Address: aws.String("db"),
+									Port:    aws.Int64(3306),
+								},
+							},
+						},
+					}, true)
+					return nil
+				}
+				m.rds.DescribeDBClustersPagesWithContextFn = func(ctx context.Context, ddi *rds.DescribeDBClustersInput, f func(*rds.DescribeDBClustersOutput, bool) bool, o ...request.Option) error {
+					require.NotContains(t, ddi.Filters[0].Values, aws.String("arn:aws:rds:us-west-2:123456789:cluster:otherServiceCluster"))
+
+					f(&rds.DescribeDBClustersOutput{
+						DBClusters: []*rds.DBCluster{
+							{
+								Endpoint:        aws.String("cluster"),
+								Port:            aws.Int64(5432),
+								ReaderEndpoint:  aws.String("cluster-ro"),
+								CustomEndpoints: []*string{aws.String("cluster-custom")},
+							},
+						},
+					}, true)
+					return nil
+				}
+			},
+			wantHosts: []orchestrator.Host{
+				{
+					Name: "primary",
+					Port: 80,
+				},
+				{
+					Name: "db",
+					Port: 3306,
+				},
+				{
+					Name: "cluster",
+					Port: 5432,
+				},
+				{
+					Name: "cluster-ro",
+					Port: 5432,
+				},
+				{
+					Name: "cluster-custom",
+					Port: 5432,
 				},
 			},
 		},
@@ -1137,11 +1756,16 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 			defer ctrl.Finish()
 			m := &testMocks{
 				ecs: mocks.NewMockecsClient(ctrl),
+				rg:  &taggedResourceGetterDouble{},
+				rds: &rdsDescriberDouble{},
 			}
 			tc.setupMocks(t, m)
 
 			h := &hostDiscoverer{
-				ecs: m.ecs,
+				wkld: "foo",
+				ecs:  m.ecs,
+				rg:   m.rg,
+				rds:  m.rds,
 			}
 
 			hosts, err := h.Hosts(context.Background())

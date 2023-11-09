@@ -186,6 +186,7 @@ type repositoryService interface {
 type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 	ServiceConnectServices(app, env, svc string) ([]*awsecs.Service, error)
+	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
 type logEventsWriter interface {
@@ -710,6 +711,7 @@ type dockerEngineRunner interface {
 	Stop(context.Context, string) error
 	Rm(string) error
 	Build(context.Context, *dockerengine.BuildArguments, io.Writer) error
+	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
 }
 
 type workloadStackGenerator interface {

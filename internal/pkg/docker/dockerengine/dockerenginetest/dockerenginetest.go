@@ -16,6 +16,7 @@ type Double struct {
 	IsContainerRunningFn func(context.Context, string) (bool, error)
 	RunFn                func(context.Context, *dockerengine.RunOptions) error
 	BuildFn              func(context.Context, *dockerengine.BuildArguments, io.Writer) error
+	ExecFn               func(context.Context, string, io.Writer, string, ...string) error
 }
 
 // Stop calls the stubbed function.
@@ -48,4 +49,12 @@ func (d *Double) Build(ctx context.Context, in *dockerengine.BuildArguments, w i
 		return nil
 	}
 	return d.BuildFn(ctx, in, w)
+}
+
+// Exec calls the stubbed function.
+func (d *Double) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
+	if d.ExecFn == nil {
+		return nil
+	}
+	return d.ExecFn(ctx, container, out, cmd, args...)
 }

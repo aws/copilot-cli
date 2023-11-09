@@ -60,6 +60,7 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+    - !Condition CreateALB
 {{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
 {{ include "mappings-regional-configs" . }}
 {{- end }}

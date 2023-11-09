@@ -5,29 +5,37 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkecs "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/rds"
 	sdksecretsmanager "github.com/aws/aws-sdk-go/service/secretsmanager"
 	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/cli/file"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -47,6 +55,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/term/syncbuffer"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -58,12 +67,28 @@ const (
 
 type containerOrchestrator interface {
 	Start() <-chan error
-	RunTask(orchestrator.Task)
+	RunTask(orchestrator.Task, ...orchestrator.RunTaskOption)
 	Stop()
 }
 
 type hostFinder interface {
-	Hosts(context.Context) ([]host, error)
+	Hosts(context.Context) ([]orchestrator.Host, error)
+}
+
+type taggedResourceGetter interface {
+	GetResourcesByTags(string, map[string]string) ([]*resourcegroups.Resource, error)
+}
+
+type rdsDescriber interface {
+	DescribeDBInstancesPagesWithContext(context.Context, *rds.DescribeDBInstancesInput, func(*rds.DescribeDBInstancesOutput, bool) bool, ...request.Option) error
+	DescribeDBClustersPagesWithContext(context.Context, *rds.DescribeDBClustersInput, func(*rds.DescribeDBClustersOutput, bool) bool, ...request.Option) error
+}
+
+type recursiveWatcher interface {
+	Add(path string) error
+	Close() error
+	Events() <-chan fsnotify.Event
+	Errors() <-chan error
 }
 
 type runLocalVars struct {
@@ -72,31 +97,35 @@ type runLocalVars struct {
 	appName       string
 	envName       string
 	envOverrides  map[string]string
+	watch         bool
 	portOverrides portOverrides
 	proxy         bool
+	proxyNetwork  net.IPNet
 }
 
 type runLocalOpts struct {
 	runLocalVars
 
-	sel            deploySelector
-	ecsClient      ecsClient
-	ssm            secretGetter
-	secretsManager secretGetter
-	sessProvider   sessionProvider
-	sess           *session.Session
-	envManagerSess *session.Session
-	targetEnv      *config.Environment
-	targetApp      *config.Application
-	store          store
-	ws             wsWlDirReader
-	cmd            execRunner
-	dockerEngine   dockerEngineRunner
-	repository     repositoryService
-	prog           progress
-	orchestrator   containerOrchestrator
-	hostFinder     hostFinder
-	envChecker     versionCompatibilityChecker
+	sel                 deploySelector
+	ecsClient           ecsClient
+	ssm                 secretGetter
+	secretsManager      secretGetter
+	sessProvider        sessionProvider
+	sess                *session.Session
+	envManagerSess      *session.Session
+	targetEnv           *config.Environment
+	targetApp           *config.Application
+	store               store
+	ws                  wsWlDirReader
+	cmd                 execRunner
+	dockerEngine        dockerEngineRunner
+	repository          repositoryService
+	prog                progress
+	orchestrator        containerOrchestrator
+	hostFinder          hostFinder
+	envChecker          versionCompatibilityChecker
+	debounceTime        time.Duration
+	newRecursiveWatcher func() (recursiveWatcher, error)
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
@@ -178,6 +207,8 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			env:  o.envName,
 			wkld: o.wkldName,
 			ecs:  ecs.New(o.envManagerSess),
+			rg:   resourcegroups.New(o.envManagerSess),
+			rds:  rds.New(o.envManagerSess),
 		}
 		envDesc, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:         o.appName,
@@ -219,6 +250,10 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			containerURIs[name] = info.RepoTags[0]
 		}
 		return containerURIs, nil
+	}
+	o.debounceTime = 5 * time.Second
+	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
+		return file.NewRecursiveWatcher(0)
 	}
 	return o, nil
 }
@@ -282,59 +317,48 @@ func (o *runLocalOpts) Execute() error {
 
 	ctx := context.Background()
 
-	task, err := o.getTask(ctx)
+	task, err := o.prepareTask(ctx)
 	if err != nil {
-		return fmt.Errorf("get task: %w", err)
+		return err
 	}
 
+	var hosts []orchestrator.Host
+	var ssmTarget string
 	if o.proxy {
 		if err := validateMinEnvVersion(o.ws, o.envChecker, o.appName, o.envName, template.RunLocalProxyMinEnvVersion, "run local --proxy"); err != nil {
 			return err
 		}
 
-		hosts, err := o.hostFinder.Hosts(ctx)
+		hosts, err = o.hostFinder.Hosts(ctx)
 		if err != nil {
 			return fmt.Errorf("find hosts to connect to: %w", err)
 		}
 
-		// TODO(dannyrandall): inject into orchestrator and use in pause container
-		fmt.Printf("hosts: %+v\n", hosts)
-	}
-
-	mft, _, err := workloadManifest(&workloadManifestInput{
-		name:         o.wkldName,
-		appName:      o.appName,
-		envName:      o.envName,
-		ws:           o.ws,
-		interpolator: o.newInterpolator(o.appName, o.envName),
-		unmarshal:    o.unmarshal,
-		sess:         o.envManagerSess,
-	})
-	if err != nil {
-		return err
-	}
-
-	containerURIs, err := o.buildContainerImages(mft)
-	if err != nil {
-		return fmt.Errorf("build images: %w", err)
-	}
-
-	// replace built images with the local built URI
-	for name, uri := range containerURIs {
-		ctr, ok := task.Containers[name]
-		if !ok {
-			return fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
+		ssmTarget, err = o.getSSMTarget(ctx)
+		if err != nil {
+			return fmt.Errorf("get proxy target container: %w", err)
 		}
-
-		ctr.ImageURI = uri
-		task.Containers[name] = ctr
 	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	errCh := o.orchestrator.Start()
-	o.orchestrator.RunTask(task)
+	var runTaskOpts []orchestrator.RunTaskOption
+	if o.proxy {
+		runTaskOpts = append(runTaskOpts, orchestrator.RunTaskWithProxy(ssmTarget, o.proxyNetwork, hosts...))
+	}
+	o.orchestrator.RunTask(task, runTaskOpts...)
+
+	var watchCh <-chan interface{}
+	var watchErrCh <-chan error
+	stopCh := make(chan struct{})
+	if o.watch {
+		watchCh, watchErrCh, err = o.watchLocalFiles(stopCh)
+		if err != nil {
+			return fmt.Errorf("setup watch: %s", err)
+		}
+	}
 
 	for {
 		select {
@@ -342,16 +366,63 @@ func (o *runLocalOpts) Execute() error {
 			// we loop until errCh closes, since Start()
 			// closes errCh when the orchestrator is completely done.
 			if !ok {
+				close(stopCh)
 				return nil
 			}
 
-			fmt.Printf("error: %s\n", err)
+			log.Errorf("error: %s\n", err)
 			o.orchestrator.Stop()
 		case <-sigCh:
 			signal.Stop(sigCh)
 			o.orchestrator.Stop()
+		case <-watchErrCh:
+			log.Errorf("watch: %s\n", err)
+			o.orchestrator.Stop()
+		case <-watchCh:
+			task, err = o.prepareTask(ctx)
+			if err != nil {
+				log.Errorf("rerun task: %s\n", err)
+				o.orchestrator.Stop()
+				break
+			}
+			o.orchestrator.RunTask(task)
 		}
 	}
+}
+
+// getSSMTarget returns a AWS SSM target for a running container
+// that supports ECS Service Exec.
+func (o *runLocalOpts) getSSMTarget(ctx context.Context) (string, error) {
+	svc, err := o.ecsClient.DescribeService(o.appName, o.envName, o.wkldName)
+	if err != nil {
+		return "", fmt.Errorf("describe service: %w", err)
+	}
+
+	for _, task := range svc.Tasks {
+		// TaskArn should have the format: arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName
+		taskARN, err := arn.Parse(aws.StringValue(task.TaskArn))
+		if err != nil {
+			return "", fmt.Errorf("parse task arn: %w", err)
+		}
+
+		split := strings.Split(taskARN.Resource, "/")
+		if len(split) != 3 {
+			return "", fmt.Errorf("task ARN in unexpected format: %q", taskARN)
+		}
+		taskName := split[2]
+
+		for _, ctr := range task.Containers {
+			id := aws.StringValue(ctr.RuntimeId)
+			hasECSExec := slices.ContainsFunc(ctr.ManagedAgents, func(a *sdkecs.ManagedAgent) bool {
+				return aws.StringValue(a.Name) == "ExecuteCommandAgent" && aws.StringValue(a.LastStatus) == "RUNNING"
+			})
+			if id != "" && hasECSExec && aws.StringValue(ctr.LastStatus) == "RUNNING" {
+				return fmt.Sprintf("ecs:%s_%s_%s", svc.ClusterName, taskName, aws.StringValue(ctr.RuntimeId)), nil
+			}
+		}
+	}
+
+	return "", errors.New("no running tasks have running containers with ecs exec enabled")
 }
 
 func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
@@ -370,7 +441,7 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	if o.proxy {
-		pauseSecrets, err := sessionEnvVars(ctx, o.sess)
+		pauseSecrets, err := sessionEnvVars(ctx, o.envManagerSess)
 		if err != nil {
 			return orchestrator.Task{}, fmt.Errorf("get pause container secrets: %w", err)
 		}
@@ -407,6 +478,120 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	}
 
 	return task, nil
+}
+
+func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, error) {
+	task, err := o.getTask(ctx)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("get task: %w", err)
+	}
+
+	mft, _, err := workloadManifest(&workloadManifestInput{
+		name:         o.wkldName,
+		appName:      o.appName,
+		envName:      o.envName,
+		ws:           o.ws,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		unmarshal:    o.unmarshal,
+		sess:         o.envManagerSess,
+	})
+	if err != nil {
+		return orchestrator.Task{}, err
+	}
+
+	containerURIs, err := o.buildContainerImages(mft)
+	if err != nil {
+		return orchestrator.Task{}, fmt.Errorf("build images: %w", err)
+	}
+
+	// replace built images with the local built URI
+	for name, uri := range containerURIs {
+		ctr, ok := task.Containers[name]
+		if !ok {
+			return orchestrator.Task{}, fmt.Errorf("built an image for %q, which doesn't exist in the task", name)
+		}
+
+		ctr.ImageURI = uri
+		task.Containers[name] = ctr
+	}
+
+	return task, nil
+}
+
+func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
+	workspacePath := o.ws.Path()
+
+	watchCh := make(chan interface{})
+	watchErrCh := make(chan error)
+
+	watcher, err := o.newRecursiveWatcher()
+	if err != nil {
+		return nil, nil, fmt.Errorf("file: %w", err)
+	}
+
+	if err = watcher.Add(workspacePath); err != nil {
+		return nil, nil, err
+	}
+
+	watcherEvents := watcher.Events()
+	watcherErrors := watcher.Errors()
+
+	debounceTimer := time.NewTimer(o.debounceTime)
+	if !debounceTimer.Stop() {
+		// flush the timer in case stop is called after the timer finishes
+		<-debounceTimer.C
+	}
+
+	go func() {
+		for {
+			select {
+			case <-stopCh:
+				watcher.Close()
+				return
+			case err, ok := <-watcherErrors:
+				watchErrCh <- err
+				if !ok {
+					watcher.Close()
+					return
+				}
+			case event, ok := <-watcherEvents:
+				if !ok {
+					watcher.Close()
+					return
+				}
+
+				// skip chmod events
+				if event.Has(fsnotify.Chmod) {
+					break
+				}
+
+				// check if any subdirectories within copilot directory are hidden
+				isHidden := false
+				parent := workspacePath
+				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
+				// fsnotify events are always of form /a/b/c, don't use filepath.Split as that's OS dependent
+				for _, child := range strings.Split(suffix, "/") {
+					parent = filepath.Join(parent, child)
+					subdirHidden, err := file.IsHiddenFile(child)
+					if err != nil {
+						break
+					}
+					if subdirHidden {
+						isHidden = true
+					}
+				}
+
+				// TODO(Aiden): implement dockerignore blacklist for update
+				if !isHidden {
+					debounceTimer.Reset(o.debounceTime)
+				}
+			case <-debounceTimer.C:
+				watchCh <- nil
+			}
+		}
+	}()
+
+	return watchCh, watchErrCh, nil
 }
 
 func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]string, error) {
@@ -617,25 +802,23 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	return getter.GetSecretValue(ctx, valueFrom)
 }
 
-type host struct {
-	host string
-	port string
-}
-
 type hostDiscoverer struct {
 	ecs  ecsClient
 	app  string
 	env  string
 	wkld string
+
+	rg  taggedResourceGetter
+	rds rdsDescriber
 }
 
-func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
+func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error) {
 	svcs, err := h.ecs.ServiceConnectServices(h.app, h.env, h.wkld)
 	if err != nil {
 		return nil, fmt.Errorf("get service connect services: %w", err)
 	}
 
-	var hosts []host
+	var hosts []orchestrator.Host
 	for _, svc := range svcs {
 		// find the primary deployment with service connect enabled
 		idx := slices.IndexFunc(svc.Deployments, func(dep *sdkecs.Deployment) bool {
@@ -647,11 +830,107 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]host, error) {
 
 		for _, sc := range svc.Deployments[idx].ServiceConnectConfiguration.Services {
 			for _, alias := range sc.ClientAliases {
-				hosts = append(hosts, host{
-					host: aws.StringValue(alias.DnsName),
-					port: strconv.Itoa(int(aws.Int64Value(alias.Port))),
+				hosts = append(hosts, orchestrator.Host{
+					Name: aws.StringValue(alias.DnsName),
+					Port: uint16(aws.Int64Value(alias.Port)),
 				})
 			}
+		}
+	}
+
+	rdsHosts, err := h.rdsHosts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get rds hosts: %w", err)
+	}
+
+	return append(hosts, rdsHosts...), nil
+}
+
+// rdsHosts gets rds endpoints for workloads tagged for this workload
+// or for the environment using direct AWS SDK calls.
+func (h *hostDiscoverer) rdsHosts(ctx context.Context) ([]orchestrator.Host, error) {
+	var hosts []orchestrator.Host
+
+	resources, err := h.rg.GetResourcesByTags(resourcegroups.ResourceTypeRDS, map[string]string{
+		deploy.AppTagKey: h.app,
+		deploy.EnvTagKey: h.env,
+	})
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("get tagged resources: %w", err)
+	case len(resources) == 0:
+		return nil, nil
+	}
+
+	dbFilter := &rds.Filter{
+		Name: aws.String("db-instance-id"),
+	}
+	clusterFilter := &rds.Filter{
+		Name: aws.String("db-cluster-id"),
+	}
+	for i := range resources {
+		// we don't want resources that belong to other services
+		// but we do want env level services
+		if wkld, ok := resources[i].Tags[deploy.ServiceTagKey]; ok && wkld != h.wkld {
+			continue
+		}
+
+		arn, err := arn.Parse(resources[i].ARN)
+		if err != nil {
+			return nil, fmt.Errorf("invalid arn %q: %w", resources[i].ARN, err)
+		}
+
+		switch {
+		case strings.HasPrefix(arn.Resource, "db:"):
+			dbFilter.Values = append(dbFilter.Values, aws.String(resources[i].ARN))
+		case strings.HasPrefix(arn.Resource, "cluster:"):
+			clusterFilter.Values = append(clusterFilter.Values, aws.String(resources[i].ARN))
+		}
+	}
+
+	if len(dbFilter.Values) > 0 {
+		err = h.rds.DescribeDBInstancesPagesWithContext(ctx, &rds.DescribeDBInstancesInput{
+			Filters: []*rds.Filter{dbFilter},
+		}, func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
+			for _, db := range out.DBInstances {
+				if db.Endpoint != nil {
+					hosts = append(hosts, orchestrator.Host{
+						Name: aws.StringValue(db.Endpoint.Address),
+						Port: uint16(aws.Int64Value(db.Endpoint.Port)),
+					})
+				}
+			}
+			return true
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe instances: %w", err)
+		}
+	}
+
+	if len(clusterFilter.Values) > 0 {
+		err = h.rds.DescribeDBClustersPagesWithContext(ctx, &rds.DescribeDBClustersInput{
+			Filters: []*rds.Filter{clusterFilter},
+		}, func(out *rds.DescribeDBClustersOutput, lastPage bool) bool {
+			for _, db := range out.DBClusters {
+				add := func(s *string) {
+					if s != nil {
+						hosts = append(hosts, orchestrator.Host{
+							Name: aws.StringValue(s),
+							Port: uint16(aws.Int64Value(db.Port)),
+						})
+					}
+				}
+
+				add(db.Endpoint)
+				add(db.ReaderEndpoint)
+				for i := range db.CustomEndpoints {
+					add(db.CustomEndpoints[i])
+				}
+			}
+			return true
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe clusters: %w", err)
 		}
 	}
 
@@ -681,8 +960,16 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.wkldName, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
+	cmd.Flags().IPNetVar(&vars.proxyNetwork, proxyNetworkFlag, net.IPNet{
+		// docker uses 172.17.0.0/16 for networking by default
+		// so we'll default to different /16 from the 172.16.0.0/12
+		// private network defined by RFC 1918.
+		IP:   net.IPv4(172, 20, 0, 0),
+		Mask: net.CIDRMask(16, 32),
+	}, proxyNetworkFlag)
 	return cmd
 }
