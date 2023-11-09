@@ -36,8 +36,8 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
 
 The new `--proxy` flag on `copilot run local` enhances your local development experience by making to possible for your local containers to talk to services deployed in your environment's VPC.
 
-For example, imagine you have an environment with two services, `foo` and `bar`, who both have [Service Connect](TODO) enabled.
-Additionally, `foo` has an [RDS addon](TODO) deployed that it uses for storing data.
+For example, imagine you have an environment with two services, `foo` and `bar`, who both have [Service Connect](../docs/manifest/lb-web-service.md#network-connect) enabled.
+Additionally, `foo` has an [RDS addon](../docs/developing/addons/workload.md) deployed that it uses for storing data.
 To test `foo` locally, you can now run `copilot run local --proxy --name foo`, and your local `foo` containers can reach the following:
 
 - The `bar` service, using its service connect URL (which defaults to `http://bar:<port>`)
