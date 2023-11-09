@@ -466,6 +466,7 @@ func (o *Orchestrator) pauseRunOptions(t Task) dockerengine.RunOptions {
 		ContainerPorts:       make(map[string]string),
 		Secrets:              t.PauseSecrets,
 		AddLinuxCapabilities: []string{"NET_ADMIN"},
+		Init:                 true,
 	}
 
 	for _, ctr := range t.Containers {
