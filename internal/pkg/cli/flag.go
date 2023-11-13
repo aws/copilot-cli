@@ -67,11 +67,12 @@ const (
 	containerFlag               = "container"
 
 	// Run local flags
-	portOverrideFlag   = "port-override"
-	envVarOverrideFlag = "env-var-override"
-	proxyFlag          = "proxy"
-	proxyNetworkFlag   = "proxy-network"
-	watchFlag          = "watch"
+	portOverrideFlag     = "port-override"
+	envVarOverrideFlag   = "env-var-override"
+	proxyFlag            = "proxy"
+	proxyNetworkFlag     = "proxy-network"
+	watchFlag            = "watch"
+	retrieveTaskRoleFlag = "task-role"
 
 	// Flags for CI/CD.
 	githubURLFlag         = "github-url"
@@ -323,9 +324,10 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 Format: [container]:KEY=VALUE. Omit container name to apply to all containers.`
 	portOverridesFlagDescription = `Optional. Override ports exposed by service. Format: <host port>:<service port>.
 Example: --port-override 5000:80 binds localhost:5000 to the service's port 80.`
-	proxyFlagDescription        = `Optional. Proxy outbound requests to your environment's VPC.`
-	proxyNetworkFlagDescription = `Optional. Set the IP Network used by --proxy.`
-	watchFlagDescription        = `Optional. Watch changes to local files and restart containers when updated.`
+	proxyFlagDescription            = `Optional. Proxy outbound requests to your environment's VPC.`
+	proxyNetworkFlagDescription     = `Optional. Set the IP Network used by --proxy.`
+	watchFlagDescription            = `Optional. Watch changes to local files and restart containers when updated.`
+	retrieveTaskRoleFlagDescription = "Optional. Run containers with TaskRole credentials instead of session credentials."
 
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
 output the manifest file used for that deployment.`

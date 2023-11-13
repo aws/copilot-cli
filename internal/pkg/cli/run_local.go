@@ -92,15 +92,16 @@ type recursiveWatcher interface {
 }
 
 type runLocalVars struct {
-	wkldName      string
-	wkldType      string
-	appName       string
-	envName       string
-	envOverrides  map[string]string
-	watch         bool
-	portOverrides portOverrides
-	proxy         bool
-	proxyNetwork  net.IPNet
+	wkldName         string
+	wkldType         string
+	appName          string
+	envName          string
+	envOverrides     map[string]string
+	watch            bool
+	retrieveTaskRole bool
+	portOverrides    portOverrides
+	proxy            bool
+	proxyNetwork     net.IPNet
 }
 
 type runLocalOpts struct {
@@ -436,6 +437,35 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
+	if o.retrieveTaskRole {
+		taskRoleCredsVars, err := o.taskRoleCredentials(ctx)
+		if err != nil {
+			log.Warning("TaskRole retrieval failed. ",
+				"You can manually add permissions for your account to assume TaskRole permissions by adding the following YAML override to your service:\n",
+				`- op: add
+  path: /Resources/TaskRole/Properties/AssumeRolePolicyDocument/Statement/-
+  value:
+    Effect: Allow
+    Principal:
+      AWS: "arn:aws:iam::[account-ID]:root"
+    Action: 'sts:AssumeRole'
+`,
+				"\n",
+				"For more information on YAML overrides see https://aws.github.io/copilot-cli/docs/developing/overrides/yamlpatch/")
+			return orchestrator.Task{}, fmt.Errorf("retrieve TaskRole credentials: %w", err)
+		}
+
+		// overwrite environment variables
+		for ctr := range envVars {
+			for k, v := range taskRoleCredsVars {
+				envVars[ctr][k] = envVarValue{
+					Value:  v,
+					Secret: true,
+				}
+			}
+		}
+	}
+
 	task := orchestrator.Task{
 		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
@@ -610,6 +640,54 @@ func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]stri
 		env["AWS_REGION"] = aws.StringValue(sess.Config.Region)
 	}
 	return env, nil
+}
+
+func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]string, error) {
+	// assumeRoleMethod tries to directly call sts:AssumeRole for TaskRole using default session
+	assumeRoleMethod := func() (map[string]string, error) {
+		taskDef, err := o.ecsClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+		if err != nil {
+			return nil, err
+		}
+
+		taskRoleSess, err := o.sessProvider.FromRole(aws.StringValue(taskDef.TaskRoleArn), o.targetEnv.Region)
+		if err != nil {
+			return nil, err
+		}
+
+		creds, err := taskRoleSess.Config.Credentials.GetWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]string{
+			"AWS_ACCESS_KEY_ID":     creds.AccessKeyID,
+			"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
+			"AWS_SESSION_TOKEN":     creds.SessionToken,
+		}, nil
+	}
+
+	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
+	ecsExecMethod := func() (map[string]string, error) {
+		return nil, errors.New("ecs exec method not implemented")
+	}
+
+	credentialsChain := []func() (map[string]string, error){
+		assumeRoleMethod,
+		ecsExecMethod,
+	}
+
+	// return TaskRole credentials from first succesful method
+	var errs []error
+	for _, method := range credentialsChain {
+		vars, err := method()
+		if err == nil {
+			return vars, nil
+		}
+		errs = append(errs, err)
+	}
+
+	return nil, errors.Join(errs...)
 }
 
 type containerEnv map[string]envVarValue
@@ -961,6 +1039,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
+	cmd.Flags().BoolVar(&vars.retrieveTaskRole, retrieveTaskRoleFlag, false, retrieveTaskRoleFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
