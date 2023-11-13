@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
@@ -466,95 +465,6 @@ func TestEnvDescriber_ServiceDiscoveryEndpoint(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedEndpoint, actual)
-			}
-		})
-	}
-}
-
-func TestEnvDescriber_PublicCIDRBlocks(t *testing.T) {
-	testCases := map[string]struct {
-		setupMocks func(mocks envDescriberMocks)
-
-		wantedCIDRBlocks []string
-		wantedErr        error
-	}{
-		"fail to describe the environment to get the VPC ID": {
-			setupMocks: func(m envDescriberMocks) {
-				gomock.InOrder(
-					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{}, errors.New("some error")),
-				)
-			},
-			wantedErr: errors.New("retrieve environment stack: some error"),
-		},
-		"fail to get the subnets of the environment VPC": {
-			setupMocks: func(m envDescriberMocks) {
-				gomock.InOrder(
-					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
-						Outputs: map[string]string{
-							"VpcId": "mockVPCID",
-						},
-					}, nil),
-					m.subnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(nil, errors.New("some error")),
-				)
-			},
-			wantedErr: errors.New("list subnets of vpc mockVPCID in environment mockEnv: some error"),
-		},
-		"return the correct CIDR blocks": {
-			setupMocks: func(m envDescriberMocks) {
-				gomock.InOrder(
-					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
-						Outputs: map[string]string{
-							"VpcId": "mockVPCID",
-						},
-					}, nil),
-					m.subnetLister.EXPECT().ListVPCSubnets("mockVPCID").Return(&ec2.VPCSubnets{
-						Public: []ec2.Subnet{
-							{
-								CIDRBlock: "mockCIDRBlock1",
-							},
-							{
-								CIDRBlock: "mockCIDRBlock2",
-							},
-						},
-					}, nil),
-				)
-			},
-			wantedCIDRBlocks: []string{"mockCIDRBlock1", "mockCIDRBlock2"},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			m := envDescriberMocks{
-				configStoreSvc: mocks.NewMockConfigStoreSvc(ctrl),
-				deployStoreSvc: mocks.NewMockDeployedEnvServicesLister(ctrl),
-				stackDescriber: mocks.NewMockstackDescriber(ctrl),
-				subnetLister:   mocks.NewMockvpcSubnetLister(ctrl),
-			}
-
-			tc.setupMocks(m)
-			d := &EnvDescriber{
-				env: &config.Environment{
-					Name: "mockEnv",
-				},
-
-				configStore:  m.configStoreSvc,
-				deployStore:  m.deployStoreSvc,
-				cfn:          m.stackDescriber,
-				subnetLister: m.subnetLister,
-			}
-
-			// WHEN
-			actual, err := d.PublicCIDRBlocks()
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedCIDRBlocks, actual)
 			}
 		})
 	}

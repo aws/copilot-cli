@@ -5,9 +5,10 @@ package stack
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"strconv"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -42,14 +43,6 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
 type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
-
-// WithNLB enables Network Load Balancer in a LoadBalancedWebService.
-// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
-func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
-	return func(s *LoadBalancedWebService) {
-		s.publicSubnetCIDRBlocks = cidrBlocks
-	}
-}
 
 // WithImportedALB specifies an imported load balancer.
 func WithImportedALB(alb *elbv2.LoadBalancer) func(s *LoadBalancedWebService) {
