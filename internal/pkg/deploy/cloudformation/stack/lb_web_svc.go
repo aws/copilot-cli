@@ -31,12 +31,11 @@ const (
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
 	*ecsWkld
-	manifest               *manifest.LoadBalancedWebService
-	httpsEnabled           bool
-	dnsDelegationEnabled   bool
-	publicSubnetCIDRBlocks []string
-	importedALB            *elbv2.LoadBalancer
-	appInfo                deploy.AppInformation
+	manifest             *manifest.LoadBalancedWebService
+	httpsEnabled         bool
+	dnsDelegationEnabled bool
+	importedALB          *elbv2.LoadBalancer
+	appInfo              deploy.AppInformation
 
 	parser loadBalancedWebSvcReadParser
 }

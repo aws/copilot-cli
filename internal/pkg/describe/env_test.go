@@ -22,7 +22,6 @@ type envDescriberMocks struct {
 	configStoreSvc *mocks.MockConfigStoreSvc
 	deployStoreSvc *mocks.MockDeployedEnvServicesLister
 	stackDescriber *mocks.MockstackDescriber
-	subnetLister   *mocks.MockvpcSubnetLister
 }
 
 var wantedResources = []*stack.Resource{
