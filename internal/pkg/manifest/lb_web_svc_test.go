@@ -2844,7 +2844,7 @@ func TestLoadBalancedWebService_ContainerDependencies(t *testing.T) {
 		wantedDependencies map[string]ContainerDependency
 		wantedErr          error
 	}{
-		"return main container and sidecar container build args": {
+		"return container dependencies of all containers": {
 			in: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("mock-svc"),
