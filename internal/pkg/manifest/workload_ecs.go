@@ -439,7 +439,8 @@ func buildArgs(contextDir string, buildArgs map[string]*DockerBuildArgs, sc map[
 	return buildArgs, nil
 }
 
-// Dependencies defined for container startup and shutdown.
+// ContainerDependency represents order of container startup and shutdown.
+// Also indicates if a container is marked as essential or not.
 type ContainerDependency struct {
 	IsEssential bool
 	DependsOn   DependsOn
