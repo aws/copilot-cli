@@ -438,3 +438,27 @@ func buildArgs(contextDir string, buildArgs map[string]*DockerBuildArgs, sc map[
 	}
 	return buildArgs, nil
 }
+
+// Dependencies defined for container startup and shutdown.
+type ContainerDependency struct {
+	IsEssential bool
+	DependsOn   DependsOn
+}
+
+func containerDependencies(name string, img Image, lc Logging, sc map[string]*SidecarConfig) map[string]ContainerDependency {
+	containerDependencies := make(map[string]ContainerDependency)
+	containerDependencies[name] = ContainerDependency{
+		DependsOn:   img.DependsOn,
+		IsEssential: true,
+	}
+	if !lc.IsEmpty() {
+		containerDependencies[FirelensContainerName] = ContainerDependency{}
+	}
+	for name, config := range sc {
+		containerDependencies[name] = ContainerDependency{
+			DependsOn:   config.DependsOn,
+			IsEssential: config.Essential == nil || aws.BoolValue(config.Essential),
+		}
+	}
+	return containerDependencies
+}
