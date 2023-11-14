@@ -738,6 +738,7 @@ func envFiles(unmarshaledManifest interface{}) map[string]string {
 	return nil
 }
 
+// ContainerDependencies returns a map of ContainerDependency objects from workload manifest.
 func ContainerDependencies(unmarshaledManifest interface{}) map[string]manifest.ContainerDependency {
 	type containerDependency interface {
 		ContainerDependencies() map[string]manifest.ContainerDependency
