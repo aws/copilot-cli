@@ -293,7 +293,7 @@ func (s *WorkerService) EnvFiles() map[string]string {
 	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
-// ContainerDependencies constructs a map of ContainerDependency objects for the WorkerService
+// ContainerDependencies returns a map of ContainerDependency objects for the WorkerService
 // including dependencies for its main container, any logging sidecar, and additional sidecars.
 func (s *WorkerService) ContainerDependencies() map[string]ContainerDependency {
 	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)

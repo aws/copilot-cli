@@ -159,7 +159,7 @@ func (j *ScheduledJob) EnvFiles() map[string]string {
 	return envFiles(j.Name, j.TaskConfig, j.Logging, j.Sidecars)
 }
 
-// ContainerDependencies constructs a map of ContainerDependency objects for ScheduledJob
+// ContainerDependencies returns a map of ContainerDependency objects for ScheduledJob
 // including dependencies for its main container, any logging sidecar, and additional sidecars.
 func (s *ScheduledJob) ContainerDependencies() map[string]ContainerDependency {
 	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)
