@@ -643,16 +643,12 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 			return nil, err
 		}
 
-		creds, err := taskRoleSess.Config.Credentials.GetWithContext(ctx)
+		creds, err := sessionEnvVars(ctx, taskRoleSess)
 		if err != nil {
 			return nil, err
 		}
 
-		return map[string]string{
-			"AWS_ACCESS_KEY_ID":     creds.AccessKeyID,
-			"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
-			"AWS_SESSION_TOKEN":     creds.SessionToken,
-		}, nil
+		return creds, nil
 	}
 
 	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
@@ -670,7 +666,7 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 	for _, method := range credentialsChain {
 		vars, err := method()
 		if err == nil {
-			return vars, &errTaskRoleRetrievalFailed{}
+			return vars, nil
 		}
 		errs = append(errs, err)
 	}
