@@ -561,6 +561,36 @@ func (s *BackendService) convertGracePeriod() *int64 {
 	return aws.Int64(int64(manifest.DefaultHealthCheckGracePeriod))
 }
 
+func (s *BackendService) convertImportedALB() (*template.ImportedALB, error) {
+	if s.importedALB == nil {
+		return nil, nil
+	}
+	var listeners []template.LBListener
+	for _, listener := range s.importedALB.Listeners {
+		listeners = append(listeners, template.LBListener{
+			ARN:      listener.ARN,
+			Port:     listener.Port,
+			Protocol: listener.Protocol,
+		})
+	}
+	var securityGroups []template.LBSecurityGroup
+	for _, sg := range s.importedALB.SecurityGroups {
+		securityGroups = append(securityGroups, template.LBSecurityGroup{
+			ID: sg,
+		})
+	}
+	fmt.Println(s.importedALB.Name)
+	fmt.Println(s.importedALB.Scheme)
+	return &template.ImportedALB{
+		Name:           s.importedALB.Name,
+		ARN:            s.importedALB.ARN,
+		DNSName:        s.importedALB.DNSName,
+		HostedZoneID:   s.importedALB.HostedZoneID,
+		Listeners:      listeners,
+		SecurityGroups: securityGroups,
+	}, nil
+}
+
 type loadBalancerTargeter interface {
 	MainContainerPort() string
 	ExposedPorts() (manifest.ExposedPortsIndex, error)

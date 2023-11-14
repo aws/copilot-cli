@@ -5,6 +5,8 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
@@ -21,6 +23,7 @@ import (
 
 type backendSvcDeployer struct {
 	*svcDeployer
+	elbGetter  elbGetter
 	backendMft *manifest.BackendService
 
 	// Overriden in tests.
@@ -41,6 +44,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	}
 	return &backendSvcDeployer{
 		svcDeployer:        svcDeployer,
+		elbGetter:          elbv2.New(svcDeployer.envSess),
 		backendMft:         bsMft,
 		aliasCertValidator: acm.New(svcDeployer.envSess),
 	}, nil
@@ -94,6 +98,14 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
+	var opts []stack.BackendServiceOption
+	if d.backendMft.HTTP.ImportedALB != nil {
+		lb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.backendMft.HTTP.ImportedALB))
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, stack.WithImportedInternalALB(lb))
+	}
 
 	var conf cloudformation.StackConfiguration
 	switch {
@@ -108,7 +120,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 			ArtifactBucketName: d.resources.S3Bucket,
 			RuntimeConfig:      *rc,
 			Addons:             d.addons,
-		})
+		}, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("create stack configuration: %w", err)
 		}
@@ -124,7 +136,11 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
 	if d.backendMft.HTTP.IsEmpty() {
+		fmt.Println("http is empty")
 		return nil
+	}
+	if err := d.validateImportedALBConfig(); err != nil {
+		return fmt.Errorf(`validate imported ALB configuration for "http": %w`, err)
 	}
 	if err := d.validateRuntimeRoutingRule(d.backendMft.HTTP.Main); err != nil {
 		return fmt.Errorf(`validate ALB runtime configuration for "http": %w`, err)
@@ -133,6 +149,37 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 		if err := d.validateRuntimeRoutingRule(rule); err != nil {
 			return fmt.Errorf(`validate ALB runtime configuration for "http.additional_rules[%d]": %w`, idx, err)
 		}
+	}
+	return nil
+}
+
+func (d *backendSvcDeployer) validateImportedALBConfig() error {
+	if d.backendMft.HTTP.ImportedALB == nil {
+		return nil
+	}
+	alb, err := d.elbGetter.LoadBalancer(aws.StringValue(d.backendMft.HTTP.ImportedALB))
+	if err != nil {
+		return fmt.Errorf(`retrieve load balancer %q: %w`, aws.StringValue(d.backendMft.HTTP.ImportedALB), err)
+	}
+	if alb.Scheme != "internal" {
+		return fmt.Errorf(`imported ALB %q for Backend Service %q should have "internal" Scheme value`, alb.ARN, aws.StringValue(d.backendMft.Name))
+	}
+	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
+		return fmt.Errorf(`imported ALB %q must have either one or two listeners`, alb.ARN)
+	}
+	if len(alb.Listeners) == 1 {
+		return nil
+	}
+	var isHTTP, isHTTPS bool
+	for _, listener := range alb.Listeners {
+		if listener.Protocol == "HTTP" {
+			isHTTP = true
+		} else if listener.Protocol == "HTTPS" {
+			isHTTPS = true
+		}
+	}
+	if !(isHTTP && isHTTPS) {
+		return fmt.Errorf("imported ALB %q must have listeners of protocols HTTP and HTTPS", alb.ARN)
 	}
 	return nil
 }

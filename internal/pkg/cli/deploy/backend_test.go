@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"testing"
 	"time"
 
@@ -254,6 +255,213 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			expectedErr: `validate ALB runtime configuration for "http.additional_rules[0]": cannot deploy service mock-svc without "alias" to environment mock-env with certificate imported`,
 		},
+		"failure if can't retrieve imported ALB": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
+						ImportedALB: aws.String("mockALB"),
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockELBGetter.EXPECT().LoadBalancer("mockALB").Return(nil, errors.New("some error"))
+			},
+			expectedErr: `validate imported ALB configuration for "http": retrieve load balancer "mockALB": some error`,
+		},
+		"failure if imported ALB has 'internet-facing' not 'internal' scheme": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				Workload: manifest.Workload{
+					Name: aws.String("be"),
+				},
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
+						ImportedALB: aws.String("mockALB"),
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockELBGetter.EXPECT().LoadBalancer("mockALB").Return(&elbv2.LoadBalancer{
+					ARN:    "mockALBARN",
+					Name:   "mockALB",
+					Scheme: "internet-facing",
+				}, nil)
+			},
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" for Backend Service "be" should have "internal" Scheme value`,
+		},
+		"failure if imported ALB has no listeners": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
+						ImportedALB: aws.String("mockALB"),
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockELBGetter.EXPECT().LoadBalancer("mockALB").Return(&elbv2.LoadBalancer{
+					ARN:       "mockALBARN",
+					Name:      "mockALB",
+					Scheme:    "internal",
+					Listeners: []elbv2.Listener{},
+				}, nil)
+			},
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have either one or two listeners`,
+		},
+		"failure if imported ALB has more than 3 listeners": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
+						ImportedALB: aws.String("mockALB"),
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockELBGetter.EXPECT().LoadBalancer("mockALB").Return(&elbv2.LoadBalancer{
+					ARN:    "mockALBARN",
+					Name:   "mockALB",
+					Scheme: "internal",
+					Listeners: []elbv2.Listener{
+						{
+							ARN:      "default",
+							Port:     0,
+							Protocol: "something",
+						},
+						{
+							ARN:      "second",
+							Port:     80,
+							Protocol: "http",
+						},
+						{
+							ARN:      "third",
+							Port:     443,
+							Protocol: "https",
+						}},
+				}, nil)
+			},
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have either one or two listeners`,
+		},
+		"failure if imported ALB has two listeners but they don't have HTTP and HTTPS protocols": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				Workload: manifest.Workload{
+					Name: aws.String("be"),
+				},
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
+						ImportedALB: aws.String("mockALB"),
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockELBGetter.EXPECT().LoadBalancer("mockALB").Return(&elbv2.LoadBalancer{
+					ARN:    "mockALBARN",
+					Name:   "mockALB",
+					Scheme: "internal",
+					Listeners: []elbv2.Listener{
+						{
+							ARN:      "default",
+							Port:     0,
+							Protocol: "something",
+						},
+						{
+							ARN:      "second",
+							Port:     80,
+							Protocol: "boop",
+						}},
+				}, nil)
+			},
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have listeners of protocols HTTP and HTTPS`,
+		},
+		"success imported ALB": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				Workload: manifest.Workload{
+					Name: aws.String("be"),
+				},
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					HTTP: manifest.HTTP{
+						Main: manifest.RoutingRule{
+							Path: aws.String("/"),
+						},
+						ImportedALB: aws.String("mockALB"),
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockELBGetter.EXPECT().LoadBalancer("mockALB").Return(&elbv2.LoadBalancer{
+					ARN:    "mockALBARN",
+					Name:   "mockALB",
+					Scheme: "internal",
+					Listeners: []elbv2.Listener{
+						{
+							ARN:      "yarn",
+							Port:     80,
+							Protocol: "HTTP",
+						},
+					},
+				}, nil).Times(2)
+			},
+		},
 		"success if env has imported certs but alb not configured": {
 			App: &config.Application{
 				Name: mockAppName,
@@ -281,6 +489,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				mockEndpointGetter:   mocks.NewMockendpointGetter(ctrl),
 				mockValidator:        mocks.NewMockaliasCertValidator(ctrl),
 				mockEnvVersionGetter: mocks.NewMockversionGetter(ctrl),
+				mockELBGetter:        mocks.NewMockelbGetter(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(m)
@@ -305,6 +514,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 						return nil
 					},
 				},
+				elbGetter:          m.mockELBGetter,
 				backendMft:         tc.Manifest,
 				aliasCertValidator: m.mockValidator,
 				newStack: func() cloudformation.StackConfiguration {

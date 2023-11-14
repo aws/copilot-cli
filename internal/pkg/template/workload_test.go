@@ -417,6 +417,16 @@ func TestEnvControllerParameters(t *testing.T) {
 			},
 			expected: []string{"InternalALBWorkloads,"},
 		},
+		"Backend with imported ALB": {
+			opts: WorkloadOpts{
+				WorkloadType: "Backend Service",
+				ALBEnabled:   true,
+				ImportedALB: &ImportedALB{
+					Name: "MyExistingALB",
+				},
+			},
+			expected: []string{},
+		},
 		"RDWS": {
 			opts: WorkloadOpts{
 				WorkloadType: "Request-Driven Web Service",

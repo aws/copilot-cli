@@ -63,6 +63,7 @@ type deployMocks struct {
 	mockLabeledTermPrinter     *mocks.MockLabeledTermPrinter
 	mockdockerEngineRunChecker *mocks.MockdockerEngineRunChecker
 	mockdomainHostedZonegetter *mocks.MockdomainHostedZoneGetter
+	mockELBGetter              *mocks.MockelbGetter
 }
 
 type mockTemplateFS struct {
