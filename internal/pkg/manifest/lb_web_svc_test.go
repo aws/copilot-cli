@@ -2871,6 +2871,9 @@ func TestLoadBalancedWebService_ContainerDependencies(t *testing.T) {
 							},
 						},
 					},
+					Logging: Logging{
+						ConfigFile: aws.String("mockConfigFile"),
+					},
 				},
 			},
 			wantedDependencies: map[string]ContainerDependency{
@@ -2890,6 +2893,7 @@ func TestLoadBalancedWebService_ContainerDependencies(t *testing.T) {
 						"mock-svc": "start",
 					},
 				},
+				"firelens_log_router": {},
 			},
 		},
 	}

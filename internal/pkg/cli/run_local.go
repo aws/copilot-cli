@@ -516,7 +516,7 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 	}
 
 	// TODO (Adi): Use this dependency order in orchestrator to start and stop containers.
-	containerDeps := o.containerDependencies(mft.Manifest())
+	containerDeps := clideploy.ContainerDependencies(mft.Manifest())
 	for name, dep := range containerDeps {
 		ctr, ok := task.Containers[name]
 		if !ok {
@@ -527,17 +527,6 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 	}
 
 	return task, nil
-}
-
-func (o *runLocalOpts) containerDependencies(unmarshaledManifest interface{}) map[string]manifest.ContainerDependency {
-	type containerDependency interface {
-		ContainerDependencies() map[string]manifest.ContainerDependency
-	}
-	mf, ok := unmarshaledManifest.(containerDependency)
-	if ok {
-		return mf.ContainerDependencies()
-	}
-	return nil
 }
 
 func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
