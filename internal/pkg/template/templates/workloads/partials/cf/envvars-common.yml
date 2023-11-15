@@ -28,13 +28,19 @@
       {{- end}}
       {{- end}}
 {{- end}}{{- end}}
-{{- if or (eq .WorkloadType "Load Balanced Web Service") (eq .WorkloadType "Backend Service")}}
 {{- if .ALBListener}}
 - Name: COPILOT_LB_DNS
-{{- if .ImportedALB}}
+  {{- if eq .WorkloadType "Load Balanced Web Service"}}
+    {{- if .ImportedALB}}
   Value: {{.ImportedALB.DNSName}}
-{{- else}}
+    {{- else}}
+  Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+    {{- end}}
+  {{- else if eq .WorkloadType "Backend Service"}}
+    {{- if .ImportedALB}}
+  Value: {{.ImportedALB.DNSName}}
+    {{- else}}
   Value: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
-{{- end}}
-{{- end}}
+    {{- end}}
+  {{- end}}
 {{- end}}
