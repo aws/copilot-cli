@@ -90,6 +90,8 @@ Resources:
               Value: !Sub "${EnvName}"
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub "${WorkloadName}"
+            - Name: COPILOT_LB_DNS
+              Value: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
           EnvironmentFiles:
             - !If
               - HasEnvFile
