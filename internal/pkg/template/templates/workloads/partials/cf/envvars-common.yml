@@ -28,7 +28,7 @@
       {{- end}}
       {{- end}}
 {{- end}}{{- end}}
-{{- if eq .WorkloadType "Load Balanced Web Service"}}
+{{- if or (eq .WorkloadType "Load Balanced Web Service") (eq .WorkloadType "Backend Service")}}
 {{- if .ALBListener}}
 - Name: COPILOT_LB_DNS
 {{- if .ImportedALB}}
