@@ -34,7 +34,7 @@
 {{- if .ImportedALB}}
   Value: {{.ImportedALB.DNSName}}
 {{- else}}
-  Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+  Value: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
 {{- end}}
 {{- end}}
 {{- end}}
