@@ -39,7 +39,7 @@
 {{- end}}
 {{- if eq .Observability.Tracing "AWSXRAY"}}
 - Name: aws-otel-collector
-  Image: public.ecr.aws/aws-observability/aws-otel-collector:v0.17.0
+  Image: public.ecr.aws/aws-observability/aws-otel-collector:v0.35.0
   Command:
     - --config=/etc/ecs/ecs-xray.yaml
   LogConfiguration:
