@@ -219,8 +219,25 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		}
 
 		// ensure that containers are fully stopped after o.stopTask finishes blocking
-		// TODO(Aiden): Implement a container ID system or use `docker ps` to ensure containers are stopped
-		time.Sleep(1 * time.Second)
+		for {
+			allCtrsStopped := true
+			time.Sleep(100 * time.Millisecond)
+
+			for ctrName := range o.curTask.Containers {
+				running, err := o.docker.IsContainerRunning(ctx, o.containerID(ctrName))
+				if err != nil {
+					return fmt.Errorf("polling containers removed: %w", err)
+				}
+
+				if running {
+					allCtrsStopped = false
+				}
+			}
+
+			if allCtrsStopped {
+				break
+			}
+		}
 	}
 
 	for name, ctr := range a.task.Containers {
