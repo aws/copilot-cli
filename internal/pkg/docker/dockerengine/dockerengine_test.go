@@ -1146,7 +1146,7 @@ func TestDockerCommand_IsContainerSuccess(t *testing.T) {
 			defer ctrl.Finish()
 
 			s := DockerCmdClient{
-				runner: tc.setupMocks(ctrl), // Correctly invoke the setupMocks function
+				runner: tc.setupMocks(ctrl),
 			}
 
 			healthy, err := s.IsContainerSuccess(context.Background(), tc.mockContainerName)
