@@ -404,7 +404,7 @@ func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName s
 	case unhealthy:
 		return false, fmt.Errorf("container %q is %q", containerName, unhealthy)
 	case noHealthcheck:
-		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", unhealthy, containerName)
+		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", noHealthcheck, containerName)
 	default:
 		return false, fmt.Errorf("container %s had unexpected health status %q", containerName, state.Health.Status)
 	}
