@@ -4,11 +4,14 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	osexec "os/exec"
 	"os/signal"
 	"path/filepath"
 	"slices"
@@ -653,7 +656,42 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 
 	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
 	ecsExecMethod := func() (map[string]string, error) {
-		return nil, errors.New("ecs exec method not implemented")
+		svcDesc, err := ecs.New(o.sess).DescribeService(o.appName, o.envName, o.wkldName)
+		if err != nil {
+			return nil, fmt.Errorf("describe ECS service for %s in environment %s: %w", o.wkldName, o.envName, err)
+		}
+
+		// try exec on each task
+		for _, task := range svcDesc.Tasks {
+			fmt.Printf("Task ARN: %s\n", aws.StringValue(task.TaskArn))
+			id, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
+			if err != nil {
+				continue
+			}
+			fmt.Printf("Task ID: %s\n", id)
+
+			awsContainerCredentialsRelativeURI, err := agentEndpoint(ctx, id)
+			if err != nil {
+				// continue
+				return nil, err
+			}
+			fmt.Printf("Endpoint Relative URI: %s\n", awsContainerCredentialsRelativeURI)
+
+			err = awsecs.New(o.sess).ExecuteCommand(awsecs.ExecuteCommandInput{
+				Cluster:   svcDesc.ClusterName,
+				Command:   fmt.Sprintf("curl 169.254.170.2%s", awsContainerCredentialsRelativeURI),
+				Task:      id,
+				Container: o.wkldName,
+			})
+			if err != nil {
+				continue
+			}
+
+			fmt.Println("found!")
+			return nil, nil
+		}
+
+		return nil, errors.New("fail")
 	}
 
 	credentialsChain := []func() (map[string]string, error){
@@ -672,6 +710,58 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 	}
 
 	return nil, &errTaskRoleRetrievalFailed{errs}
+}
+
+func (o *runLocalOpts) agentEndpoint(ctx context.Context, taskID string) (string, error) {
+	cmd := osexec.CommandContext(ctx, "aws", "--region", o.targetEnv.Region, "ssm", "start-session", "--target", taskID)
+	out := &bytes.Buffer{}
+	cmd.Stdout, cmd.Stderr = out, out
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return "", fmt.Errorf("stdin pipe: %w", err)
+	}
+
+	var url string
+	done := make(chan struct{})
+
+	go func() {
+		// keep stdin open until we've found the URI
+		defer stdin.Close()
+		io.WriteString(stdin, "curl 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI\n")
+		io.WriteString(stdin, "exit\n")
+		<-done
+	}()
+
+	go func() {
+		// parse stdout/err until we find the uri
+		defer close(done)
+
+		for url == "" {
+			time.Sleep(100 * time.Millisecond)
+			lines := out.String()
+
+			for _, line := range strings.Split(lines, "\n") {
+				fmt.Println(line)
+				if !strings.Contains(line, "LOCALRUNURI: ") || strings.Contains(line, "$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI") {
+					continue
+				}
+
+				split := strings.Fields(line)
+				url = strings.TrimSpace(split[2])
+				return
+			}
+		}
+	}()
+
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	if url == "" {
+		return "", fmt.Errorf("url not found")
+	}
+
+	return url, nil
 }
 
 type containerEnv map[string]envVarValue
@@ -1023,6 +1113,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
+	cmd.Flags().BoolVar(&vars.retrieveTaskRole, retrieveTaskRoleFlag, false, retrieveTaskRoleFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
