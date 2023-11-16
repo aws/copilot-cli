@@ -429,7 +429,6 @@ func (d *DockerCmdClient) containerState(ctx context.Context, containerName stri
 	if containerID == "" {
 		return ContainerState{}, nil
 	}
-	// return ContainerState{}, nil
 	buf := &bytes.Buffer{}
 	if err := d.runner.RunWithContext(ctx, "docker", []string{"inspect", "--format", "{{json .State}}", containerID}, exec.Stdout(buf)); err != nil {
 		return ContainerState{}, fmt.Errorf("run docker inspect: %w", err)
