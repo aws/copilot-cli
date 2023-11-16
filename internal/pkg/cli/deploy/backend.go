@@ -136,7 +136,6 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
 	if d.backendMft.HTTP.IsEmpty() {
-		fmt.Println("http is empty")
 		return nil
 	}
 	if err := d.validateImportedALBConfig(); err != nil {

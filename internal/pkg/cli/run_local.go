@@ -820,7 +820,7 @@ func (h *hostDiscoverer) Hosts(ctx context.Context) ([]orchestrator.Host, error)
 
 	var hosts []orchestrator.Host
 	for _, svc := range svcs {
-		// find the primary deployment with service connect enabled
+		// find the primary deployment with Service Connect enabled
 		idx := slices.IndexFunc(svc.Deployments, func(dep *sdkecs.Deployment) bool {
 			return aws.StringValue(dep.Status) == "PRIMARY" && aws.BoolValue(dep.ServiceConnectConfiguration.Enabled)
 		})

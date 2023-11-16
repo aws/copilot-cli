@@ -579,8 +579,6 @@ func (s *BackendService) convertImportedALB() (*template.ImportedALB, error) {
 			ID: sg,
 		})
 	}
-	fmt.Println(s.importedALB.Name)
-	fmt.Println(s.importedALB.Scheme)
 	return &template.ImportedALB{
 		Name:           s.importedALB.Name,
 		ARN:            s.importedALB.ARN,
