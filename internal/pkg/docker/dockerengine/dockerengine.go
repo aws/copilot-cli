@@ -366,22 +366,13 @@ func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (b
 	return false, nil
 }
 
-// IsContainerComplete returns true if a docker container exits with an exitcode.
-func (c DockerCmdClient) IsContainerComplete(ctx context.Context, containerName string) (bool, error) {
+// IsContainerCompleteOrSuccess returns true if a docker container exits with an exitcode.
+func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
 	state, err := c.containerState(ctx, containerName)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
-	return state.Status == containerStatusExited, nil
-}
-
-// IsContainerSuccess returns true if a docker container exits with exitcode 0.
-func (c DockerCmdClient) IsContainerSuccess(ctx context.Context, containerName string) (bool, error) {
-	state, err := c.containerState(ctx, containerName)
-	if err != nil {
-		return false, err
-	}
-	return state.Status == containerStatusExited && state.ExitCode == 0, nil
+	return state.Status == containerStatusExited, state.ExitCode, nil
 }
 
 // IsContainerHealthy returns true if a container health state is healthy.

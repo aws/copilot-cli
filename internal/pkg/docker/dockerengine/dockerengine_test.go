@@ -1032,13 +1032,14 @@ func TestDockerCommand_IsContainerHealthy(t *testing.T) {
 	}
 }
 
-func TestDockerCommand_IsContainerComplete(t *testing.T) {
+func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 	tests := map[string]struct {
-		mockContainerName string
-		mockHealthStatus  string
-		setupMocks        func(*gomock.Controller) *MockCmd
-		wantComplete      bool
-		wantErr           error
+		mockContainerName     string
+		mockHealthStatus      string
+		setupMocks            func(*gomock.Controller) *MockCmd
+		wantCompleteOrSuccess bool
+		wantExitCode          int
+		wantErr               error
 	}{
 		"container successfully complete": {
 			mockContainerName: "mockContainer",
@@ -1067,39 +1068,10 @@ func TestDockerCommand_IsContainerComplete(t *testing.T) {
 				})
 				return mockCmd
 			},
-			wantComplete: true,
+			wantCompleteOrSuccess: true,
+			wantExitCode:          143,
 		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			s := DockerCmdClient{
-				runner: tc.setupMocks(ctrl), // Correctly invoke the setupMocks function
-			}
-
-			expected, err := s.IsContainerComplete(context.Background(), tc.mockContainerName)
-			require.Equal(t, tc.wantComplete, expected)
-			if tc.wantErr != nil {
-				require.EqualError(t, err, tc.wantErr.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestDockerCommand_IsContainerSuccess(t *testing.T) {
-	tests := map[string]struct {
-		mockContainerName string
-		mockHealthStatus  string
-		setupMocks        func(*gomock.Controller) *MockCmd
-		wantSuccess       bool
-		wantErr           error
-	}{
-		"container successfully complete": {
+		"container successfully success": {
 			mockContainerName: "mockContainer",
 			mockHealthStatus:  "unhealthy",
 			setupMocks: func(controller *gomock.Controller) *MockCmd {
@@ -1126,7 +1098,7 @@ func TestDockerCommand_IsContainerSuccess(t *testing.T) {
 				})
 				return mockCmd
 			},
-			wantSuccess: true,
+			wantCompleteOrSuccess: true,
 		},
 		"error when fetching container state": {
 			mockContainerName: "mockContainer",
@@ -1146,11 +1118,12 @@ func TestDockerCommand_IsContainerSuccess(t *testing.T) {
 			defer ctrl.Finish()
 
 			s := DockerCmdClient{
-				runner: tc.setupMocks(ctrl),
+				runner: tc.setupMocks(ctrl), // Correctly invoke the setupMocks function
 			}
 
-			expected, err := s.IsContainerSuccess(context.Background(), tc.mockContainerName)
-			require.Equal(t, tc.wantSuccess, expected)
+			expected, expectedCode, err := s.IsContainerCompleteOrSuccess(context.Background(), tc.mockContainerName)
+			require.Equal(t, tc.wantCompleteOrSuccess, expected)
+			require.Equal(t, tc.wantExitCode, expectedCode)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
