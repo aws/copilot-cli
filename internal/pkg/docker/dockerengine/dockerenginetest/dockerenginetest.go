@@ -12,11 +12,23 @@ import (
 
 // Double is a test double for dockerengine.DockerCmdClient
 type Double struct {
-	StopFn               func(context.Context, string) error
-	IsContainerRunningFn func(context.Context, string) (bool, error)
-	RunFn                func(context.Context, *dockerengine.RunOptions) error
-	BuildFn              func(context.Context, *dockerengine.BuildArguments, io.Writer) error
-	ExecFn               func(context.Context, string, io.Writer, string, ...string) error
+	StopFn                        func(context.Context, string) error
+	IsContainerRunningFn          func(context.Context, string) (bool, error)
+	RunFn                         func(context.Context, *dockerengine.RunOptions) error
+	BuildFn                       func(context.Context, *dockerengine.BuildArguments, io.Writer) error
+	ExecFn                        func(context.Context, string, io.Writer, string, ...string) error
+	IsContainerHealthyFn          func(ctx context.Context, containerName string) (bool, error)
+	IsContainerRunningOrHealthyFn func(ctx context.Context, containerName string) (bool, int, error)
+}
+
+// IsContainerCompleteOrSuccess implements orchestrator.DockerEngine.
+func (*Double) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
+	panic("unimplemented")
+}
+
+// IsContainerHealthy implements orchestrator.DockerEngine.
+func (*Double) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
+	panic("unimplemented")
 }
 
 // Stop calls the stubbed function.

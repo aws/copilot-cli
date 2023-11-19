@@ -263,7 +263,6 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 
 func (in *RunOptions) generateRunArguments() []string {
 	args := []string{"run"}
-	args = append(args, "--rm")
 
 	if in.ContainerName != "" {
 		args = append(args, "--name", in.ContainerName)
@@ -366,24 +365,16 @@ func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (b
 	return false, nil
 }
 
-// IsContainerComplete returns true if a docker container exits with an exitcode.
-func (c DockerCmdClient) IsContainerComplete(ctx context.Context, containerName string) (bool, error) {
+// IsContainerCompleteOrSuccess returns true if a docker container exits with an exitcode.
+func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
 	state, err := c.containerState(ctx, containerName)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
-	return state.Status == containerStatusExited, nil
+	return state.Status == containerStatusExited, state.ExitCode, nil
 }
 
-// IsContainerSuccess returns true if a docker container exits with exitcode 0.
-func (c DockerCmdClient) IsContainerSuccess(ctx context.Context, containerName string) (bool, error) {
-	state, err := c.containerState(ctx, containerName)
-	if err != nil {
-		return false, err
-	}
-	return state.Status == containerStatusExited && state.ExitCode == 0, nil
-}
-
+// IsContainerHealthy returns true if a container health state is healthy.
 func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
 	state, err := c.containerState(ctx, containerName)
 	if err != nil {
@@ -403,7 +394,7 @@ func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName s
 	case unhealthy:
 		return false, fmt.Errorf("container %q is %q", containerName, unhealthy)
 	case noHealthcheck:
-		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", unhealthy, containerName)
+		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", noHealthcheck, containerName)
 	default:
 		return false, fmt.Errorf("container %s had unexpected health status %q", containerName, state.Health.Status)
 	}
@@ -428,7 +419,6 @@ func (d *DockerCmdClient) containerState(ctx context.Context, containerName stri
 	if containerID == "" {
 		return ContainerState{}, nil
 	}
-	// return ContainerState{}, nil
 	buf := &bytes.Buffer{}
 	if err := d.runner.RunWithContext(ctx, "docker", []string{"inspect", "--format", "{{json .State}}", containerID}, exec.Stdout(buf)); err != nil {
 		return ContainerState{}, fmt.Errorf("run docker inspect: %w", err)
@@ -572,13 +562,13 @@ func PlatformString(os, arch string) string {
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 	/*
-			Sample docker config file
-		    {
-		        "credsStore" : "ecr-login",
-		        "credHelpers": {
-		            "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
-		        }
-		    }
+	   Sample docker config file
+	   {
+	       "credsStore" : "ecr-login",
+	       "credHelpers": {
+	           "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
+	       }
+	   }
 	*/
 	cred := dockerConfig{}
 	err := json.Unmarshal(config, &cred)
