@@ -529,6 +529,7 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 		}
 		ctr.IsEssential = dep.IsEssential
 		ctr.DependsOn = dep.DependsOn
+		task.Containers[name] = ctr
 	}
 
 	return task, nil
