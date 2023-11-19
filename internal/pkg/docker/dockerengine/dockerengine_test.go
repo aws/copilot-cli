@@ -1021,8 +1021,8 @@ func TestDockerCommand_IsContainerHealthy(t *testing.T) {
 				runner: tc.setupMocks(ctrl), // Correctly invoke the setupMocks function
 			}
 
-			healthy, err := s.IsContainerHealthy(context.Background(), tc.mockContainerName)
-			require.Equal(t, tc.wantHealthy, healthy)
+			expected, err := s.IsContainerHealthy(context.Background(), tc.mockContainerName)
+			require.Equal(t, tc.wantHealthy, expected)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
@@ -1080,8 +1080,8 @@ func TestDockerCommand_IsContainerComplete(t *testing.T) {
 				runner: tc.setupMocks(ctrl), // Correctly invoke the setupMocks function
 			}
 
-			healthy, err := s.IsContainerComplete(context.Background(), tc.mockContainerName)
-			require.Equal(t, tc.wantComplete, healthy)
+			expected, err := s.IsContainerComplete(context.Background(), tc.mockContainerName)
+			require.Equal(t, tc.wantComplete, expected)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
@@ -1149,8 +1149,8 @@ func TestDockerCommand_IsContainerSuccess(t *testing.T) {
 				runner: tc.setupMocks(ctrl),
 			}
 
-			healthy, err := s.IsContainerSuccess(context.Background(), tc.mockContainerName)
-			require.Equal(t, tc.wantSuccess, healthy)
+			expected, err := s.IsContainerSuccess(context.Background(), tc.mockContainerName)
+			require.Equal(t, tc.wantSuccess, expected)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
