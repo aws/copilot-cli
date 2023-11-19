@@ -4,6 +4,7 @@
 package graph
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -123,13 +124,13 @@ func TestGraph_Remove(t *testing.T) {
 
 func TestGraph_IsAcyclic(t *testing.T) {
 	testCases := map[string]struct {
-		graph Graph[string]
+		graph *Graph[string]
 
 		isAcyclic bool
 		cycle     []string
 	}{
 		"small non acyclic graph": {
-			graph: Graph[string]{
+			graph: &Graph[string]{
 				vertices: map[string]neighbors[string]{
 					"A": {"B": true, "C": true},
 					"B": {"A": true},
@@ -140,7 +141,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 			cycle:     []string{"A", "B"},
 		},
 		"non acyclic": {
-			graph: Graph[string]{
+			graph: &Graph[string]{
 				vertices: map[string]neighbors[string]{
 					"K": {"F": true},
 					"A": {"B": true, "C": true},
@@ -155,7 +156,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 			cycle:     []string{"A", "G", "E", "B"},
 		},
 		"acyclic": {
-			graph: Graph[string]{
+			graph: &Graph[string]{
 				vertices: map[string]neighbors[string]{
 					"A": {"B": true, "C": true},
 					"B": {"D": true},
@@ -368,4 +369,72 @@ func TestTopologicalOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func buildGraphWithSingleParent() *Graph[string] {
+	vertices := []string{"A", "B", "C", "D"}
+	graph := NewWithStatus[string]("started", vertices...)
+	graph.Add(Edge[string]{From: "D", To: "C"}) // D -> C
+	graph.Add(Edge[string]{From: "C", To: "B"}) // C -> B
+	graph.Add(Edge[string]{From: "B", To: "A"}) // B -> A
+	return graph
+}
+
+func TestTraverseInDependencyOrder(t *testing.T) {
+	t.Run("graph with single root vertex", func(t *testing.T) {
+		graph := buildGraphWithSingleParent()
+		var visited []string
+		processFn := func(ctx context.Context, v string) error {
+			visited = append(visited, v)
+			return nil
+		}
+		err := graph.UpwardTraversal(context.Background(), processFn, "started", "stopped")
+		require.NoError(t, err)
+		expected := []string{"A", "B", "C", "D"}
+		require.Equal(t, expected, visited)
+	})
+	t.Run("graph with multiple parents and boundary nodes", func(t *testing.T) {
+		vertices := []string{"A", "B", "C", "D"}
+		graph := NewWithStatus[string]("started", vertices...)
+		graph.Add(Edge[string]{From: "A", To: "C"})
+		graph.Add(Edge[string]{From: "A", To: "D"})
+		graph.Add(Edge[string]{From: "B", To: "D"})
+		vtxChan := make(chan string, 4)
+		seen := make(map[string]int)
+		done := make(chan struct{})
+		go func() {
+			for _, vtx := range vertices {
+				seen[vtx]++
+			}
+			done <- struct{}{}
+		}()
+
+		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vertice string) error {
+			vtxChan <- vertice
+			return nil
+		}, "started", "stopped")
+		require.NoError(t, err, "Error during iteration")
+		close(vtxChan)
+		<-done
+
+		require.Len(t, seen, 4)
+		for vtx, count := range seen {
+			require.Equal(t, 1, count, "%s", vtx)
+		}
+	})
+}
+
+func TestTraverseInReverseDependencyOrder(t *testing.T) {
+	t.Run("Graph with single root vertex", func(t *testing.T) {
+		graph := buildGraphWithSingleParent()
+		var visited []string
+		processFn := func(ctx context.Context, v string) error {
+			visited = append(visited, v)
+			return nil
+		}
+		err := graph.DownwardTraversal(context.Background(), processFn, "started", "stopped")
+		require.NoError(t, err)
+		expected := []string{"D", "C", "B", "A"}
+		require.Equal(t, expected, visited)
+	})
 }
