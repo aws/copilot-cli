@@ -8,12 +8,13 @@ package deploy
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -780,7 +781,7 @@ func (stg *PipelineStage) buildActionsGraph(rankables []actionGraphNode) *graph.
 	for _, r := range rankables {
 		names = append(names, r.name)
 	}
-	digraph := graph.New(names...)
+	digraph := graph.New(names)
 
 	for _, r := range rankables {
 		if r.depends_on == nil {

@@ -14,7 +14,7 @@ import (
 func TestGraph_Add(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// GIVEN
-		graph := New[string]()
+		graph := New[string]([]string{})
 
 		// WHEN
 		// A <-> B
@@ -45,7 +45,7 @@ func TestGraph_InDegree(t *testing.T) {
 		wanted map[rune]int
 	}{
 		"should return 0 for nodes that don't exist in the graph": {
-			graph: New[rune](),
+			graph: New[rune]([]rune{}),
 
 			wanted: map[rune]int{
 				'a': 0,
@@ -53,7 +53,7 @@ func TestGraph_InDegree(t *testing.T) {
 		},
 		"should return number of incoming edges for complex graph": {
 			graph: func() *Graph[rune] {
-				g := New[rune]()
+				g := New[rune]([]rune{})
 				g.Add(Edge[rune]{'a', 'b'})
 				g.Add(Edge[rune]{'b', 'a'})
 				g.Add(Edge[rune]{'a', 'c'})
@@ -89,7 +89,7 @@ func TestGraph_Remove(t *testing.T) {
 	}{
 		"edge deletion should be idempotent": {
 			graph: func() *Graph[rune] {
-				g := New[rune]()
+				g := New[rune]([]rune{})
 				g.Add(Edge[rune]{'a', 'b'})
 				g.Add(Edge[rune]{'z', 'b'})
 				g.Remove(Edge[rune]{'a', 'b'})
@@ -187,15 +187,15 @@ func TestGraph_Roots(t *testing.T) {
 		wantedRoots []int
 	}{
 		"should return nil if the graph is empty": {
-			graph: New[int](),
+			graph: New[int]([]int{}),
 		},
 		"should return all the vertices if there are no edges in the graph": {
-			graph:       New[int](1, 2, 3, 4, 5),
+			graph:       New[int]([]int{1, 2, 3, 4, 5}),
 			wantedRoots: []int{1, 2, 3, 4, 5},
 		},
 		"should return only vertices with no in degrees": {
 			graph: func() *Graph[int] {
-				g := New[int]()
+				g := New[int]([]int{})
 				g.Add(Edge[int]{
 					From: 1,
 					To:   3,
@@ -232,7 +232,7 @@ func TestTopologicalOrder(t *testing.T) {
 		"should return an error when a cycle is detected": {
 			// frontend <-> backend
 			graph: func() *Graph[string] {
-				g := New("frontend", "backend")
+				g := New([]string{"frontend", "backend"})
 				g.Add(Edge[string]{
 					From: "frontend",
 					To:   "backend",
@@ -248,7 +248,7 @@ func TestTopologicalOrder(t *testing.T) {
 		"should return the ranks for a graph that looks like a bus": {
 			// vpc -> lb -> api
 			graph: func() *Graph[string] {
-				g := New[string]()
+				g := New[string]([]string{})
 				g.Add(Edge[string]{
 					From: "vpc",
 					To:   "lb",
@@ -271,7 +271,7 @@ func TestTopologicalOrder(t *testing.T) {
 				// vpc -> rds -> backend
 				//     -> s3  -> api
 				//            -> frontend
-				g := New[string]()
+				g := New[string]([]string{})
 				g.Add(Edge[string]{
 					From: "vpc",
 					To:   "rds",
@@ -308,7 +308,7 @@ func TestTopologicalOrder(t *testing.T) {
 			graph: func() *Graph[string] {
 				// warehouse -> orders   -> frontend
 				//              payments ->
-				g := New[string]()
+				g := New[string]([]string{})
 				g.Add(Edge[string]{
 					From: "payments",
 					To:   "frontend",
@@ -335,7 +335,7 @@ func TestTopologicalOrder(t *testing.T) {
 			graph: func() *Graph[string] {
 				// a -> b -> c -> d -> f
 				// a           -> e -> f
-				g := New[string]()
+				g := New[string]([]string{})
 				for _, edge := range []Edge[string]{{"a", "b"}, {"b", "c"}, {"c", "d"}, {"d", "f"}, {"a", "e"}, {"e", "f"}} {
 					g.Add(edge)
 				}
@@ -373,7 +373,7 @@ func TestTopologicalOrder(t *testing.T) {
 
 func buildGraphWithSingleParent() *Graph[string] {
 	vertices := []string{"A", "B", "C", "D"}
-	graph := NewWithStatus[string]("started", vertices...)
+	graph := New[string](vertices, WithStatus[string]("started"))
 	graph.Add(Edge[string]{From: "D", To: "C"}) // D -> C
 	graph.Add(Edge[string]{From: "C", To: "B"}) // C -> B
 	graph.Add(Edge[string]{From: "B", To: "A"}) // B -> A
@@ -395,7 +395,7 @@ func TestTraverseInDependencyOrder(t *testing.T) {
 	})
 	t.Run("graph with multiple parents and boundary nodes", func(t *testing.T) {
 		vertices := []string{"A", "B", "C", "D"}
-		graph := NewWithStatus[string]("started", vertices...)
+		graph := New[string](vertices, WithStatus[string]("started"))
 		graph.Add(Edge[string]{From: "A", To: "C"})
 		graph.Add(Edge[string]{From: "A", To: "D"})
 		graph.Add(Edge[string]{From: "B", To: "D"})

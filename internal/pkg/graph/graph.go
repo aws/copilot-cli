@@ -37,26 +37,34 @@ type Edge[V comparable] struct {
 type neighbors[V comparable] map[V]bool
 
 // New initiates a new Graph.
-func New[V comparable](vertices ...V) *Graph[V] {
+func New[V comparable](vertices []V, opts ...GraphOption[V]) *Graph[V] {
 	adj := make(map[V]neighbors[V])
 	inDegrees := make(map[V]int)
 	for _, vertex := range vertices {
 		adj[vertex] = make(neighbors[V])
 		inDegrees[vertex] = 0
 	}
-	return &Graph[V]{
+	g := &Graph[V]{
 		vertices:  adj,
 		inDegrees: inDegrees,
 	}
-}
-
-func NewWithStatus[V comparable](status string, vertices ...V) *Graph[V] {
-	g := New[V](vertices...)
-	g.status = make(map[V]string)
-	for vertex := range g.vertices {
-		g.status[vertex] = status
+	for _, opt := range opts {
+		opt(g)
 	}
 	return g
+}
+
+// GraphOption allows you to initialize Graph with additional properties.
+type GraphOption[V comparable] func(g *Graph[V])
+
+// WithStatus sets the status of each vertex in the Graph.
+func WithStatus[V comparable](status string) func(g *Graph[V]) {
+	return func(g *Graph[V]) {
+		g.status = make(map[V]string)
+		for vertex := range g.vertices {
+			g.status[vertex] = status
+		}
+	}
 }
 
 // Neighbors returns the list of connected vertices from vtx.
