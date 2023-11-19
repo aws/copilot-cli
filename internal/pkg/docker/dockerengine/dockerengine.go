@@ -44,20 +44,6 @@ const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
 
-// Health states of a Container.
-const (
-	noHealthcheck = "none"      // Indicates there is no healthcheck
-	starting      = "starting"  // Starting indicates that the container is not yet ready
-	healthy       = "healthy"   // Healthy indicates that the container is running correctly
-	unhealthy     = "unhealthy" // Unhealthy indicates that the container has a problem
-)
-
-// State of a docker container.
-const (
-	containerStatusRunning = "running"
-	containerStatusExited  = "exited"
-)
-
 // DockerCmdClient represents the docker client to interact with the server via external commands.
 type DockerCmdClient struct {
 	runner Cmd
@@ -353,112 +339,13 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 
 // IsContainerRunning checks if a specific Docker container is running.
 func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (bool, error) {
-	state, err := c.containerState(ctx, name)
-	if err != nil {
-		return false, err
-	}
-	switch state.Status {
-	case containerStatusRunning:
-		return true, nil
-	case containerStatusExited:
-		return false, &ErrContainerExited{name: name, exitcode: state.ExitCode}
-	}
-	return false, nil
-}
-
-// IsContainerComplete returns true if a docker container exits with an exitcode.
-func (c DockerCmdClient) IsContainerComplete(ctx context.Context, containerName string) (bool, error) {
-	state, err := c.containerState(ctx, containerName)
-	if err != nil {
-		return false, err
-	}
-	return state.Status == containerStatusExited, nil
-}
-
-// IsContainerSuccess returns true if a docker container exits with exitcode 0.
-func (c DockerCmdClient) IsContainerSuccess(ctx context.Context, containerName string) (bool, error) {
-	state, err := c.containerState(ctx, containerName)
-	if err != nil {
-		return false, err
-	}
-	return state.Status == containerStatusExited && state.ExitCode == 0, nil
-}
-
-func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
-	state, err := c.containerState(ctx, containerName)
-	if err != nil {
-		return false, err
-	}
-	if state.Status == containerStatusExited {
-		return false, &ErrContainerExited{name: containerName, exitcode: state.ExitCode}
-	}
-	if state.Health == nil {
-		return false, fmt.Errorf("healthcheck is not configured for container %s", containerName)
-	}
-	switch state.Health.Status {
-	case healthy:
-		return true, nil
-	case starting:
-		return false, nil
-	case unhealthy:
-		return false, fmt.Errorf("container %q is %q", containerName, unhealthy)
-	case noHealthcheck:
-		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", unhealthy, containerName)
-	default:
-		return false, fmt.Errorf("container %s had unexpected health status %q", containerName, state.Health.Status)
-	}
-}
-
-// ContainerState holds the status, exit code, and health information of a Docker container.
-type ContainerState struct {
-	Status   string `json:"Status"`
-	ExitCode int    `json:"ExitCode"`
-	Health   *struct {
-		Status string `json:"Status"`
-	}
-}
-
-// containerState retrieves the current state of a specified Docker container.
-// It returns a ContainerState object and any error encountered during retrieval.
-func (d *DockerCmdClient) containerState(ctx context.Context, containerName string) (ContainerState, error) {
-	containerID, err := d.containerID(ctx, containerName)
-	if err != nil {
-		return ContainerState{}, err
-	}
-	if containerID == "" {
-		return ContainerState{}, nil
-	}
-	// return ContainerState{}, nil
 	buf := &bytes.Buffer{}
-	if err := d.runner.RunWithContext(ctx, "docker", []string{"inspect", "--format", "{{json .State}}", containerID}, exec.Stdout(buf)); err != nil {
-		return ContainerState{}, fmt.Errorf("run docker inspect: %w", err)
+	if err := c.runner.RunWithContext(ctx, "docker", []string{"ps", "-q", "--filter", "name=" + name}, exec.Stdout(buf)); err != nil {
+		return false, fmt.Errorf("run docker ps: %w", err)
 	}
-	var containerState ContainerState
-	if err := json.Unmarshal([]byte(strings.TrimSpace(buf.String())), &containerState); err != nil {
-		return ContainerState{}, fmt.Errorf("unmarshal state of container %q:%w", containerName, err)
-	}
-	return containerState, nil
-}
 
-// containerID gets the ID of a Docker container by its name.
-func (d *DockerCmdClient) containerID(ctx context.Context, containerName string) (string, error) {
-	buf := &bytes.Buffer{}
-	if err := d.runner.RunWithContext(ctx, "docker", []string{"ps", "-a", "-q", "--filter", "name=" + containerName}, exec.Stdout(buf)); err != nil {
-		return "", fmt.Errorf("run docker ps: %w", err)
-	}
-	return strings.TrimSpace(buf.String()), nil
-}
-
-// ErrContainerExited represents an error when a Docker container has exited.
-// It includes the container name and exit code in the error message.
-type ErrContainerExited struct {
-	name     string
-	exitcode int
-}
-
-// ErrContainerExited represents docker container exited with an exitcode.
-func (e *ErrContainerExited) Error() string {
-	return fmt.Sprintf("container %q exited with code %d", e.name, e.exitcode)
+	output := strings.TrimSpace(buf.String())
+	return output != "", nil
 }
 
 // Stop calls `docker stop` to stop a running container.
