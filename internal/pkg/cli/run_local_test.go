@@ -292,9 +292,17 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 						HostPort: aws.Int64(9999),
 					},
 				},
+				Essential: aws.Bool(true),
+				DependsOn: []*sdkecs.ContainerDependency{
+					{
+						Condition:     aws.String("START"),
+						ContainerName: aws.String("bar"),
+					},
+				},
 			},
 			{
-				Name: aws.String("bar"),
+				Name:      aws.String("bar"),
+				Essential: aws.Bool(true),
 				Environment: []*sdkecs.KeyValuePair{
 					{
 						Name:  aws.String("BAR_VAR"),
@@ -388,6 +396,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"80":  "8080",
 					"999": "9999",
 				},
+				IsEssential: true,
+				DependsOn: map[string]string{
+					"bar": "start",
+				},
 			},
 			"bar": {
 				ImageURI: "image2",
@@ -404,6 +416,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"777":   "7777",
 					"10000": "10000",
 				},
+				IsEssential: true,
+				DependsOn:   map[string]string{},
 			},
 		},
 	}
