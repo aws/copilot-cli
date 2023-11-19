@@ -436,6 +436,8 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
+	containerDeps := o.getContainerDependencies(td)
+
 	task := orchestrator.Task{
 		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
@@ -451,10 +453,12 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	for _, ctr := range td.ContainerDefinitions {
 		name := aws.StringValue(ctr.Name)
 		def := orchestrator.ContainerDefinition{
-			ImageURI: aws.StringValue(ctr.Image),
-			EnvVars:  envVars[name].EnvVars(),
-			Secrets:  envVars[name].Secrets(),
-			Ports:    make(map[string]string, len(ctr.PortMappings)),
+			ImageURI:    aws.StringValue(ctr.Image),
+			EnvVars:     envVars[name].EnvVars(),
+			Secrets:     envVars[name].Secrets(),
+			Ports:       make(map[string]string, len(ctr.PortMappings)),
+			IsEssential: containerDeps[name].isEssential,
+			DependsOn:   containerDeps[name].dependsOn,
 		}
 
 		for _, port := range ctr.PortMappings {
@@ -516,6 +520,7 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 	}
 
 	// TODO (Adi): Use this dependency order in orchestrator to start and stop containers.
+	// replace container dependencies with the local dependencies from manifest.
 	containerDeps := clideploy.ContainerDependencies(mft.Manifest())
 	for name, dep := range containerDeps {
 		ctr, ok := task.Containers[name]
@@ -811,6 +816,26 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	}
 
 	return getter.GetSecretValue(ctx, valueFrom)
+}
+
+type containerDependency struct {
+	isEssential bool
+	dependsOn   map[string]string
+}
+
+func (o *runLocalOpts) getContainerDependencies(taskDef *awsecs.TaskDefinition) map[string]containerDependency {
+	dependencies := make(map[string]containerDependency, len(taskDef.ContainerDefinitions))
+	for _, ctr := range taskDef.ContainerDefinitions {
+		dep := containerDependency{
+			isEssential: aws.BoolValue(ctr.Essential),
+			dependsOn:   make(map[string]string),
+		}
+		for _, containerDep := range ctr.DependsOn {
+			dep.dependsOn[aws.StringValue(containerDep.ContainerName)] = strings.ToLower(aws.StringValue(containerDep.Condition))
+		}
+		dependencies[aws.StringValue(ctr.Name)] = dep
+	}
+	return dependencies
 }
 
 type hostDiscoverer struct {

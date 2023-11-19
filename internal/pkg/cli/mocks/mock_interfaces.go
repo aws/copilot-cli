@@ -7727,6 +7727,37 @@ func (mr *MockdockerEngineRunnerMockRecorder) Exec(ctx, container, out, cmd inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockdockerEngineRunner)(nil).Exec), varargs...)
 }
 
+// IsContainerCompleteOrSuccess mocks base method.
+func (m *MockdockerEngineRunner) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsContainerCompleteOrSuccess", ctx, containerName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// IsContainerCompleteOrSuccess indicates an expected call of IsContainerCompleteOrSuccess.
+func (mr *MockdockerEngineRunnerMockRecorder) IsContainerCompleteOrSuccess(ctx, containerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerCompleteOrSuccess", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerCompleteOrSuccess), ctx, containerName)
+}
+
+// IsContainerHealthy mocks base method.
+func (m *MockdockerEngineRunner) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsContainerHealthy", ctx, containerName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsContainerHealthy indicates an expected call of IsContainerHealthy.
+func (mr *MockdockerEngineRunnerMockRecorder) IsContainerHealthy(ctx, containerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerHealthy", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerHealthy), ctx, containerName)
+}
+
 // IsContainerRunning mocks base method.
 func (m *MockdockerEngineRunner) IsContainerRunning(arg0 context.Context, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
