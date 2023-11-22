@@ -111,12 +111,47 @@ func TestOrchestrator(t *testing.T) {
 				`stop "bar": some error`,
 			},
 		},
+		"error polling tasks removed": {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				runningCnt := 0
+				de := &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 1 {
+							return false, errors.New("some error")
+						}
+						return true, nil
+					},
+					StopFn: func(ctx context.Context, name string) error {
+						return nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {},
+							"bar": {},
+						},
+					})
+				}, de
+			},
+			errs: []string{
+				`polling containers removed: some error`,
+			},
+		},
 		"error restarting new task due to pause changes": {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 3 {
+							return false, nil
+						}
 						return true, nil
 					},
 				}
@@ -149,8 +184,13 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 2 {
+							return false, nil
+						}
 						return true, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
@@ -195,8 +235,13 @@ func TestOrchestrator(t *testing.T) {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				stopPause := make(chan struct{})
+				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 1 {
+							return false, nil
+						}
 						return true, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
@@ -230,8 +275,13 @@ func TestOrchestrator(t *testing.T) {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				stopPause := make(chan struct{})
+				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 1 {
+							return false, nil
+						}
 						return true, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
@@ -375,8 +425,13 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 1 {
+							return false, nil
+						}
 						return true, nil
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
