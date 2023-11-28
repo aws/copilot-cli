@@ -147,14 +147,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, nil
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, nil
 					},
 				}
 				return func(t *testing.T, o *Orchestrator) {
@@ -186,14 +184,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, nil
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
 						// validate pause container has correct ports and secrets
@@ -237,14 +233,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				stopPause := make(chan struct{})
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, nil
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
 						if opts.ContainerName == "prefix-foo" {
@@ -277,14 +271,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
 				stopPause := make(chan struct{})
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, nil
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
 						if opts.ContainerName == "prefix-foo" {
@@ -427,14 +419,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, nil
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, nil
 					},
 					ExecFn: func(ctx context.Context, ctr string, w io.Writer, cmd string, args ...string) error {
 						if cmd == "aws" {
