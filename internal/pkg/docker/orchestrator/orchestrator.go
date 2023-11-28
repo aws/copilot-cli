@@ -395,8 +395,29 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
-			fmt.Printf("Stopped %q\n", name)
-			errCh <- nil
+
+			// ensure that container is fully stopped before stopTask finishes blocking
+			for {
+				running, err := o.docker.IsContainerRunning(ctx, o.containerID(name))
+				if err != nil {
+					errCh <- fmt.Errorf("polling container %q for removal: %w", name, err)
+					return
+				}
+
+				if running {
+					select {
+					case <-time.After(1 * time.Second):
+						continue
+					case <-ctx.Done():
+						errCh <- ctx.Err()
+						return
+					}
+				}
+
+				fmt.Printf("Stopped %q\n", name)
+				errCh <- nil
+				return
+			}
 		}()
 	}
 
@@ -407,33 +428,8 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 			break
 		}
 	}
-	if err := errors.Join(errs...); err != nil {
-		return err
-	}
 
-	// ensure that containers are fully stopped before stopTask finishes blocking
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(100 * time.Millisecond):
-			allCtrsStopped := true
-			for ctrName := range o.curTask.Containers {
-				running, err := o.docker.IsContainerRunning(ctx, o.containerID(ctrName))
-				if err != nil {
-					return fmt.Errorf("polling containers removed: %w", err)
-				}
-
-				if running {
-					allCtrsStopped = false
-				}
-			}
-
-			if allCtrsStopped {
-				return nil
-			}
-		}
-	}
+	return errors.Join(errs...)
 }
 
 // waitForContainerToStart blocks until the container specified by id starts.

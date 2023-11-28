@@ -84,8 +84,13 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						runningCnt += 1
+						if runningCnt > 1 {
+							return false, nil
+						}
 						return true, nil
 					},
 					StopFn: func(ctx context.Context, name string) error {
@@ -138,7 +143,8 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 			errs: []string{
-				`polling containers removed: some error`,
+				`polling container "foo" for removal: some error`,
+				`polling container "bar" for removal: some error`,
 			},
 		},
 		"error restarting new task due to pause changes": {
@@ -149,7 +155,7 @@ func TestOrchestrator(t *testing.T) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						runningCnt += 1
-						if runningCnt > 3 {
+						if runningCnt > 1 {
 							return false, nil
 						}
 						return true, nil
@@ -188,7 +194,7 @@ func TestOrchestrator(t *testing.T) {
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						runningCnt += 1
-						if runningCnt > 2 {
+						if runningCnt > 1 {
 							return false, nil
 						}
 						return true, nil
