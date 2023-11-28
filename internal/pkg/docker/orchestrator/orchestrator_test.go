@@ -84,14 +84,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, nil
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, nil
 					},
 					StopFn: func(ctx context.Context, name string) error {
 						if name == "prefix-success" {
@@ -120,14 +118,12 @@ func TestOrchestrator(t *testing.T) {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
-				runningCnt := 0
 				de := &dockerenginetest.Double{
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						runningCnt += 1
-						if runningCnt > 1 {
-							return false, errors.New("some error")
+						if name == "prefix-pause" {
+							return true, nil
 						}
-						return true, nil
+						return false, errors.New("some error")
 					},
 					StopFn: func(ctx context.Context, name string) error {
 						return nil
