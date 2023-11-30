@@ -57,6 +57,7 @@ type DockerEngine interface {
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
 	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
+	Rm(context.Context, string) error
 }
 
 const (
@@ -422,6 +423,9 @@ func (a *stopAction) Do(o *Orchestrator) error {
 	if err := o.docker.Stop(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
+	if err := o.docker.Rm(context.Background(), o.containerID("pause")); err != nil {
+		errs = append(errs, fmt.Errorf("remove %q: %w", "pause", err))
+	}
 	fmt.Printf("Stopped %q\n", "pause")
 
 	return errors.Join(errs...)
@@ -444,6 +448,13 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 				return
 			}
 			fmt.Printf("Stopped %q\n", name)
+			// Remove the container
+			fmt.Printf("Removing %q\n", name)
+			if err := o.docker.Rm(ctx, o.containerID(name)); err != nil {
+				errCh <- fmt.Errorf("remove %q: %w", name, err)
+				return
+			}
+			fmt.Printf("Removed %q\n", name)
 			errCh <- nil
 		}()
 	}
@@ -630,7 +641,7 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 			}
 			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
 			cancelFn()
-			o.runErrs <- fmt.Errorf("run essential %q: %w", opts.ContainerName, err)
+			o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 		}
 	}()
 }

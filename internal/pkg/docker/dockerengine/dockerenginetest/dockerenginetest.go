@@ -19,6 +19,7 @@ type Double struct {
 	ExecFn                        func(context.Context, string, io.Writer, string, ...string) error
 	IsContainerHealthyFn          func(ctx context.Context, containerName string) (bool, error)
 	IsContainerRunningOrHealthyFn func(ctx context.Context, containerName string) (bool, int, error)
+	RmFn                          func(context.Context, string) error
 }
 
 // IsContainerCompleteOrSuccess implements orchestrator.DockerEngine.
@@ -69,4 +70,11 @@ func (d *Double) Exec(ctx context.Context, container string, out io.Writer, cmd 
 		return nil
 	}
 	return d.ExecFn(ctx, container, out, cmd, args...)
+}
+
+func (d *Double) Rm(ctx context.Context, name string) error {
+	if d.RmFn == nil {
+		return nil
+	}
+	return d.RmFn(ctx, name)
 }

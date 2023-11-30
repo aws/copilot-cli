@@ -478,9 +478,9 @@ func (c DockerCmdClient) Stop(ctx context.Context, containerID string) error {
 }
 
 // Rm calls `docker rm` to remove a stopped container.
-func (c DockerCmdClient) Rm(containerID string) error {
+func (c DockerCmdClient) Rm(ctx context.Context, containerID string) error {
 	buf := &bytes.Buffer{}
-	if err := c.runner.Run("docker", []string{"rm", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
+	if err := c.runner.RunWithContext(ctx, "docker", []string{"rm", containerID}, exec.Stdout(buf), exec.Stderr(buf)); err != nil {
 		return fmt.Errorf("%s: %w", strings.TrimSpace(buf.String()), err)
 	}
 	return nil
