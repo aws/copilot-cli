@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	osexec "os/exec"
 	"path/filepath"
 	"strings"
@@ -686,6 +687,29 @@ func TestDockerCommand_Run(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("running container: %w", mockError),
 		},
+
+		"should return error when container exits": {
+			containerName: mockPauseContainer,
+			command:       mockCommand,
+			uri:           mockImageURI,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"run",
+					"--name", mockPauseContainer,
+					"mockImageUri",
+					"sleep", "infinity"}, gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error {
+						// Simulate an zero exit code.
+						return &osexec.ExitError{ProcessState: &os.ProcessState{}}
+					})
+			},
+			wantedError: &ErrContainerExited{
+				name:     mockPauseContainer,
+				exitcode: 0,
+			},
+		},
+
 		"success with run options for pause container": {
 			containerName: mockPauseContainer,
 			ports:         mockContainerPorts,

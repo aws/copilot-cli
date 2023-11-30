@@ -20,6 +20,9 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"golang.org/x/sync/errgroup"
 )
 
 // Orchestrator manages running a Task. Only a single Task
@@ -49,6 +52,8 @@ type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunL
 type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
+	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error)
+	IsContainerHealthy(ctx context.Context, containerName string) (bool, error)
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
 	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
@@ -66,6 +71,18 @@ const (
 
 const (
 	proxyPortStart = uint16(50000)
+)
+
+const (
+	ctrStateUnknown         = "unknown"
+	ctrStateRunningOrExited = "RunningOrExited"
+)
+
+const (
+	ctrStateHealthy  = "healthy"
+	ctrStateComplete = "complete"
+	ctrStateSuccess  = "success"
+	ctrStateStart    = "start"
 )
 
 //go:embed Pause-Dockerfile
@@ -194,8 +211,8 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 
 		// start the pause container
 		opts := o.pauseRunOptions(a.task)
-		o.run(pauseCtrTaskID, opts)
-		if err := o.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
+		o.run(pauseCtrTaskID, opts, true, cancel)
+		if err := o.waitForContainerToStart(ctx, opts.ContainerName, true); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
 
@@ -222,14 +239,41 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		// TODO(Aiden): Implement a container ID system or use `docker ps` to ensure containers are stopped
 		time.Sleep(1 * time.Second)
 	}
-
-	for name, ctr := range a.task.Containers {
-		name, ctr := name, ctr
-		o.run(taskID, o.containerRunOptions(name, ctr))
-	}
-
 	o.curTask = a.task
+	depGraph := buildDependencyGraph(a.task.Containers)
+	err := depGraph.UpwardTraversal(ctx, func(ctx context.Context, containerName string) error {
+		if len(a.task.Containers[containerName].DependsOn) > 0 {
+			if err := o.waitForContainerDependencies(ctx, containerName, a); err != nil {
+				return fmt.Errorf("wait for container %s dependencies: %w", containerName, err)
+			}
+		}
+		o.run(taskID, o.containerRunOptions(containerName, a.task.Containers[containerName]), a.task.Containers[containerName].IsEssential, cancel)
+		return o.waitForContainerToStart(ctx, o.containerID(containerName), a.task.Containers[containerName].IsEssential)
+	}, ctrStateUnknown, ctrStateRunningOrExited)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return fmt.Errorf("upward traversal: %w", err)
+	}
 	return nil
+}
+
+func buildDependencyGraph(containers map[string]ContainerDefinition) *graph.Graph[string] {
+	var vertices []string
+	for vertex := range containers {
+		vertices = append(vertices, vertex)
+	}
+	dependencyGraph := graph.New(vertices, graph.WithStatus[string](ctrStateUnknown))
+	for containerName, container := range containers {
+		for depCtr := range container.DependsOn {
+			dependencyGraph.Add(graph.Edge[string]{
+				From: containerName,
+				To:   depCtr,
+			})
+		}
+	}
+	return dependencyGraph
 }
 
 // setupProxyConnections creates proxy connections to a.hosts in pauseContainer.
@@ -416,22 +460,85 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 }
 
 // waitForContainerToStart blocks until the container specified by id starts.
-func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string) error {
+func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string, isEssential bool) error {
 	for {
 		isRunning, err := o.docker.IsContainerRunning(ctx, id)
 		switch {
 		case err != nil:
+			var errContainerExited *dockerengine.ErrContainerExited
+			if errors.As(err, &errContainerExited) && !isEssential {
+				return nil
+			}
 			return fmt.Errorf("check if %q is running: %w", id, err)
 		case isRunning:
 			return nil
 		}
-
 		select {
 		case <-time.After(1 * time.Second):
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
+}
+
+func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, containerName string, a *runTaskAction) error {
+	fmt.Printf("Waiting for container %q dependencies...\n", containerName)
+	eg, ctx := errgroup.WithContext(ctx)
+	for name, state := range a.task.Containers[containerName].DependsOn {
+		name, state := name, state
+		eg.Go(func() error {
+			ctrId := o.containerID(name)
+			isEssential := a.task.Containers[name].IsEssential
+			ticker := time.NewTicker(700 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					switch state {
+					case ctrStateStart:
+						err := o.waitForContainerToStart(ctx, ctrId, isEssential)
+						if err != nil {
+							return err
+						}
+						if !isEssential {
+							fmt.Printf("non-essential container %q started successfully\n", ctrId)
+						}
+						log.Successf("Successfully container %s is running\n", ctrId)
+						return nil
+					case ctrStateHealthy:
+						healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
+						if err != nil {
+							if !isEssential {
+								fmt.Printf("non-essential container %q failed to be %q: %v\n", ctrId, state, err)
+								return nil
+							}
+							return fmt.Errorf("essential container %q failed to be %q: %w", ctrId, state, err)
+						}
+						if healthy {
+							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
+							return nil
+						}
+					case ctrStateComplete, ctrStateSuccess:
+						exited, exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+						if err != nil {
+							if !isEssential {
+								fmt.Printf("non-essential container %q failed to be %q: %v\n", ctrId, state, err)
+								return nil
+							}
+							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
+						}
+						if exited && ((state == "complete" && exitCode != 0) || (state == "success" && exitCode == 0)) {
+							log.Successf("Successfully dependency container %q exited with code: %d\n", name, exitCode)
+							return nil
+						}
+					}
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+		})
+	}
+	return eg.Wait()
 }
 
 // containerID returns the full ID for a container with name run by s.
@@ -495,7 +602,10 @@ func (o *Orchestrator) containerRunOptions(name string, ctr ContainerDefinition)
 // run calls `docker run` using opts. Errors are only returned
 // to the main Orchestrator routine if the taskID the container was run with
 // matches the current taskID the Orchestrator is running.
-func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
+// run calls `docker run` using opts. Errors are only returned
+// to the main Orchestrator routine if the taskID the container was run with
+// matches the current taskID the Orchestrator is running.
+func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssential bool, cancelFn context.CancelFunc) {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
@@ -514,7 +624,13 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions) {
 			if err == nil {
 				err = errors.New("container stopped unexpectedly")
 			}
-			o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
+			var errContainerExited *dockerengine.ErrContainerExited
+			if errors.As(err, &errContainerExited) && !isEssential {
+				return
+			}
+			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
+			cancelFn()
+			o.runErrs <- fmt.Errorf("run essential %q: %w", opts.ContainerName, err)
 		}
 	}()
 }

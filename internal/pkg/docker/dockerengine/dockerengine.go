@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -27,6 +28,10 @@ import (
 type Cmd interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 	RunWithContext(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error
+}
+
+type exitCodeError interface {
+	ExitCode() int
 }
 
 // Operating systems and architectures supported by docker.
@@ -342,6 +347,13 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			exec.Stdout(stdout),
 			exec.Stderr(stderr),
 			exec.NewProcessGroup()); err != nil {
+			var ec exitCodeError
+			if errors.As(err, &ec) {
+				return &ErrContainerExited{
+					name:     options.ContainerName,
+					exitcode: ec.ExitCode(),
+				}
+			}
 			return fmt.Errorf("running container: %w", err)
 		}
 		return nil
@@ -444,6 +456,11 @@ func (d *DockerCmdClient) containerID(ctx context.Context, containerName string)
 type ErrContainerExited struct {
 	name     string
 	exitcode int
+}
+
+// ExitCode returns the OS exit code configured for this error.
+func (e *ErrContainerExited) ExitCode() int {
+	return e.exitcode
 }
 
 // ErrContainerExited represents docker container exited with an exitcode.

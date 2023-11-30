@@ -7,8 +7,6 @@ package graph
 import (
 	"context"
 	"sync"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // vertexStatus denotes the visiting status of a vertex when running DFS in a graph.
@@ -370,53 +368,68 @@ type graphTraversal[V comparable] struct {
 }
 
 func (t *graphTraversal[V]) execute(ctx context.Context, graph *Graph[V]) error {
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	vertexCount := len(graph.vertices)
 	if vertexCount == 0 {
 		return nil
 	}
-	eg, ctx := errgroup.WithContext(ctx)
-	vertexCh := make(chan V, vertexCount)
-	defer close(vertexCh)
 
-	processVertices := func(ctx context.Context, graph *Graph[V], eg *errgroup.Group, vertices []V, vertexCh chan V) {
+	var wg sync.WaitGroup
+	vertexCh := make(chan V, vertexCount)
+	errCh := make(chan error, vertexCount) // Channel for errors
+
+	processVertices := func(ctx context.Context, graph *Graph[V], wg *sync.WaitGroup, vertices []V, vertexCh chan V) {
 		for _, vertex := range vertices {
 			vertex := vertex
-			// Delay processing this vertex if any of its dependent vertices are yet to be processed.
 			if len(t.filterVerticesByStatus(graph, vertex, t.adjacentVertexSkipStatus)) != 0 {
 				continue
 			}
 			if !t.markAsSeen(vertex) {
-				// Skip this vertex if it's already been processed by another routine.
 				continue
 			}
-			eg.Go(func() error {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				if err := t.processVertex(ctx, vertex); err != nil {
-					return err
+					errCh <- err
+					return
 				}
-				// Assign new status to the vertex upon successful processing.
 				graph.updateStatus(vertex, t.requiredVertexStatus)
 				vertexCh <- vertex
-				return nil
-			})
+			}()
 		}
 	}
 
-	eg.Go(func() error {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		for {
 			select {
 			case <-ctx.Done():
-				return nil
+				return
 			case vertex := <-vertexCh:
 				vertexCount--
 				if vertexCount == 0 {
-					return nil
+					return
 				}
-				processVertices(ctx, graph, eg, t.findAdjacentVertices(graph, vertex), vertexCh)
+				processVertices(ctx, graph, &wg, t.findAdjacentVertices(graph, vertex), vertexCh)
 			}
 		}
-	})
-	processVertices(ctx, graph, eg, t.findBoundaryVertices(graph), vertexCh)
-	return eg.Wait()
+	}()
+	processVertices(ctx, graph, &wg, t.findBoundaryVertices(graph), vertexCh)
+	wg.Wait()    // Wait for all goroutines to finish
+	close(errCh) // Close error channel
+
+	// Check if there were any errors
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *graphTraversal[V]) markAsSeen(vertex V) bool {
