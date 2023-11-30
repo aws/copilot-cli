@@ -7,6 +7,8 @@ package graph
 import (
 	"context"
 	"sync"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // vertexStatus denotes the visiting status of a vertex when running DFS in a graph.
@@ -376,12 +378,11 @@ func (t *graphTraversal[V]) execute(ctx context.Context, graph *Graph[V]) error 
 	if vertexCount == 0 {
 		return nil
 	}
-
-	var wg sync.WaitGroup
+	eg, ctx := errgroup.WithContext(ctx)
 	vertexCh := make(chan V, vertexCount)
-	errCh := make(chan error, vertexCount)
+	defer close(vertexCh)
 
-	processVertices := func(ctx context.Context, graph *Graph[V], wg *sync.WaitGroup, vertices []V, vertexCh chan V) {
+	processVertices := func(ctx context.Context, graph *Graph[V], eg *errgroup.Group, vertices []V, vertexCh chan V) {
 		for _, vertex := range vertices {
 			vertex := vertex
 			// Delay processing this vertex if any of its dependent vertices are yet to be processed.
@@ -389,48 +390,37 @@ func (t *graphTraversal[V]) execute(ctx context.Context, graph *Graph[V]) error 
 				continue
 			}
 			if !t.markAsSeen(vertex) {
-				// Skip this vertex if it's already been processed by another go routine.
+				// Skip this vertex if it's already been processed by another routine.
 				continue
 			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			eg.Go(func() error {
 				if err := t.processVertex(ctx, vertex); err != nil {
-					errCh <- err
-					return
+					return err
 				}
+				// Assign new status to the vertex upon successful processing.
 				graph.updateStatus(vertex, t.requiredVertexStatus)
 				vertexCh <- vertex
-			}()
+				return nil
+			})
 		}
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	eg.Go(func() error {
 		for {
 			select {
 			case <-ctx.Done():
-				return
+				return nil
 			case vertex := <-vertexCh:
 				vertexCount--
 				if vertexCount == 0 {
-					return
+					return nil
 				}
-				processVertices(ctx, graph, &wg, t.findAdjacentVertices(graph, vertex), vertexCh)
+				processVertices(ctx, graph, eg, t.findAdjacentVertices(graph, vertex), vertexCh)
 			}
 		}
-	}()
-	processVertices(ctx, graph, &wg, t.findBoundaryVertices(graph), vertexCh)
-	wg.Wait()
-	close(errCh)
-
-	for err := range errCh {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	})
+	processVertices(ctx, graph, eg, t.findBoundaryVertices(graph), vertexCh)
+	return eg.Wait()
 }
 
 func (t *graphTraversal[V]) markAsSeen(vertex V) bool {
