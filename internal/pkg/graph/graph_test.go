@@ -409,8 +409,8 @@ func TestTraverseInDependencyOrder(t *testing.T) {
 			done <- struct{}{}
 		}()
 
-		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vertice string) error {
-			vtxChan <- vertice
+		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vtx string) error {
+			vtxChan <- vtx
 			return nil
 		}, "started", "stopped")
 		require.NoError(t, err, "Error during iteration")
