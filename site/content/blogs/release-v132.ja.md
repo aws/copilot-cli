@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.32: `run local --proxy`, `run local --watch`, 既存 ALB のインポートをサポート'
+title: 'AWS Copilot v1.32: `run local --proxy`、`run local --watch`、既存 ALB のインポートをサポート'
 twitter_title: 'AWS Copilot v1.32'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.32: `run local --proxy`, `run local --watch`, 既存 ALB のインポートをサポート
+# AWS Copilot v1.32: `run local --proxy`、`run local --watch`、既存 ALB のインポートをサポート
 
 投稿日: 2023 年 11 月 9 日
 
@@ -37,7 +37,7 @@ Copilot v1.32 ではより柔軟で効率的な開発を支援する大きな機
 ## `copilot run local` のプロキシ機能
 `copilot run local` の新しい `--proxy` フラグにより、ローカルコンテナが Environment にデプロイされた Service と通信できるようになりました。これにより、ローカル開発の体験が向上します。
 
-たとえば、`users` と `orders` という 2 つのサービスがあり、どちらも [Service Connect](../docs/manifest/lb-web-service.ja.md#network-connect) を有効にしている Environment があるとします。さらに、`orders` にはデータを保存するために [RDS addon](../docs/developing/addons/workload.ja.md) がデプロイされているとします。`copilot run local --proxy --name orders` を実行することで、ローカルの `orders` コンテナは以下のコンポーネントと通信ができます:
+たとえば、`users` と `orders` という 2 つの Service があり、どちらも [Service Connect](../docs/manifest/lb-web-service.ja.md#network-connect) を有効にしている Environment があるとします。さらに、`orders` にはデータを保存するために [RDS addon](../docs/developing/addons/workload.ja.md) がデプロイされているとします。`copilot run local --proxy --name orders` を実行することで、ローカルの `orders` コンテナは以下のコンポーネントと通信ができます:
 
 - `users` Service: Service Connect URL を利用します (デフォルト: `http://users:<port>`)
 - `orders` Service の RDS データベース: DB インスタンス URL (例: `app-env-orders-random-characters.us-west-2.rds.amazonaws.com:5432`) や、DB クラスター URL を利用します

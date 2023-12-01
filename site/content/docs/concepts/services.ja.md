@@ -39,7 +39,7 @@ Amazon CloudFront で配信され、S3 でホスティングされた静的 Web 
 Application Load Balancer、Network Load Balancer、または両方をトラフィックの入り口として Fargate 上でタスクを実行する ECS サービスです。
 安定したリクエスト量が見込まれる場合、Service から VPC 内のリソースにアクセスする必要がある場合、あるいはより高度な設定の必要がある場合に適した HTTP または TCP サービスの選択肢です。
 
-Application Load Balancer は Environment レベルのリソースであり、Environment 内の全ての Load Balanced Web Service で共有されることに注意しましょう。v1.32.0 では、[ワークロード Manifest](../manifest/lb-web-service.ja.md#http-alb) で指定することにより、既存の ALB をサービスレベルでインポートできます。詳細については、[こちら](environments.ja.md#load-balancers-and-dns)を確認してください。対照的に、 Network Load Balancer は Service レベルのリソースであり、 Service 間では共有されません。
+Application Load Balancer は Environment レベルのリソースであり、Environment 内の全ての Load Balanced Web Service で共有されることに注意しましょう。v1.32.0 では、[Load Balanced Web Service の Manifest](../manifest/lb-web-service.ja.md#http-alb) で指定することにより、既存の ALB を Service レベルでインポートできます。詳細については、[こちら](environments.ja.md#load-balancers-and-dns)を確認してください。対照的に、 Network Load Balancer は Service レベルのリソースであり、 Service 間では共有されません。
 
 下図は Application Load Balancer のみを含む Load Balanced Web Service の図です。
 

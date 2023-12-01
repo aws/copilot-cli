@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.31: NLB 設定の拡張, タスク失敗時のログの改善, `copilot deploy` の機能拡張'
+title: 'AWS Copilot v1.31: NLB 設定の拡張、タスク失敗時のログの改善、`copilot deploy` の機能拡張'
 twitter_title: 'AWS Copilot v1.31'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.31: NLB 設定の拡張, タスク失敗時のログの改善, `copilot deploy` の機能拡張
+# AWS Copilot v1.31: NLB 設定の拡張、タスク失敗時のログの改善、`copilot deploy` の機能拡張
 
 投稿日: 2023 年 10 月 5 日
 
@@ -48,18 +48,18 @@ nlb:
 <a id="copilot-deploy-enhancements"></a>
 
 ## `copilot deploy` の機能拡張
-`copilot deploy` で複数のワークロードを一度にデプロイできるようになりました。`--name` フラグで複数のワークロードを指定できます。新しい `--all` フラグを `--init-wkld` フラグを組み合わせて利用すると、すべてのローカルワークロードを初期してデプロイできます。また、サービス名を指定する際に "deployment order" タグを利用可能になりました。
+`copilot deploy` で複数のワークロードを一度にデプロイできるようになりました。`--name` フラグで複数のワークロードを指定できます。新しい `--all` フラグを `--init-wkld` フラグを組み合わせて利用すると、すべてのローカルワークロードを初期してデプロイできます。また、Service 名を指定する際に "deployment order" タグを利用可能になりました。
 
-たとえば、複数のワークロードを含む新しいリポジトリをクローンした場合、次のコマンドで環境とすべてのサービスを初期化できます。
+たとえば、複数のワークロードを含む新しいリポジトリをクローンした場合、次のコマンドで環境とすべての Service を初期化できます。
 ```console
 copilot deploy --init-env --deploy-env -e dev --all --init-wkld
 ```
 
-別の例として、他のサービスが公開するトピックをサブスクライブしているワーカーサービスがある場合、`--all` と組み合わせて名前と順序を指定できます。
+別の例として、他の Service が公開するトピックをサブスクライブしている Worker Service がある場合、`--all` と組み合わせて名前と順序を指定できます。
 ```console
 copilot deploy --all -n fe/1 -n worker/2
 ```
-上記のコマンドでは、まず `fe` をデプロイした後、次に `worker` をデプロイした後に、ワークスペース内の残りのサービスやジョブがデプロイされます。
+上記のコマンドでは、まず `fe` をデプロイした後、次に `worker` をデプロイした後に、ワークスペース内の残りの Service や Job がデプロイされます。
 
 <a id="better-task-failure-logs"></a>
 
