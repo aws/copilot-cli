@@ -552,6 +552,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(""),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(""),
+		},
 	}
 	testCases := map[string]struct {
 		httpsEnabled         bool
@@ -966,6 +970,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "phonetool",
+    "ArtifactKeyARN": "",
     "ContainerImage": "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
     "DNSDelegated": "false",
