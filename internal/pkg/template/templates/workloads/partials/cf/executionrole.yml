@@ -40,7 +40,7 @@ ExecutionRole:
               Action:
                 - 'kms:Decrypt'
               Resource:
-                - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                - !Ref ArtifactKeyARN
       # Optional IAM permission required by ECS task def env file
       # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam
       # Example EnvFileARN: arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env
