@@ -6,12 +6,12 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
-	osexec "os/exec"
 	"os/signal"
 	"path/filepath"
 	"slices"
@@ -68,6 +68,10 @@ const (
 	workloadAskPrompt = "Which workload would you like to run locally?"
 )
 
+const (
+	curlContainerCredentialsCmd = "curl 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
+)
+
 type containerOrchestrator interface {
 	Start() <-chan error
 	RunTask(orchestrator.Task, ...orchestrator.RunTaskOption)
@@ -112,6 +116,7 @@ type runLocalOpts struct {
 
 	sel                 deploySelector
 	ecsClient           ecsClient
+	ecsExecutor         ecsCommandExecutor
 	ssm                 secretGetter
 	secretsManager      secretGetter
 	sessProvider        sessionProvider
@@ -130,6 +135,7 @@ type runLocalOpts struct {
 	envChecker          versionCompatibilityChecker
 	debounceTime        time.Duration
 	newRecursiveWatcher func() (recursiveWatcher, error)
+	outputCapturer      *os.File
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
@@ -187,6 +193,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		// so use the default sess and *hope* they have permissions.
 		o.ecsClient = ecs.New(o.envManagerSess)
 		o.ssm = ssm.New(o.envManagerSess)
+		o.ecsExecutor = awsecs.New(o.envManagerSess)
 		o.secretsManager = secretsmanager.New(defaultSessEnvRegion)
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
@@ -259,6 +266,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
 		return file.NewRecursiveWatcher(0)
 	}
+	o.outputCapturer = os.Stdout
 	return o, nil
 }
 
@@ -656,42 +664,99 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 
 	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
 	ecsExecMethod := func() (map[string]string, error) {
-		svcDesc, err := ecs.New(o.sess).DescribeService(o.appName, o.envName, o.wkldName)
+		svcDesc, err := o.ecsClient.DescribeService(o.appName, o.envName, o.wkldName)
 		if err != nil {
 			return nil, fmt.Errorf("describe ECS service for %s in environment %s: %w", o.wkldName, o.envName, err)
 		}
 
-		// try exec on each task
-		for _, task := range svcDesc.Tasks {
-			fmt.Printf("Task ARN: %s\n", aws.StringValue(task.TaskArn))
-			id, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
-			if err != nil {
-				continue
-			}
-			fmt.Printf("Task ID: %s\n", id)
+		// capture stdout
+		stdoutReader, stdoutWriter, err := os.Pipe()
+		if err != nil {
+			return nil, fmt.Errorf("create os pipe: %w", err)
+		}
+		stdoutPointer := o.outputCapturer
+		defer func() {
+			o.outputCapturer = stdoutPointer
+		}()
+		o.outputCapturer = stdoutWriter
 
-			awsContainerCredentialsRelativeURI, err := agentEndpoint(ctx, id)
+		// try exec on each container within the service
+		var wg sync.WaitGroup
+		for _, task := range svcDesc.Tasks {
+			taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
 			if err != nil {
-				// continue
 				return nil, err
 			}
-			fmt.Printf("Endpoint Relative URI: %s\n", awsContainerCredentialsRelativeURI)
 
-			err = awsecs.New(o.sess).ExecuteCommand(awsecs.ExecuteCommandInput{
-				Cluster:   svcDesc.ClusterName,
-				Command:   fmt.Sprintf("curl 169.254.170.2%s", awsContainerCredentialsRelativeURI),
-				Task:      id,
-				Container: o.wkldName,
-			})
-			if err != nil {
-				continue
+			for _, container := range task.Containers {
+				wg.Add(1)
+				containerName := aws.StringValue(container.Name)
+				go func() {
+					defer wg.Done()
+					o.ecsExecutor.ExecuteCommand(awsecs.ExecuteCommandInput{
+						Cluster:   svcDesc.ClusterName,
+						Command:   fmt.Sprintf("/bin/sh -c %q\n", curlContainerCredentialsCmd),
+						Task:      taskID,
+						Container: containerName,
+					})
+				}()
 			}
-
-			fmt.Println("found!")
-			return nil, nil
 		}
 
-		return nil, errors.New("fail")
+		// wait for containers to finish and reset stdout
+		containersFinished := make(chan struct{})
+		go func() {
+			wg.Wait()
+			stdoutWriter.Close()
+			o.outputCapturer = stdoutPointer
+			close(containersFinished)
+		}()
+
+		type containerCredentialsOutput struct {
+			AccessKeyId     string
+			SecretAccessKey string
+			Token           string
+		}
+
+		// parse stdout to try and find credentials
+		credsResult := make(chan map[string]string)
+		parseErr := make(chan error)
+		go func() {
+			select {
+			case <-containersFinished:
+				buf, err := io.ReadAll(stdoutReader)
+				if err != nil {
+					parseErr <- err
+					return
+				}
+				lines := bytes.Split(buf, []byte("\n"))
+				var creds containerCredentialsOutput
+				for _, line := range lines {
+					err := json.Unmarshal(line, &creds)
+					if err != nil {
+						continue
+					}
+					credsResult <- map[string]string{
+						"AWS_ACCESS_KEY_ID":     creds.AccessKeyId,
+						"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
+						"AWS_SESSION_TOKEN":     creds.Token,
+					}
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+			parseErr <- errors.New("all containers failed to retrieve credentials")
+		}()
+
+		select {
+		case creds := <-credsResult:
+			return creds, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case err := <-parseErr:
+			return nil, err
+		}
 	}
 
 	credentialsChain := []func() (map[string]string, error){
@@ -710,58 +775,6 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 	}
 
 	return nil, &errTaskRoleRetrievalFailed{errs}
-}
-
-func (o *runLocalOpts) agentEndpoint(ctx context.Context, taskID string) (string, error) {
-	cmd := osexec.CommandContext(ctx, "aws", "--region", o.targetEnv.Region, "ssm", "start-session", "--target", taskID)
-	out := &bytes.Buffer{}
-	cmd.Stdout, cmd.Stderr = out, out
-
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return "", fmt.Errorf("stdin pipe: %w", err)
-	}
-
-	var url string
-	done := make(chan struct{})
-
-	go func() {
-		// keep stdin open until we've found the URI
-		defer stdin.Close()
-		io.WriteString(stdin, "curl 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI\n")
-		io.WriteString(stdin, "exit\n")
-		<-done
-	}()
-
-	go func() {
-		// parse stdout/err until we find the uri
-		defer close(done)
-
-		for url == "" {
-			time.Sleep(100 * time.Millisecond)
-			lines := out.String()
-
-			for _, line := range strings.Split(lines, "\n") {
-				fmt.Println(line)
-				if !strings.Contains(line, "LOCALRUNURI: ") || strings.Contains(line, "$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI") {
-					continue
-				}
-
-				split := strings.Fields(line)
-				url = strings.TrimSpace(split[2])
-				return
-			}
-		}
-	}()
-
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-	if url == "" {
-		return "", fmt.Errorf("url not found")
-	}
-
-	return url, nil
 }
 
 type containerEnv map[string]envVarValue
