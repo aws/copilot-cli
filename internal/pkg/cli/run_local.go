@@ -521,7 +521,7 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 
 	// TODO (Adi): Use this dependency order in orchestrator to start and stop containers.
 	// replace container dependencies with the local dependencies from manifest.
-	containerDeps := clideploy.ContainerDependencies(mft.Manifest())
+	containerDeps := manifest.ContainerDependencies(mft.Manifest())
 	for name, dep := range containerDeps {
 		ctr, ok := task.Containers[name]
 		if !ok {
