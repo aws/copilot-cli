@@ -367,12 +367,15 @@ func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (b
 }
 
 // IsContainerCompleteOrSuccess returns true if a docker container exits with an exitcode.
-func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
+func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
 	state, err := c.containerState(ctx, containerName)
 	if err != nil {
-		return false, 0, err
+		return 0, err
 	}
-	return state.Status == containerStatusExited, state.ExitCode, nil
+	if state.Status == containerStatusRunning {
+		return -1, nil
+	}
+	return state.ExitCode, nil
 }
 
 // IsContainerHealthy returns true if a container health state is healthy.
@@ -381,11 +384,11 @@ func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName s
 	if err != nil {
 		return false, err
 	}
-	if state.Status == containerStatusExited {
-		return false, &ErrContainerExited{name: containerName, exitcode: state.ExitCode}
+	if state.Status != containerStatusRunning {
+		return false, fmt.Errorf("container %q is not in %q state", containerName, containerStatusRunning)
 	}
 	if state.Health == nil {
-		return false, fmt.Errorf("healthcheck is not configured for container %s", containerName)
+		return false, fmt.Errorf("healthcheck is not configured for container %q", containerName)
 	}
 	switch state.Health.Status {
 	case healthy:
@@ -395,9 +398,9 @@ func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName s
 	case unhealthy:
 		return false, fmt.Errorf("container %q is %q", containerName, unhealthy)
 	case noHealthcheck:
-		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", noHealthcheck, containerName)
+		return false, fmt.Errorf("healthcheck is not configured for container %q", containerName)
 	default:
-		return false, fmt.Errorf("container %s had unexpected health status %q", containerName, state.Health.Status)
+		return false, fmt.Errorf("container %q had unexpected health status %q", containerName, state.Health.Status)
 	}
 }
 
