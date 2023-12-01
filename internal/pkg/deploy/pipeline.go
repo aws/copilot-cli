@@ -21,7 +21,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
-
 const (
 	fmtInvalidRepo           = "unable to parse the repository from the URL %+v"
 	fmtErrMissingProperty    = "missing `%s` in properties"
