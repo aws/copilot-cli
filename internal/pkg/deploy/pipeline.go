@@ -781,7 +781,7 @@ func (stg *PipelineStage) buildActionsGraph(rankables []actionGraphNode) *graph.
 	for _, r := range rankables {
 		names = append(names, r.name)
 	}
-	digraph := graph.New(names)
+	digraph := graph.New[string]()
 
 	for _, r := range rankables {
 		if r.depends_on == nil {

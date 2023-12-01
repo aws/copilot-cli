@@ -2331,7 +2331,7 @@ func validateNoCircularDependencies(deps map[string]containerDependency) error {
 }
 
 func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph[string], error) {
-	dependencyGraph := graph.New[string]([]string{})
+	dependencyGraph := graph.New[string]()
 	for name, containerDep := range deps {
 		for dep := range containerDep.dependsOn {
 			if _, ok := deps[dep]; !ok {
