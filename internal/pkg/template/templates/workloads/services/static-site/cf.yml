@@ -334,7 +334,7 @@ Resources:
                     !Sub "${AppName}-ArtifactKey"
                 Condition:
                   StringEquals:
-                    kms:EncryptionContext:aws:s3:arn: arn:aws:s3:::{{.AssetMappingFileBucket}}
+                    kms:EncryptionContext:aws:s3:arn: "arn:aws:s3:::{{.AssetMappingFileBucket}}"
                     kms:ViaService: !Sub 's3.${AWS::Region}.amazonaws.com'
         - PolicyName: ServiceBucketAccess
           PolicyDocument:

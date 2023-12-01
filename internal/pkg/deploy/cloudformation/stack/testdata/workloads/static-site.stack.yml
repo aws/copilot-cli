@@ -297,7 +297,7 @@ Resources:
                     !Sub "${AppName}-ArtifactKey"
                 Condition:
                   StringEquals:
-                    kms:EncryptionContext:aws:s3:arn: arn:aws:s3:::stackset-bucket
+                    kms:EncryptionContext:aws:s3:arn: "arn:aws:s3:::stackset-bucket"
                     kms:ViaService: !Sub 's3.${AWS::Region}.amazonaws.com'
         - PolicyName: ServiceBucketAccess
           PolicyDocument:
