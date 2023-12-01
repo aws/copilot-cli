@@ -424,7 +424,7 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 		for {
 			select {
 			case <-ctx.Done():
-				return nil
+				return ctx.Err()
 			case vertex := <-vertexCh:
 				vertexCount--
 				if vertexCount == 0 {
