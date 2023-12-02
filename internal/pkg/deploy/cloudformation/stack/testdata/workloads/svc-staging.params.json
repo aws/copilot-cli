@@ -2,6 +2,7 @@
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "my-app",
+    "ArtifactKeyARN": "",
     "ContainerImage": "123456789000.dkr.ecr.us-east-1.amazonaws.com/vault/e2e:cicdtest",
     "ContainerPort": "4000",
     "DNSDelegated": "false",

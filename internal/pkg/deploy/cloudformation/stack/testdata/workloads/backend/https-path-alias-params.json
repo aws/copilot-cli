@@ -11,6 +11,7 @@
 		"LogRetention": "30",
 		"ContainerPort": "80",
 		"EnvFileARN": "",
+		"ArtifactKeyARN": "",
 		"TargetContainer": "https-path-alias",
 		"TargetPort": "80",
 		"RulePath": "https-path-alias-path",
