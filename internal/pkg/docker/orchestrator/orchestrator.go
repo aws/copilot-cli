@@ -449,10 +449,12 @@ type Task struct {
 
 // ContainerDefinition defines information necessary to run a container.
 type ContainerDefinition struct {
-	ImageURI string
-	EnvVars  map[string]string
-	Secrets  map[string]string
-	Ports    map[string]string // host port -> container port
+	ImageURI    string
+	EnvVars     map[string]string
+	Secrets     map[string]string
+	Ports       map[string]string // host port -> container port
+	IsEssential bool
+	DependsOn   map[string]string
 }
 
 // pauseRunOptions returns RunOptions for the pause container for t.
