@@ -173,7 +173,7 @@ func (e *errTaskRoleRetrievalFailed) Error() string {
 }
 
 func (e *errTaskRoleRetrievalFailed) RecommendActions() string {
-	return fmt.Sprintf(`TaskRole retrieval failed. You can manually add permissions for your account to assume TaskRole permissions by adding the following YAML override to your service:
+	return fmt.Sprintf(`TaskRole retrieval failed. You can manually add permissions for your account to assume TaskRole by adding the following YAML override to your service:
 %s
 For more information on YAML overrides see %s`,
 		color.HighlightCodeBlock(`- op: add
@@ -181,7 +181,7 @@ For more information on YAML overrides see %s`,
   value:
     Effect: Allow
     Principal:
-      AWS: "arn:aws:iam::[account-ID]:root"
+      AWS: "arn:aws:iam::[app-account-ID]:root"
     Action: 'sts:AssumeRole'`),
 		color.Emphasize("https://aws.github.io/copilot-cli/docs/developing/overrides/yamlpatch/"))
 }

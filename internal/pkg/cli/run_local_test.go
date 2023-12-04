@@ -294,9 +294,17 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 						HostPort: aws.Int64(9999),
 					},
 				},
+				Essential: aws.Bool(true),
+				DependsOn: []*sdkecs.ContainerDependency{
+					{
+						Condition:     aws.String("START"),
+						ContainerName: aws.String("bar"),
+					},
+				},
 			},
 			{
-				Name: aws.String("bar"),
+				Name:      aws.String("bar"),
+				Essential: aws.Bool(true),
 				Environment: []*sdkecs.KeyValuePair{
 					{
 						Name:  aws.String("BAR_VAR"),
@@ -391,6 +399,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"80":  "8080",
 					"999": "9999",
 				},
+				IsEssential: true,
+				DependsOn: map[string]string{
+					"bar": "start",
+				},
 			},
 			"bar": {
 				ImageURI: "image2",
@@ -407,6 +419,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"777":   "7777",
 					"10000": "10000",
 				},
+				IsEssential: true,
+				DependsOn:   map[string]string{},
 			},
 		},
 	}
@@ -437,6 +451,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"80":  "8080",
 					"999": "9999",
 				},
+				IsEssential: true,
+				DependsOn: map[string]string{
+					"bar": "start",
+				},
 			},
 			"bar": {
 				ImageURI: "image2",
@@ -455,6 +473,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"777":   "7777",
 					"10000": "10000",
 				},
+				IsEssential: true,
+				DependsOn:   map[string]string{},
 			},
 		},
 	}
@@ -497,7 +517,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
 		},
-		"error retrieving TaskRole credentials": {
+		"error retrieving task role credentials": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
@@ -508,7 +528,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.sessProvider.EXPECT().FromRole("mock-arn", testRegion).Return(nil, errors.New("some error"))
 			},
-			wantedError: errors.New(`get task: retrieve TaskRole credentials: some error
+			wantedError: errors.New(`get task: retrieve task role credentials: some error
 ecs exec method not implemented`),
 		},
 		"error reading workload manifest": {
@@ -1051,12 +1071,12 @@ ecs exec method not implemented`),
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
 				runLocalVars: runLocalVars{
-					appName:          tc.inputAppName,
-					wkldName:         tc.inputWkldName,
-					envName:          tc.inputEnvName,
-					envOverrides:     tc.inputEnvOverrides,
-					watch:            tc.inputWatch,
-					retrieveTaskRole: tc.inputTaskRole,
+					appName:      tc.inputAppName,
+					wkldName:     tc.inputWkldName,
+					envName:      tc.inputEnvName,
+					envOverrides: tc.inputEnvOverrides,
+					watch:        tc.inputWatch,
+					useTaskRole:  tc.inputTaskRole,
 					portOverrides: portOverrides{
 						{
 							host:      "777",
