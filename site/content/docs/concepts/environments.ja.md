@@ -48,6 +48,15 @@ Load Balanced Web Service または、Manifest に `http` フィールドを記�
 
 Manifest で [`http`](../manifest/backend-service.ja.md#http)フィールドが設定された Backend Service が Environment 内にデプロイされる場合、内部 ALB が作成されます。HTTPS のエンドポイントを利用する場合は、`copilot env init` を実行する際に、[`--import-cert-arns`](../commands/env-init.ja.md#what-are-the-flags) フラグを使用してください。そして、 プライベートサブネットのみの VPC をインポートします。内部 ALB に関する詳細は[こちら](../developing/internal-albs.ja.md)を確認してください。
 
+すでに VPC 内にインターネット向け ALB があり、Copilot が ALB を作成する代わりに既存の ALB を利用したい場合、Environment にデプロイする前に、Load Balanced Web Service の Manifest で既存の ALB の名前または ARN を指定してください。
+
+```yaml
+http:
+  alb: [name or ARN]
+```
+
+インポートされた ALB は、すべての Load Balanced Web Service 間で共有されるのではなく、既存の ALB をインポートした Service にのみ関連付けられます。
+
 ## Environment のカスタマイズ
 
 既存の Environment リソースをインポートする、コマンドでフラグを使う、[Environment Manifest](../manifest/environment.ja.md) を変更するといった方法で、デフォルトの設定をすることができます。もし、現在設定可能なリソースよりも多くの種類のリソースをカスタマイズしたい場合は、お気軽にユースケースを添えた GitHub イシューを作成してください！

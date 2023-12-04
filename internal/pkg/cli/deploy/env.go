@@ -604,7 +604,7 @@ func appDomainHostedZoneId(appName, domain string, domainHostedZoneGetter domain
 	}
 	appHostedZoneID, err := domainHostedZoneGetter.PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", appName, domain))
 	if err != nil {
-		return "", fmt.Errorf("get public public hosted zone ID for domain %s", fmt.Sprintf("%s.%s", appName, domain))
+		return "", fmt.Errorf("get public public hosted zone ID for domain %s: %w", fmt.Sprintf("%s.%s", appName, domain), err)
 	}
 	return appHostedZoneID, nil
 }

@@ -2838,6 +2838,75 @@ func TestLoadBalancedWebService_BuildArgs(t *testing.T) {
 	}
 }
 
+func TestLoadBalancedWebService_ContainerDependencies(t *testing.T) {
+	testCases := map[string]struct {
+		in                 *LoadBalancedWebService
+		wantedDependencies map[string]ContainerDependency
+		wantedErr          error
+	}{
+		"return container dependencies of all containers": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								DependsOn: DependsOn{
+									"nginx": "start",
+								},
+							},
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"nginx": {
+							Essential: aws.Bool(true),
+						},
+						"nginx1": {
+							DependsOn: DependsOn{
+								"nginx":    "healthy",
+								"mock-svc": "start",
+							},
+						},
+					},
+					Logging: Logging{
+						ConfigFile: aws.String("mockConfigFile"),
+					},
+				},
+			},
+			wantedDependencies: map[string]ContainerDependency{
+				"mock-svc": {
+					IsEssential: true,
+					DependsOn: DependsOn{
+						"nginx": "start",
+					},
+				},
+				"nginx": {
+					IsEssential: true,
+				},
+				"nginx1": {
+					IsEssential: true,
+					DependsOn: DependsOn{
+						"nginx":    "healthy",
+						"mock-svc": "start",
+					},
+				},
+				"firelens_log_router": {},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.ContainerDependencies()
+			// THEN
+			require.Equal(t, tc.wantedDependencies, got)
+		})
+	}
+}
+
 func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
 	testCases := map[string]struct {
 		in     NetworkLoadBalancerConfiguration
