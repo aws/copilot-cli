@@ -50,7 +50,6 @@ type deployMocks struct {
 	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter
 	mockSpinner                *mocks.Mockspinner
-	mockPublicCIDRBlocksGetter *mocks.MockpublicCIDRBlocksGetter
 	mockSNSTopicsLister        *mocks.MocksnsTopicsLister
 	mockServiceDeployer        *mocks.MockserviceDeployer
 	mockServiceForceUpdater    *mocks.MockserviceForceUpdater
@@ -923,26 +922,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": validate aliases against the imported CDN certificate for env mockEnv: some error"),
 		},
-		"fail to get public CIDR blocks": {
-			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Listener: manifest.NetworkLoadBalancerListener{
-					Port: aws.String("443/tcp"),
-				},
-			},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name: mockAppName,
-			},
-			mock: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
-				m.mockPublicCIDRBlocksGetter.EXPECT().PublicCIDRBlocks().Return(nil, errors.New("some error"))
-			},
-			wantErr: fmt.Errorf("get public CIDR blocks information from the VPC of environment mockEnv: some error"),
-		},
 		"alias used while app is not associated with a domain": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inEnvironment: &config.Environment{
@@ -1371,7 +1350,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				mockServiceDeployer:        mocks.NewMockserviceDeployer(ctrl),
 				mockServiceForceUpdater:    mocks.NewMockserviceForceUpdater(ctrl),
 				mockSpinner:                mocks.NewMockspinner(ctrl),
-				mockPublicCIDRBlocksGetter: mocks.NewMockpublicCIDRBlocksGetter(ctrl),
 				mockValidator:              mocks.NewMockaliasCertValidator(ctrl),
 				mockdomainHostedZonegetter: mocks.NewMockdomainHostedZoneGetter(ctrl),
 			}
@@ -1404,8 +1382,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						return mockNowTime
 					},
 				},
-				appVersionGetter:       m.mockAppVersionGetter,
-				publicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
+				appVersionGetter: m.mockAppVersionGetter,
 				newAliasCertValidator: func(region *string) aliasCertValidator {
 					return m.mockValidator
 				},

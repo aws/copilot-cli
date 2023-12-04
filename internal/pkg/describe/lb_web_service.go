@@ -33,7 +33,7 @@ const (
 	envOutputPublicALBAccessible         = "PublicALBAccessible"
 
 	svcStackResourceALBTargetGroupLogicalID             = "TargetGroup"
-	svcStackResourceNLBTargetGroupLogicalID             = "NLBTargetGroup" // TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
+	svcStackResourceNLBTargetGroupLogicalID             = "NLBTargetGroup" // Deprecated. Only retained so 'svc show' can still work without redeploying service.
 	svcStackResourceNLBTargetGroupV2LogicalID           = "NetworkLoadBalancerTargetGroup"
 	svcStackResourceHTTPSListenerRuleLogicalID          = "HTTPSListenerRule"
 	svcStackResourceHTTPListenerRuleLogicalID           = "HTTPListenerRule"
