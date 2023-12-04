@@ -106,6 +106,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			EnvManifest:        envConfig,
 			Manifest:           v,
 			ArtifactBucketName: "bucket",
+			ArtifactKey:        "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",
