@@ -409,7 +409,7 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 					case <-time.After(1 * time.Second):
 						continue
 					case <-ctx.Done():
-						errCh <- ctx.Err()
+						errCh <- fmt.Errorf("check container %q stopped: %w", name, ctx.Err())
 						return
 					}
 				}
