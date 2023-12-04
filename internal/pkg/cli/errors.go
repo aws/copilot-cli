@@ -181,7 +181,7 @@ For more information on YAML overrides see %s`,
   value:
     Effect: Allow
     Principal:
-      AWS: "arn:aws:iam::[account-ID]:root"
+      AWS: "arn:aws:iam::[app-account-ID]:root"
     Action: 'sts:AssumeRole'`),
 		color.Emphasize("https://aws.github.io/copilot-cli/docs/developing/overrides/yamlpatch/"))
 }
