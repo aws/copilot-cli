@@ -139,6 +139,12 @@ func (s *BackendService) EnvFiles() map[string]string {
 	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
+// ContainerDependencies returns a map of ContainerDependency objects for the BackendService
+// including dependencies for its main container, any logging sidecar, and additional sidecars.
+func (s *BackendService) ContainerDependencies() map[string]ContainerDependency {
+	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)
+}
+
 func (s *BackendService) subnets() *SubnetListOrArgs {
 	return &s.Network.VPC.Placement.Subnets
 }

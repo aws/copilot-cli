@@ -18,9 +18,9 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.32 brings big enhancements to help you develop more flexibly and efficiently:
 
-- **`copilot run local --proxy`**: Proxy outbound traffic from your local containers to services and RDS instances in your environment. [See detailed section](#copilot-run-local---proxy)
-- **`copilot run local --watch`**: Automatically rebuilds your containers when you make changes to your code. [See detailed section](#copilot-run-local---watch)
-- **Importing ALBs**: You can front your Load-Balanced Web Services with existing ALBs. [See detailed section](#imported-ALBs)
+- **`copilot run local --proxy`**: Proxy outbound traffic from your local containers to services and RDS instances in your environment. [See detailed section](#proxy-with-copilot-run-local)
+- **`copilot run local --watch`**: Automatically rebuilds your containers when you make changes to your code. [See detailed section](#watch-flag-for-copilot-run-local)
+- **Importing ALBs**: You can front your Load-Balanced Web Services with existing ALBs. [See detailed section](#imported-albs)
 
 ???+ note "What’s AWS Copilot?"
 
@@ -32,7 +32,7 @@ Copilot v1.32 brings big enhancements to help you develop more flexibly and effi
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## `copilot run local --proxy`
+## Proxy with `copilot run local`
 
 The new `--proxy` flag on `copilot run local` enhances your local development experience by making it possible for your local containers to talk to services deployed in your environment.
 
@@ -43,7 +43,7 @@ You can now run `copilot run local --proxy --name orders` and your local `orders
 - The `users` service, using its service connect URL (defaults to `http://users:<port>`)
 - `orders`'s RDS database, using any DB instance url (like `app-env-orders-random-characters.us-west-2.rds.amazonaws.com:5432`) or DB cluster URL.
 
-## `copilot run local --watch`
+## Watch flag for `copilot run local`
 
 The `--watch` flag watches your workspace and rebuilds your containers when you make changes to your code so you can develop continuously. This is extremely useful when used with `--proxy`, as it allows you to save the overhead time required to set up proxy each time you would rebuild your application!
 

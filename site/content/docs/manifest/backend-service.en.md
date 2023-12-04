@@ -184,6 +184,9 @@ The http section contains parameters related to integrating your service with an
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each Backend Service should listen on a unique path.
 
+<span class="parent-field">http.</span><a id="http-alb" href="#http-alb" class="field">`alb`</a> <span class="type">String</span> <span class="version">Added in [v1.33.0](../../blogs/release-v133.en.md#imported-albs)</span>  
+The ARN or name of an existing internal ALB to import. Listener rules will be added to your listener(s). Copilot will not manage DNS-related resources like certificates.
+
 {% include 'http-healthcheck.en.md' %}
 
 <span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
