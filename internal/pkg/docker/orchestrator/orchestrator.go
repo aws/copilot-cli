@@ -217,10 +217,6 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		if err := o.stopTask(ctx, o.curTask); err != nil {
 			return fmt.Errorf("stop existing task: %w", err)
 		}
-
-		// ensure that containers are fully stopped after o.stopTask finishes blocking
-		// TODO(Aiden): Implement a container ID system or use `docker ps` to ensure containers are stopped
-		time.Sleep(1 * time.Second)
 	}
 
 	for name, ctr := range a.task.Containers {
@@ -399,8 +395,29 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
-			fmt.Printf("Stopped %q\n", name)
-			errCh <- nil
+
+			// ensure that container is fully stopped before stopTask finishes blocking
+			for {
+				running, err := o.docker.IsContainerRunning(ctx, o.containerID(name))
+				if err != nil {
+					errCh <- fmt.Errorf("polling container %q for removal: %w", name, err)
+					return
+				}
+
+				if running {
+					select {
+					case <-time.After(1 * time.Second):
+						continue
+					case <-ctx.Done():
+						errCh <- fmt.Errorf("check container %q stopped: %w", name, ctx.Err())
+						return
+					}
+				}
+
+				fmt.Printf("Stopped %q\n", name)
+				errCh <- nil
+				return
+			}
 		}()
 	}
 
@@ -449,10 +466,12 @@ type Task struct {
 
 // ContainerDefinition defines information necessary to run a container.
 type ContainerDefinition struct {
-	ImageURI string
-	EnvVars  map[string]string
-	Secrets  map[string]string
-	Ports    map[string]string // host port -> container port
+	ImageURI    string
+	EnvVars     map[string]string
+	Secrets     map[string]string
+	Ports       map[string]string // host port -> container port
+	IsEssential bool
+	DependsOn   map[string]string
 }
 
 // pauseRunOptions returns RunOptions for the pause container for t.
