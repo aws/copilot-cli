@@ -1051,12 +1051,12 @@ ecs exec method not implemented`),
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
 				runLocalVars: runLocalVars{
-					appName:          tc.inputAppName,
-					wkldName:         tc.inputWkldName,
-					envName:          tc.inputEnvName,
-					envOverrides:     tc.inputEnvOverrides,
-					watch:            tc.inputWatch,
-					retrieveTaskRole: tc.inputTaskRole,
+					appName:      tc.inputAppName,
+					wkldName:     tc.inputWkldName,
+					envName:      tc.inputEnvName,
+					envOverrides: tc.inputEnvOverrides,
+					watch:        tc.inputWatch,
+					useTaskRole:  tc.inputTaskRole,
 					portOverrides: portOverrides{
 						{
 							host:      "777",

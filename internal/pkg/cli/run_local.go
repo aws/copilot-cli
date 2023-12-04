@@ -92,16 +92,16 @@ type recursiveWatcher interface {
 }
 
 type runLocalVars struct {
-	wkldName         string
-	wkldType         string
-	appName          string
-	envName          string
-	envOverrides     map[string]string
-	watch            bool
-	retrieveTaskRole bool
-	portOverrides    portOverrides
-	proxy            bool
-	proxyNetwork     net.IPNet
+	wkldName      string
+	wkldType      string
+	appName       string
+	envName       string
+	envOverrides  map[string]string
+	watch         bool
+	useTaskRole   bool
+	portOverrides portOverrides
+	proxy         bool
+	proxyNetwork  net.IPNet
 }
 
 type runLocalOpts struct {
@@ -437,10 +437,10 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
-	if o.retrieveTaskRole {
+	if o.useTaskRole {
 		taskRoleCredsVars, err := o.taskRoleCredentials(ctx)
 		if err != nil {
-			return orchestrator.Task{}, fmt.Errorf("retrieve TaskRole credentials: %w", err)
+			return orchestrator.Task{}, fmt.Errorf("retrieve task role credentials: %w", err)
 		}
 
 		// overwrite environment variables
@@ -632,6 +632,7 @@ func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]stri
 
 func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]string, error) {
 	// assumeRoleMethod tries to directly call sts:AssumeRole for TaskRole using default session
+	// calls sts:AssumeRole through aws-sdk-go here https://github.com/aws/aws-sdk-go/blob/ac58203a9054cc9d901429bdd94edfc0a7a1de46/aws/credentials/stscreds/assume_role_provider.go#L352
 	assumeRoleMethod := func() (map[string]string, error) {
 		taskDef, err := o.ecsClient.TaskDefinition(o.appName, o.envName, o.wkldName)
 		if err != nil {
@@ -643,12 +644,7 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 			return nil, err
 		}
 
-		creds, err := sessionEnvVars(ctx, taskRoleSess)
-		if err != nil {
-			return nil, err
-		}
-
-		return creds, nil
+		return sessionEnvVars(ctx, taskRoleSess)
 	}
 
 	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
@@ -661,7 +657,7 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 		ecsExecMethod,
 	}
 
-	// return TaskRole credentials from first succesful method
+	// return TaskRole credentials from first successful method
 	var errs []error
 	for _, method := range credentialsChain {
 		vars, err := method()
