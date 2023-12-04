@@ -453,7 +453,7 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 			}
 		}
 	}
-  
+
 	containerDeps := o.getContainerDependencies(td)
 
 	task := orchestrator.Task{
