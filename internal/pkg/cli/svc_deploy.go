@@ -350,7 +350,7 @@ After fixing the deployment, you can:
 func (o *deploySvcOpts) RecommendActions() error {
 	if lbMft, ok := o.appliedDynamicMft.Manifest().(*manifest.LoadBalancedWebService); ok {
 		if !lbMft.NLBConfig.IsEmpty() {
-			log.Warning("With v1.33.0, Copilot will apply a security group to your network load balancer. ",
+			log.Warning("With v1.33.0, Copilot applies a security group to your network load balancer. ",
 				"This allows more fine-grained intra-VPC access control: ",
 				"your service won't need to allow-list the CIDR blocks of the public subnets where the NLB is deployed; ",
 				"it only needs to allow-list the NLB, specifically.\n",
