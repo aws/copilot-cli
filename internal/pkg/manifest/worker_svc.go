@@ -293,6 +293,12 @@ func (s *WorkerService) EnvFiles() map[string]string {
 	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
 }
 
+// ContainerDependencies returns a map of ContainerDependency objects for the WorkerService
+// including dependencies for its main container, any logging sidecar, and additional sidecars.
+func (s *WorkerService) ContainerDependencies() map[string]ContainerDependency {
+	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)
+}
+
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
 // receives messages from. This method also appends ".fifo" to the topics and returns a new set of subs.
 func (s *WorkerService) Subscriptions() []TopicSubscription {

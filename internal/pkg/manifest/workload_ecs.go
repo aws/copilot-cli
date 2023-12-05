@@ -438,3 +438,28 @@ func buildArgs(contextDir string, buildArgs map[string]*DockerBuildArgs, sc map[
 	}
 	return buildArgs, nil
 }
+
+// ContainerDependency represents order of container startup and shutdown.
+// Also indicates if a container is marked as essential or not.
+type ContainerDependency struct {
+	IsEssential bool
+	DependsOn   DependsOn
+}
+
+func containerDependencies(name string, img Image, lc Logging, sc map[string]*SidecarConfig) map[string]ContainerDependency {
+	containerDependencies := make(map[string]ContainerDependency)
+	containerDependencies[name] = ContainerDependency{
+		DependsOn:   img.DependsOn,
+		IsEssential: true,
+	}
+	if !lc.IsEmpty() {
+		containerDependencies[FirelensContainerName] = ContainerDependency{}
+	}
+	for name, config := range sc {
+		containerDependencies[name] = ContainerDependency{
+			DependsOn:   config.DependsOn,
+			IsEssential: config.Essential == nil || aws.BoolValue(config.Essential),
+		}
+	}
+	return containerDependencies
+}
