@@ -717,6 +717,7 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 
 		// try exec on each container within the service
 		var wg sync.WaitGroup
+		containerErr := make(chan error)
 		for _, task := range svcDesc.Tasks {
 			taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
 			if err != nil {
@@ -728,7 +729,7 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 				containerName := aws.StringValue(container.Name)
 				go func() {
 					defer wg.Done()
-					o.ecsExecutor.ExecuteCommand(awsecs.ExecuteCommandInput{
+					containerErr <- o.ecsExecutor.ExecuteCommand(awsecs.ExecuteCommandInput{
 						Cluster:   svcDesc.ClusterName,
 						Command:   fmt.Sprintf("/bin/sh -c %q\n", curlContainerCredentialsCmd),
 						Task:      taskID,
@@ -783,13 +784,18 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 			parseErr <- errors.New("all containers failed to retrieve credentials")
 		}()
 
-		select {
-		case creds := <-credsResult:
-			return creds, nil
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case err := <-parseErr:
-			return nil, err
+		var containerErrs []error
+		for {
+			select {
+			case creds := <-credsResult:
+				return creds, nil
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case err := <-parseErr:
+				return nil, errors.Join(append([]error{err}, containerErrs...)...)
+			case err := <-containerErr:
+				containerErrs = append(containerErrs, err)
+			}
 		}
 	}
 
