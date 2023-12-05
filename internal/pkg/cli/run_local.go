@@ -135,13 +135,15 @@ type runLocalOpts struct {
 	envChecker          versionCompatibilityChecker
 	debounceTime        time.Duration
 	newRecursiveWatcher func() (recursiveWatcher, error)
-	outputCapturer      *os.File
 
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
+
+	captureStdout func() (io.Reader, error)
+	releaseStdout func()
 }
 
 func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
@@ -266,7 +268,32 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
 		return file.NewRecursiveWatcher(0)
 	}
-	o.outputCapturer = os.Stdout
+
+	// Capture stdout by replacing it with a piped writer and returning an attached io.Reader.
+	// Functions are concurrency safe and idempotent.
+	var mu sync.Mutex
+	var savedWriter, savedStdout *os.File
+	savedStdout = os.Stdout
+	o.captureStdout = func() (io.Reader, error) {
+		if savedWriter != nil {
+			savedWriter.Close()
+		}
+		pipeReader, pipeWriter, err := os.Pipe()
+		if err != nil {
+			return nil, err
+		}
+		mu.Lock()
+		savedWriter = pipeWriter
+		os.Stdout = savedWriter
+		mu.Unlock()
+		return (io.Reader)(pipeReader), nil
+	}
+	o.releaseStdout = func() {
+		mu.Lock()
+		os.Stdout = savedStdout
+		mu.Unlock()
+		savedWriter.Close()
+	}
 	return o, nil
 }
 
@@ -682,16 +709,11 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 			return nil, fmt.Errorf("describe ECS service for %s in environment %s: %w", o.wkldName, o.envName, err)
 		}
 
-		// capture stdout
-		stdoutReader, stdoutWriter, err := os.Pipe()
+		stdoutReader, err := o.captureStdout()
 		if err != nil {
-			return nil, fmt.Errorf("create os pipe: %w", err)
+			return nil, err
 		}
-		stdoutPointer := o.outputCapturer
-		defer func() {
-			o.outputCapturer = stdoutPointer
-		}()
-		o.outputCapturer = stdoutWriter
+		defer o.releaseStdout()
 
 		// try exec on each container within the service
 		var wg sync.WaitGroup
@@ -720,8 +742,7 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 		containersFinished := make(chan struct{})
 		go func() {
 			wg.Wait()
-			stdoutWriter.Close()
-			o.outputCapturer = stdoutPointer
+			o.releaseStdout()
 			close(containersFinished)
 		}()
 
@@ -777,14 +798,19 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 		ecsExecMethod,
 	}
 
+	credentialsChainWrappedErrs := []string{
+		"assume role",
+		"ecs exec",
+	}
+
 	// return TaskRole credentials from first successful method
 	var errs []error
-	for _, method := range credentialsChain {
+	for errIndex, method := range credentialsChain {
 		vars, err := method()
 		if err == nil {
 			return vars, nil
 		}
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("%s: %w", credentialsChainWrappedErrs[errIndex], err))
 	}
 
 	return nil, &errTaskRoleRetrievalFailed{errs}
@@ -1159,7 +1185,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
-	cmd.Flags().BoolVar(&vars.retrieveTaskRole, retrieveTaskRoleFlag, false, retrieveTaskRoleFlagDescription)
+	cmd.Flags().BoolVar(&vars.useTaskRole, useTaskRoleFlag, false, useTaskRoleFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)
