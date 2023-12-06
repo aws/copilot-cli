@@ -388,6 +388,68 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 
+		"return error when dependency container is unhealthy": {
+			logOptions:     noLogs,
+			stopAfterNErrs: 1,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				stopPause := make(chan struct{})
+				stopFoo := make(chan struct{})
+				de := &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					DoesContainerExistFn: func(ctx context.Context, s string) (bool, error) {
+						return false, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-bar" {
+							return errors.New("container `prefix-bar` exited with code 143")
+						}
+						if opts.ContainerName == "prefix-pause" {
+							// block pause container until Stop(pause)
+							<-stopPause
+						}
+						if opts.ContainerName == "prefix-foo" {
+							// block bar container until Stop(foo)
+							<-stopFoo
+						}
+						return nil
+					},
+					StopFn: func(ctx context.Context, s string) error {
+						if s == "prefix-pause" {
+							stopPause <- struct{}{}
+						}
+						if s == "prefix-foo" {
+							stopFoo <- struct{}{}
+						}
+						return nil
+					},
+					IsContainerHealthyFn: func(ctx context.Context, containerName string) (bool, error) {
+						if containerName == "prefix-foo" {
+							return false, fmt.Errorf("container `prefix-foo` is unhealthy")
+						}
+						return true, nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {
+								IsEssential: true,
+							},
+							"bar": {
+								IsEssential: false,
+								DependsOn: map[string]string{
+									"foo": ctrStateHealthy,
+								},
+							},
+						},
+					})
+				}, de
+			},
+			errs: []string{"upward traversal: wait for container bar dependencies: essential container \"prefix-foo\" failed to be \"healthy\": container `prefix-foo` is unhealthy"},
+		},
+
 		"container run stops early with error": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
