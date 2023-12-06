@@ -267,7 +267,7 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 
-		"return nil error if non essential container exits": {
+		"return nil if non essential container exits": {
 			logOptions:      noLogs,
 			runUntilStopped: true,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
@@ -277,7 +277,7 @@ func TestOrchestrator(t *testing.T) {
 					},
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						if name == "prefix-foo" {
-							return false, fmt.Errorf("container %q exited with code %d", name, 143)
+							return false, &dockerengine.ErrContainerExited{}
 						}
 						return true, nil
 					},
@@ -287,12 +287,6 @@ func TestOrchestrator(t *testing.T) {
 					StopFn: func(ctx context.Context, name string) error {
 						return nil
 					},
-					IsContainerCompleteOrSuccessFn: func(ctx context.Context, containerName string) (int, error) {
-						if containerName == "prefix-foo" {
-							return 143, nil
-						}
-						return -1, nil
-					},
 				}
 				return func(t *testing.T, o *Orchestrator) {
 					o.RunTask(Task{
@@ -300,15 +294,46 @@ func TestOrchestrator(t *testing.T) {
 							"foo": {
 								IsEssential: false,
 							},
-							"bar": {
-								IsEssential: true,
-							},
 						},
 					})
 				}, de
 			},
 		},
 
+		"return error if essential container exits": {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			stopAfterNErrs:  1,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				de := &dockerenginetest.Double{
+					DoesContainerExistFn: func(ctx context.Context, s string) (bool, error) {
+						return false, nil
+					},
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						if name == "prefix-foo" {
+							return false, &dockerengine.ErrContainerExited{}
+						}
+						return true, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						return nil
+					},
+					StopFn: func(ctx context.Context, name string) error {
+						return nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {
+								IsEssential: true,
+							},
+						},
+					})
+				}, de
+			},
+			errs: []string{"upward traversal: check if \"prefix-foo\" is running: container \"\" exited with code 0"},
+		},
 		"success with dependsOn order": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
