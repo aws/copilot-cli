@@ -406,11 +406,11 @@ func TestTraverseInDependencyOrder(t *testing.T) {
 			for _, vtx := range vertices {
 				seen[vtx]++
 			}
-			done <- struct{}{}
+			close(done)
 		}()
 
-		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vertice string) error {
-			vtxChan <- vertice
+		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vtx string) error {
+			vtxChan <- vtx
 			return nil
 		}, "started", "stopped")
 		require.NoError(t, err, "Error during iteration")

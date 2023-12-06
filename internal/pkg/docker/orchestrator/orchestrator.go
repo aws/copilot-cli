@@ -453,13 +453,13 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 		}
 		// ensure that container is fully stopped before stopTask finishes blocking
 		for {
-			running, err := o.docker.DoesContainerExist(ctx, o.containerID(name))
+			exists, err := o.docker.DoesContainerExist(ctx, o.containerID(name))
 			if err != nil {
 				errCh <- fmt.Errorf("polling container %q for removal: %w", name, err)
 				return nil
 			}
 
-			if running {
+			if exists {
 				select {
 				case <-time.After(1 * time.Second):
 					continue

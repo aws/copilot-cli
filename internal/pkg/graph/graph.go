@@ -337,16 +337,16 @@ It applies the specified process function to each vertex in the graph, skipping 
 The traversal is concurrent and may process vertices in parallel.
 Returns an error if the traversal encounters any issues, or nil if successful.
 */
-func (lg *LabeledGraph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
+func (lg *LabeledGraph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, nextVertexSkipStatus, requiredVertexStatus string) error {
 	traversal := &graphTraversal[V]{
-		mu:                       sync.Mutex{},
-		seen:                     make(map[V]struct{}),
-		findBoundaryVertices:     func(lg *LabeledGraph[V]) []V { return lg.leaves() },
-		findAdjacentVertices:     func(lg *LabeledGraph[V], v V) []V { return lg.parents(v) },
-		filterVerticesByStatus:   func(g *LabeledGraph[V], v V, status string) []V { return g.filterChildren(v, status) },
-		requiredVertexStatus:     requiredVertexStatus,
-		adjacentVertexSkipStatus: adjacentVertexSkipStatus,
-		processVertex:            processVertexFunc,
+		mu:                             sync.Mutex{},
+		seen:                           make(map[V]struct{}),
+		findStartVertices:              func(lg *LabeledGraph[V]) []V { return lg.leaves() },
+		findNextVertices:               func(lg *LabeledGraph[V], v V) []V { return lg.parents(v) },
+		filterPreviousVerticesByStatus: func(g *LabeledGraph[V], v V, status string) []V { return g.filterChildren(v, status) },
+		requiredVertexStatus:           requiredVertexStatus,
+		nextVertexSkipStatus:           nextVertexSkipStatus,
+		processVertex:                  processVertexFunc,
 	}
 	return traversal.execute(ctx, lg)
 }
@@ -361,27 +361,27 @@ Returns an error if the traversal encounters any issues.
 */
 func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
 	traversal := &graphTraversal[V]{
-		mu:                       sync.Mutex{},
-		seen:                     make(map[V]struct{}),
-		findBoundaryVertices:     func(lg *LabeledGraph[V]) []V { return lg.Roots() },
-		findAdjacentVertices:     func(lg *LabeledGraph[V], v V) []V { return lg.children(v) },
-		filterVerticesByStatus:   func(lg *LabeledGraph[V], v V, status string) []V { return lg.filterParents(v, status) },
-		requiredVertexStatus:     requiredVertexStatus,
-		adjacentVertexSkipStatus: adjacentVertexSkipStatus,
-		processVertex:            processVertexFunc,
+		mu:                             sync.Mutex{},
+		seen:                           make(map[V]struct{}),
+		findStartVertices:              func(lg *LabeledGraph[V]) []V { return lg.Roots() },
+		findNextVertices:               func(lg *LabeledGraph[V], v V) []V { return lg.children(v) },
+		filterPreviousVerticesByStatus: func(lg *LabeledGraph[V], v V, status string) []V { return lg.filterParents(v, status) },
+		requiredVertexStatus:           requiredVertexStatus,
+		nextVertexSkipStatus:           adjacentVertexSkipStatus,
+		processVertex:                  processVertexFunc,
 	}
 	return traversal.execute(ctx, lg)
 }
 
 type graphTraversal[V comparable] struct {
-	mu                       sync.Mutex
-	seen                     map[V]struct{}
-	findBoundaryVertices     func(*LabeledGraph[V]) []V
-	findAdjacentVertices     func(*LabeledGraph[V], V) []V
-	filterVerticesByStatus   func(*LabeledGraph[V], V, string) []V
-	requiredVertexStatus     string
-	adjacentVertexSkipStatus string
-	processVertex            func(context.Context, V) error
+	mu                             sync.Mutex
+	seen                           map[V]struct{}
+	findStartVertices              func(*LabeledGraph[V]) []V
+	findNextVertices               func(*LabeledGraph[V], V) []V
+	filterPreviousVerticesByStatus func(*LabeledGraph[V], V, string) []V
+	requiredVertexStatus           string
+	nextVertexSkipStatus           string
+	processVertex                  func(context.Context, V) error
 }
 
 func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) error {
@@ -401,7 +401,7 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 		for _, vertex := range vertices {
 			vertex := vertex
 			// Delay processing this vertex if any of its dependent vertices are yet to be processed.
-			if len(t.filterVerticesByStatus(graph, vertex, t.adjacentVertexSkipStatus)) != 0 {
+			if len(t.filterPreviousVerticesByStatus(graph, vertex, t.nextVertexSkipStatus)) != 0 {
 				continue
 			}
 			if !t.markAsSeen(vertex) {
@@ -430,11 +430,11 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 				if vertexCount == 0 {
 					return nil
 				}
-				processVertices(ctx, lg, eg, t.findAdjacentVertices(lg, vertex), vertexCh)
+				processVertices(ctx, lg, eg, t.findNextVertices(lg, vertex), vertexCh)
 			}
 		}
 	})
-	processVertices(ctx, lg, eg, t.findBoundaryVertices(lg), vertexCh)
+	processVertices(ctx, lg, eg, t.findStartVertices(lg), vertexCh)
 	return eg.Wait()
 }
 
