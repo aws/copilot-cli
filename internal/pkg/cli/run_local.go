@@ -98,6 +98,7 @@ type runLocalVars struct {
 	envName       string
 	envOverrides  map[string]string
 	watch         bool
+	useTaskRole   bool
 	portOverrides portOverrides
 	proxy         bool
 	proxyNetwork  net.IPNet
@@ -436,6 +437,23 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
+	if o.useTaskRole {
+		taskRoleCredsVars, err := o.taskRoleCredentials(ctx)
+		if err != nil {
+			return orchestrator.Task{}, fmt.Errorf("retrieve task role credentials: %w", err)
+		}
+
+		// overwrite environment variables
+		for ctr := range envVars {
+			for k, v := range taskRoleCredsVars {
+				envVars[ctr][k] = envVarValue{
+					Value:  v,
+					Secret: true,
+				}
+			}
+		}
+	}
+
 	containerDeps := o.getContainerDependencies(td)
 
 	task := orchestrator.Task{
@@ -625,6 +643,46 @@ func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]stri
 		env["AWS_REGION"] = aws.StringValue(sess.Config.Region)
 	}
 	return env, nil
+}
+
+func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]string, error) {
+	// assumeRoleMethod tries to directly call sts:AssumeRole for TaskRole using default session
+	// calls sts:AssumeRole through aws-sdk-go here https://github.com/aws/aws-sdk-go/blob/ac58203a9054cc9d901429bdd94edfc0a7a1de46/aws/credentials/stscreds/assume_role_provider.go#L352
+	assumeRoleMethod := func() (map[string]string, error) {
+		taskDef, err := o.ecsClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+		if err != nil {
+			return nil, err
+		}
+
+		taskRoleSess, err := o.sessProvider.FromRole(aws.StringValue(taskDef.TaskRoleArn), o.targetEnv.Region)
+		if err != nil {
+			return nil, err
+		}
+
+		return sessionEnvVars(ctx, taskRoleSess)
+	}
+
+	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
+	ecsExecMethod := func() (map[string]string, error) {
+		return nil, errors.New("ecs exec method not implemented")
+	}
+
+	credentialsChain := []func() (map[string]string, error){
+		assumeRoleMethod,
+		ecsExecMethod,
+	}
+
+	// return TaskRole credentials from first successful method
+	var errs []error
+	for _, method := range credentialsChain {
+		vars, err := method()
+		if err == nil {
+			return vars, nil
+		}
+		errs = append(errs, err)
+	}
+
+	return nil, &errTaskRoleRetrievalFailed{errs}
 }
 
 type containerEnv map[string]envVarValue
