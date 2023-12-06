@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -263,7 +264,6 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 
 func (in *RunOptions) generateRunArguments() []string {
 	args := []string{"run"}
-	args = append(args, "--rm")
 
 	if in.ContainerName != "" {
 		args = append(args, "--name", in.ContainerName)
@@ -303,6 +303,9 @@ func (in *RunOptions) generateRunArguments() []string {
 
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
+	type exitCodeError interface {
+		ExitCode() int
+	}
 	// set default options
 	if options.LogOptions.Color == nil {
 		options.LogOptions.Color = color.New()
@@ -343,6 +346,13 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			exec.Stdout(stdout),
 			exec.Stderr(stderr),
 			exec.NewProcessGroup()); err != nil {
+			var ec exitCodeError
+			if errors.As(err, &ec) {
+				return &ErrContainerExited{
+					name:     options.ContainerName,
+					exitcode: ec.ExitCode(),
+				}
+			}
 			return fmt.Errorf("running container: %w", err)
 		}
 		return nil
@@ -448,6 +458,11 @@ func (d *DockerCmdClient) containerID(ctx context.Context, containerName string)
 type ErrContainerExited struct {
 	name     string
 	exitcode int
+}
+
+// ExitCode returns the OS exit code configured for this error.
+func (e *ErrContainerExited) ExitCode() int {
+	return e.exitcode
 }
 
 // ErrContainerExited represents docker container exited with an exitcode.
