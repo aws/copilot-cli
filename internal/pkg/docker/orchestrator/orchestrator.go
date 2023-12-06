@@ -241,7 +241,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		time.Sleep(1 * time.Second)
 	}
 	o.curTask = a.task
-	depGraph := buildDependencyGraph(a.task.Containers)
+	depGraph := buildDependencyGraph(a.task.Containers, ctrStateUnknown)
 	err := depGraph.UpwardTraversal(ctx, func(ctx context.Context, containerName string) error {
 		if len(a.task.Containers[containerName].DependsOn) > 0 {
 			if err := o.waitForContainerDependencies(ctx, containerName, a); err != nil {
@@ -260,12 +260,12 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	return nil
 }
 
-func buildDependencyGraph(containers map[string]ContainerDefinition) *graph.LabeledGraph[string] {
+func buildDependencyGraph(containers map[string]ContainerDefinition, status string) *graph.LabeledGraph[string] {
 	var vertices []string
 	for vertex := range containers {
 		vertices = append(vertices, vertex)
 	}
-	dependencyGraph := graph.NewLabeledGraph(vertices, graph.WithStatus[string](ctrStateUnknown))
+	dependencyGraph := graph.NewLabeledGraph(vertices, graph.WithStatus[string](status))
 	for containerName, container := range containers {
 		for depCtr := range container.DependsOn {
 			dependencyGraph.Add(graph.Edge[string]{
