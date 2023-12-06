@@ -52,6 +52,7 @@ type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunL
 // DockerEngine is used by Orchestrator to manage containers.
 type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
+	DoesContainerExist(context.Context, string) (bool, error)
 	IsContainerRunning(context.Context, string) (bool, error)
 	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error)
 	IsContainerHealthy(ctx context.Context, containerName string) (bool, error)
@@ -450,9 +451,28 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 			errCh <- fmt.Errorf("remove %q: %w", name, err)
 			return nil
 		}
-		fmt.Printf("Stopped and Removed %q\n", name)
-		errCh <- nil
-		return nil
+		// ensure that container is fully stopped before stopTask finishes blocking
+		for {
+			running, err := o.docker.DoesContainerExist(ctx, o.containerID(name))
+			if err != nil {
+				errCh <- fmt.Errorf("polling container %q for removal: %w", name, err)
+				return nil
+			}
+
+			if running {
+				select {
+				case <-time.After(1 * time.Second):
+					continue
+				case <-ctx.Done():
+					errCh <- fmt.Errorf("check container %q stopped: %w", name, ctx.Err())
+					return nil
+				}
+			}
+
+			fmt.Printf("Stopped and Removed %q\n", name)
+			errCh <- nil
+			return nil
+		}
 	}, ctrStateRunningOrExited, ctrStateRemoved)
 
 	if err != nil {

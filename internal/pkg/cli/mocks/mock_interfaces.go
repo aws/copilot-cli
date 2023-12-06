@@ -7693,6 +7693,21 @@ func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).CheckDockerEngineRunning))
 }
 
+// DoesContainerExist mocks base method.
+func (m *MockdockerEngineRunner) DoesContainerExist(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DoesContainerExist", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DoesContainerExist indicates an expected call of DoesContainerExist.
+func (mr *MockdockerEngineRunnerMockRecorder) DoesContainerExist(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoesContainerExist", reflect.TypeOf((*MockdockerEngineRunner)(nil).DoesContainerExist), arg0, arg1)
+}
+
 // Exec mocks base method.
 func (m *MockdockerEngineRunner) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
 	m.ctrl.T.Helper()

@@ -13,6 +13,7 @@ import (
 // Double is a test double for dockerengine.DockerCmdClient
 type Double struct {
 	StopFn                         func(context.Context, string) error
+	DoesContainerExistFn           func(context.Context, string) (bool, error)
 	IsContainerRunningFn           func(context.Context, string) (bool, error)
 	RunFn                          func(context.Context, *dockerengine.RunOptions) error
 	BuildFn                        func(context.Context, *dockerengine.BuildArguments, io.Writer) error
@@ -22,28 +23,20 @@ type Double struct {
 	RmFn                           func(context.Context, string) error
 }
 
-// IsContainerCompleteOrSuccess implements orchestrator.DockerEngine.
-func (d *Double) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
-	if d.IsContainerCompleteOrSuccessFn == nil {
-		return -1, nil
-	}
-	return d.IsContainerCompleteOrSuccessFn(ctx, containerName)
-}
-
-// IsContainerHealthy implements orchestrator.DockerEngine.
-func (d *Double) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
-	if d.IsContainerHealthyFn == nil {
-		return false, nil
-	}
-	return d.IsContainerHealthyFn(ctx, containerName)
-}
-
 // Stop calls the stubbed function.
 func (d *Double) Stop(ctx context.Context, name string) error {
 	if d.StopFn == nil {
 		return nil
 	}
 	return d.StopFn(ctx, name)
+}
+
+// DoesContainerExist calls the stubbed function.
+func (d *Double) DoesContainerExist(ctx context.Context, name string) (bool, error) {
+	if d.IsContainerRunningFn == nil {
+		return false, nil
+	}
+	return d.DoesContainerExistFn(ctx, name)
 }
 
 // IsContainerRunning calls the stubbed function.
@@ -78,9 +71,26 @@ func (d *Double) Exec(ctx context.Context, container string, out io.Writer, cmd 
 	return d.ExecFn(ctx, container, out, cmd, args...)
 }
 
+// Rm calls the stubbed function.
 func (d *Double) Rm(ctx context.Context, name string) error {
 	if d.RmFn == nil {
 		return nil
 	}
 	return d.RmFn(ctx, name)
+}
+
+// IsContainerCompleteOrSuccess implements orchestrator.DockerEngine.
+func (d *Double) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
+	if d.IsContainerCompleteOrSuccessFn == nil {
+		return -1, nil
+	}
+	return d.IsContainerCompleteOrSuccessFn(ctx, containerName)
+}
+
+// IsContainerHealthy implements orchestrator.DockerEngine.
+func (d *Double) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
+	if d.IsContainerHealthyFn == nil {
+		return false, nil
+	}
+	return d.IsContainerHealthyFn(ctx, containerName)
 }
