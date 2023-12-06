@@ -21,6 +21,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/graph"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -76,7 +77,8 @@ const (
 
 const (
 	ctrStateUnknown         = "unknown"
-	ctrStateRunningOrExited = "RunningOrExited"
+	ctrStateRunningOrExited = "runningOrExited"
+	ctrStateRemoved         = "removed"
 )
 
 const (
@@ -112,7 +114,7 @@ func New(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Orche
 func (o *Orchestrator) Start() <-chan error {
 	// close done when all goroutines created by Orchestrator have finished
 	done := make(chan struct{})
-	// buffered channel so that the orchestrator routine can always send the errors from runErrs and action.Do
+	// buffered channel so that the orchestrator routine does not block and can always send the errors from runErrs and action.Do
 	errs := make(chan error, 1)
 
 	// orchestrator routine
@@ -403,7 +405,6 @@ func (o *Orchestrator) buildPauseContainer(ctx context.Context) error {
 func (o *Orchestrator) Stop() {
 	o.stopOnce.Do(func() {
 		close(o.stopped)
-		fmt.Printf("\nStopping task...\n")
 		o.actions <- &stopAction{}
 	})
 }
@@ -414,6 +415,7 @@ func (a *stopAction) Do(o *Orchestrator) error {
 	defer o.wg.Done()                            // for the Orchestrator
 	o.curTaskID.Store(orchestratorStoppedTaskID) // ignore runtime errors
 
+	fmt.Printf("\nStopping task...\n")
 	// collect errors since we want to try to clean up everything we can
 	var errs []error
 	if err := o.stopTask(context.Background(), o.curTask); err != nil {
@@ -440,22 +442,25 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 	}
 
 	// errCh gets one error per container
-	errCh := make(chan error)
-	for name := range task.Containers {
-		name := name
-		go func() {
-			fmt.Printf("Stopping and Removing %q\n", name)
-			if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
-				errCh <- fmt.Errorf("stop %q: %w", name, err)
-				return
-			}
-			if err := o.docker.Rm(ctx, o.containerID(name)); err != nil {
-				errCh <- fmt.Errorf("remove %q: %w", name, err)
-				return
-			}
-			fmt.Printf("Stopped and Removed %q\n", name)
-			errCh <- nil
-		}()
+	errCh := make(chan error, len(task.Containers))
+	depGraph := buildDependencyGraph(task.Containers, ctrStateRunningOrExited)
+	err := depGraph.DownwardTraversal(ctx, func(ctx context.Context, name string) error {
+		fmt.Printf("Stopping and Removing %q\n", name)
+		if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
+			errCh <- fmt.Errorf("stop %q: %w", name, err)
+			return nil
+		}
+		if err := o.docker.Rm(ctx, o.containerID(name)); err != nil {
+			errCh <- fmt.Errorf("remove %q: %w", name, err)
+			return nil
+		}
+		fmt.Printf("Stopped and Removed %q\n", name)
+		errCh <- nil
+		return nil
+	}, ctrStateRunningOrExited, ctrStateRemoved)
+
+	if err != nil {
+		return fmt.Errorf("downward traversal: %w", err)
 	}
 
 	var errs []error
@@ -492,7 +497,12 @@ func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string, i
 }
 
 func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, containerName string, a *runTaskAction) error {
-	fmt.Printf("Waiting for container %q dependencies...\n", containerName)
+	var deps []string
+	for depName, state := range a.task.Containers[containerName].DependsOn {
+		deps = append(deps, fmt.Sprintf("%s->%s", depName, state))
+	}
+	logMsg := strings.Join(deps, ", ")
+	fmt.Printf("Waiting for container %q dependencies: [%s]\n", containerName, color.Emphasize(logMsg))
 	eg, ctx := errgroup.WithContext(ctx)
 	for name, state := range a.task.Containers[containerName].DependsOn {
 		name, state := name, state
@@ -510,10 +520,11 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, contain
 						if err != nil {
 							return err
 						}
-						if !isEssential {
-							fmt.Printf("non-essential container %q started successfully\n", ctrId)
+						if isEssential {
+							log.Successf("Successfully container %s is running\n", ctrId)
+							return nil
 						}
-						log.Successf("Successfully container %s is running\n", ctrId)
+						fmt.Printf("non-essential container %q started successfully\n", ctrId)
 						return nil
 					case ctrStateHealthy:
 						healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
@@ -534,7 +545,7 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, contain
 							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 						}
 						if exitCode != -1 {
-							log.Successf("Successfully dependency container %q exited with code: %d\n", name, exitCode)
+							log.Successf("Successfully dependency container %q exited with code: %d\n", ctrId, exitCode)
 							return nil
 						}
 					case ctrStateSuccess:
@@ -542,12 +553,12 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, contain
 						if err != nil {
 							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 						}
+						if exitCode > 0 {
+							return fmt.Errorf("dependency container %q exited with code %d", ctrId, exitCode)
+						}
 						if exitCode == 0 {
 							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
 							return nil
-						}
-						if exitCode > 0 {
-							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 						}
 					}
 				case <-ctx.Done():
@@ -640,7 +651,10 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 			if errors.As(err, &errContainerExited) && !isEssential {
 				return
 			}
-			if err == nil && isEssential {
+			if err == nil {
+				if !isEssential {
+					return
+				}
 				err = errors.New("container stopped unexpectedly")
 			}
 			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
