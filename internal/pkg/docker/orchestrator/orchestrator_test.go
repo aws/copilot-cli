@@ -114,6 +114,43 @@ func TestOrchestrator(t *testing.T) {
 				`stop "bar": some error`,
 			},
 		},
+		"error removing task": {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				de := &dockerenginetest.Double{
+					DoesContainerExistFn: func(ctx context.Context, s string) (bool, error) {
+						return false, nil
+					},
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					StopFn: func(ctx context.Context, name string) error {
+						return nil
+					},
+					RmFn: func(ctx context.Context, name string) error {
+						if name == "prefix-success" {
+							return nil
+						}
+						return errors.New("some error")
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo":     {},
+							"bar":     {},
+							"success": {},
+						},
+					})
+				}, de
+			},
+			errs: []string{
+				`remove "pause": some error`,
+				`remove "foo": some error`,
+				`remove "bar": some error`,
+			},
+		},
 		"error polling tasks removed": {
 			logOptions:      noLogs,
 			runUntilStopped: true,
