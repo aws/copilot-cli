@@ -69,6 +69,8 @@ const (
 )
 
 const (
+	// Command to retrieve container credentials with ecs exec. See more at https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html.
+	// Example output: {"AccessKeyId":"ACCESS_KEY_ID","Expiration":"EXPIRATION_DATE","RoleArn":"TASK_ROLE_ARN","SecretAccessKey":"SECRET_ACCESS_KEY","Token":"SECURITY_TOKEN_STRING"}
 	curlContainerCredentialsCmd = "curl 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
 )
 
@@ -778,10 +780,10 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 					}
 					return
 				}
+				parseErr <- errors.New("all containers failed to retrieve credentials")
 			case <-ctx.Done():
 				return
 			}
-			parseErr <- errors.New("all containers failed to retrieve credentials")
 		}()
 
 		var containerErrs []error
