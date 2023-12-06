@@ -112,7 +112,8 @@ func New(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Orche
 func (o *Orchestrator) Start() <-chan error {
 	// close done when all goroutines created by Orchestrator have finished
 	done := make(chan struct{})
-	errs := make(chan error)
+	// buffered channel so that the orchestrator routine can always send the errors from runErrs and action.Do
+	errs := make(chan error, 1)
 
 	// orchestrator routine
 	o.wg.Add(1) // decremented by stopAction
@@ -206,6 +207,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	}()
 
 	if taskID == 1 {
+		o.curTask = a.task
 		if err := o.buildPauseContainer(ctx); err != nil {
 			return fmt.Errorf("build pause container: %w", err)
 		}
