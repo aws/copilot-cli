@@ -406,7 +406,7 @@ func TestTraverseInDependencyOrder(t *testing.T) {
 			for _, vtx := range vertices {
 				seen[vtx]++
 			}
-			done <- struct{}{}
+			close(done)
 		}()
 
 		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vtx string) error {
