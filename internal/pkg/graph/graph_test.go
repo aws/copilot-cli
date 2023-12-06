@@ -4,6 +4,7 @@
 package graph
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -368,4 +369,72 @@ func TestTopologicalOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func buildGraphWithSingleParent() *LabeledGraph[string] {
+	vertices := []string{"A", "B", "C", "D"}
+	graph := NewLabeledGraph[string](vertices, WithStatus[string]("started"))
+	graph.Add(Edge[string]{From: "D", To: "C"}) // D -> C
+	graph.Add(Edge[string]{From: "C", To: "B"}) // C -> B
+	graph.Add(Edge[string]{From: "B", To: "A"}) // B -> A
+	return graph
+}
+
+func TestTraverseInDependencyOrder(t *testing.T) {
+	t.Run("graph with single root vertex", func(t *testing.T) {
+		graph := buildGraphWithSingleParent()
+		var visited []string
+		processFn := func(ctx context.Context, v string) error {
+			visited = append(visited, v)
+			return nil
+		}
+		err := graph.UpwardTraversal(context.Background(), processFn, "started", "stopped")
+		require.NoError(t, err)
+		expected := []string{"A", "B", "C", "D"}
+		require.Equal(t, expected, visited)
+	})
+	t.Run("graph with multiple parents and boundary nodes", func(t *testing.T) {
+		vertices := []string{"A", "B", "C", "D"}
+		graph := NewLabeledGraph[string](vertices, WithStatus[string]("started"))
+		graph.Add(Edge[string]{From: "A", To: "C"})
+		graph.Add(Edge[string]{From: "A", To: "D"})
+		graph.Add(Edge[string]{From: "B", To: "D"})
+		vtxChan := make(chan string, 4)
+		seen := make(map[string]int)
+		done := make(chan struct{})
+		go func() {
+			for _, vtx := range vertices {
+				seen[vtx]++
+			}
+			close(done)
+		}()
+
+		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vtx string) error {
+			vtxChan <- vtx
+			return nil
+		}, "started", "stopped")
+		require.NoError(t, err, "Error during iteration")
+		close(vtxChan)
+		<-done
+
+		require.Len(t, seen, 4)
+		for vtx, count := range seen {
+			require.Equal(t, 1, count, "%s", vtx)
+		}
+	})
+}
+
+func TestTraverseInReverseDependencyOrder(t *testing.T) {
+	t.Run("Graph with single root vertex", func(t *testing.T) {
+		graph := buildGraphWithSingleParent()
+		var visited []string
+		processFn := func(ctx context.Context, v string) error {
+			visited = append(visited, v)
+			return nil
+		}
+		err := graph.DownwardTraversal(context.Background(), processFn, "started", "stopped")
+		require.NoError(t, err)
+		expected := []string{"D", "C", "B", "A"}
+		require.Equal(t, expected, visited)
+	})
 }
