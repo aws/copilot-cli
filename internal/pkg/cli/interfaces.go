@@ -711,7 +711,7 @@ type dockerEngineRunner interface {
 	Stop(context.Context, string) error
 	Build(context.Context, *dockerengine.BuildArguments, io.Writer) error
 	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
-	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error)
+	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error)
 	IsContainerHealthy(ctx context.Context, containerName string) (bool, error)
 	Rm(context.Context, string) error
 }

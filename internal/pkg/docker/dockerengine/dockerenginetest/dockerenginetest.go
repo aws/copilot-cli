@@ -12,24 +12,30 @@ import (
 
 // Double is a test double for dockerengine.DockerCmdClient
 type Double struct {
-	StopFn                        func(context.Context, string) error
-	IsContainerRunningFn          func(context.Context, string) (bool, error)
-	RunFn                         func(context.Context, *dockerengine.RunOptions) error
-	BuildFn                       func(context.Context, *dockerengine.BuildArguments, io.Writer) error
-	ExecFn                        func(context.Context, string, io.Writer, string, ...string) error
-	IsContainerHealthyFn          func(ctx context.Context, containerName string) (bool, error)
-	IsContainerRunningOrHealthyFn func(ctx context.Context, containerName string) (bool, int, error)
-	RmFn                          func(context.Context, string) error
+	StopFn                         func(context.Context, string) error
+	IsContainerRunningFn           func(context.Context, string) (bool, error)
+	RunFn                          func(context.Context, *dockerengine.RunOptions) error
+	BuildFn                        func(context.Context, *dockerengine.BuildArguments, io.Writer) error
+	ExecFn                         func(context.Context, string, io.Writer, string, ...string) error
+	IsContainerHealthyFn           func(ctx context.Context, containerName string) (bool, error)
+	IsContainerCompleteOrSuccessFn func(ctx context.Context, containerName string) (int, error)
+	RmFn                           func(context.Context, string) error
 }
 
 // IsContainerCompleteOrSuccess implements orchestrator.DockerEngine.
-func (*Double) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
-	panic("unimplemented")
+func (d *Double) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
+	if d.IsContainerCompleteOrSuccessFn == nil {
+		return -1, nil
+	}
+	return d.IsContainerCompleteOrSuccessFn(ctx, containerName)
 }
 
 // IsContainerHealthy implements orchestrator.DockerEngine.
-func (*Double) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
-	panic("unimplemented")
+func (d *Double) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
+	if d.IsContainerHealthyFn == nil {
+		return false, nil
+	}
+	return d.IsContainerHealthyFn(ctx, containerName)
 }
 
 // Stop calls the stubbed function.

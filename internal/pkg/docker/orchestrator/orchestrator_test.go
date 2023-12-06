@@ -253,7 +253,9 @@ func TestOrchestrator(t *testing.T) {
 				return func(t *testing.T, o *Orchestrator) {
 					o.RunTask(Task{
 						Containers: map[string]ContainerDefinition{
-							"foo": {},
+							"foo": {
+								IsEssential: true,
+							},
 						},
 					})
 				}, de

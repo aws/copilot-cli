@@ -52,7 +52,7 @@ type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunL
 type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
-	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error)
+	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error)
 	IsContainerHealthy(ctx context.Context, containerName string) (bool, error)
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
@@ -260,12 +260,12 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	return nil
 }
 
-func buildDependencyGraph(containers map[string]ContainerDefinition) *graph.Graph[string] {
+func buildDependencyGraph(containers map[string]ContainerDefinition) *graph.LabeledGraph[string] {
 	var vertices []string
 	for vertex := range containers {
 		vertices = append(vertices, vertex)
 	}
-	dependencyGraph := graph.New(vertices, graph.WithStatus[string](ctrStateUnknown))
+	dependencyGraph := graph.NewLabeledGraph(vertices, graph.WithStatus[string](ctrStateUnknown))
 	for containerName, container := range containers {
 		for depCtr := range container.DependsOn {
 			dependencyGraph.Add(graph.Edge[string]{
@@ -419,14 +419,14 @@ func (a *stopAction) Do(o *Orchestrator) error {
 	}
 
 	// stop pause container
-	fmt.Printf("Stopping %q\n", "pause")
+	fmt.Printf("Stopping and Removing %q\n", "pause")
 	if err := o.docker.Stop(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 	if err := o.docker.Rm(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("remove %q: %w", "pause", err))
 	}
-	fmt.Printf("Stopped %q\n", "pause")
+	fmt.Printf("Stopped and Removed %q\n", "pause")
 
 	return errors.Join(errs...)
 }
@@ -442,19 +442,16 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 	for name := range task.Containers {
 		name := name
 		go func() {
-			fmt.Printf("Stopping %q\n", name)
+			fmt.Printf("Stopping and Removing %q\n", name)
 			if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("stop %q: %w", name, err)
 				return
 			}
-			fmt.Printf("Stopped %q\n", name)
-			// Remove the container
-			fmt.Printf("Removing %q\n", name)
 			if err := o.docker.Rm(ctx, o.containerID(name)); err != nil {
 				errCh <- fmt.Errorf("remove %q: %w", name, err)
 				return
 			}
-			fmt.Printf("Removed %q\n", name)
+			fmt.Printf("Stopped and Removed %q\n", name)
 			errCh <- nil
 		}()
 	}
@@ -529,18 +526,26 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, contain
 							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
 							return nil
 						}
-					case ctrStateComplete, ctrStateSuccess:
-						exited, exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+					case ctrStateComplete:
+						exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
 						if err != nil {
-							if !isEssential {
-								fmt.Printf("non-essential container %q failed to be %q: %v\n", ctrId, state, err)
-								return nil
-							}
 							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 						}
-						if exited && ((state == "complete" && exitCode != 0) || (state == "success" && exitCode == 0)) {
+						if exitCode != -1 {
 							log.Successf("Successfully dependency container %q exited with code: %d\n", name, exitCode)
 							return nil
+						}
+					case ctrStateSuccess:
+						exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+						if err != nil {
+							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
+						}
+						if exitCode == 0 {
+							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
+							return nil
+						}
+						if exitCode > 0 {
+							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 						}
 					}
 				case <-ctx.Done():
@@ -613,10 +618,7 @@ func (o *Orchestrator) containerRunOptions(name string, ctr ContainerDefinition)
 // run calls `docker run` using opts. Errors are only returned
 // to the main Orchestrator routine if the taskID the container was run with
 // matches the current taskID the Orchestrator is running.
-// run calls `docker run` using opts. Errors are only returned
-// to the main Orchestrator routine if the taskID the container was run with
-// matches the current taskID the Orchestrator is running.
-func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssential bool, cancelFn context.CancelFunc) {
+func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssential bool, cancel context.CancelFunc) {
 	o.wg.Add(1)
 	go func() {
 		defer o.wg.Done()
@@ -632,15 +634,15 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 		// the error is from the pause container
 		// or from the currently running task
 		if taskID == pauseCtrTaskID || taskID == curTaskID {
-			if err == nil {
-				err = errors.New("container stopped unexpectedly")
-			}
 			var errContainerExited *dockerengine.ErrContainerExited
 			if errors.As(err, &errContainerExited) && !isEssential {
 				return
 			}
+			if err == nil && isEssential {
+				err = errors.New("container stopped unexpectedly")
+			}
 			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
-			cancelFn()
+			cancel()
 			o.runErrs <- fmt.Errorf("run %q: %w", opts.ContainerName, err)
 		}
 	}()

@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,10 +27,6 @@ import (
 type Cmd interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 	RunWithContext(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error
-}
-
-type exitCodeError interface {
-	ExitCode() int
 }
 
 // Operating systems and architectures supported by docker.
@@ -268,6 +263,7 @@ func (c DockerCmdClient) Push(ctx context.Context, uri string, w io.Writer, tags
 
 func (in *RunOptions) generateRunArguments() []string {
 	args := []string{"run"}
+	args = append(args, "--rm")
 
 	if in.ContainerName != "" {
 		args = append(args, "--name", in.ContainerName)
@@ -347,13 +343,6 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			exec.Stdout(stdout),
 			exec.Stderr(stderr),
 			exec.NewProcessGroup()); err != nil {
-			var ec exitCodeError
-			if errors.As(err, &ec) {
-				return &ErrContainerExited{
-					name:     options.ContainerName,
-					exitcode: ec.ExitCode(),
-				}
-			}
 			return fmt.Errorf("running container: %w", err)
 		}
 		return nil
@@ -378,12 +367,15 @@ func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (b
 }
 
 // IsContainerCompleteOrSuccess returns true if a docker container exits with an exitcode.
-func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
+func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
 	state, err := c.containerState(ctx, containerName)
 	if err != nil {
-		return false, 0, err
+		return 0, err
 	}
-	return state.Status == containerStatusExited, state.ExitCode, nil
+	if state.Status == containerStatusRunning {
+		return -1, nil
+	}
+	return state.ExitCode, nil
 }
 
 // IsContainerHealthy returns true if a container health state is healthy.
@@ -392,11 +384,11 @@ func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName s
 	if err != nil {
 		return false, err
 	}
-	if state.Status == containerStatusExited {
-		return false, &ErrContainerExited{name: containerName, exitcode: state.ExitCode}
+	if state.Status != containerStatusRunning {
+		return false, fmt.Errorf("container %q is not in %q state", containerName, containerStatusRunning)
 	}
 	if state.Health == nil {
-		return false, fmt.Errorf("healthcheck is not configured for container %s", containerName)
+		return false, fmt.Errorf("healthcheck is not configured for container %q", containerName)
 	}
 	switch state.Health.Status {
 	case healthy:
@@ -406,9 +398,9 @@ func (c DockerCmdClient) IsContainerHealthy(ctx context.Context, containerName s
 	case unhealthy:
 		return false, fmt.Errorf("container %q is %q", containerName, unhealthy)
 	case noHealthcheck:
-		return false, fmt.Errorf("healthcheck configuration is set to %q for container %s", noHealthcheck, containerName)
+		return false, fmt.Errorf("healthcheck is not configured for container %q", containerName)
 	default:
-		return false, fmt.Errorf("container %s had unexpected health status %q", containerName, state.Health.Status)
+		return false, fmt.Errorf("container %q had unexpected health status %q", containerName, state.Health.Status)
 	}
 }
 
@@ -456,11 +448,6 @@ func (d *DockerCmdClient) containerID(ctx context.Context, containerName string)
 type ErrContainerExited struct {
 	name     string
 	exitcode int
-}
-
-// ExitCode returns the OS exit code configured for this error.
-func (e *ErrContainerExited) ExitCode() int {
-	return e.exitcode
 }
 
 // ErrContainerExited represents docker container exited with an exitcode.

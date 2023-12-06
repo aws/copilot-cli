@@ -24,8 +24,6 @@ const (
 type Graph[V comparable] struct {
 	vertices  map[V]neighbors[V] // Adjacency list for each vertex.
 	inDegrees map[V]int          // Number of incoming edges for each vertex.
-	status    map[V]string       // status of each vertex.
-	lock      sync.Mutex         // lock used to mutate graph data.
 }
 
 // Edge represents one edge of a directed graph.
@@ -37,33 +35,16 @@ type Edge[V comparable] struct {
 type neighbors[V comparable] map[V]bool
 
 // New initiates a new Graph.
-func New[V comparable](vertices []V, opts ...GraphOption[V]) *Graph[V] {
+func New[V comparable](vertices ...V) *Graph[V] {
 	adj := make(map[V]neighbors[V])
 	inDegrees := make(map[V]int)
 	for _, vertex := range vertices {
 		adj[vertex] = make(neighbors[V])
 		inDegrees[vertex] = 0
 	}
-	g := &Graph[V]{
+	return &Graph[V]{
 		vertices:  adj,
 		inDegrees: inDegrees,
-	}
-	for _, opt := range opts {
-		opt(g)
-	}
-	return g
-}
-
-// GraphOption allows you to initialize Graph with additional properties.
-type GraphOption[V comparable] func(g *Graph[V])
-
-// WithStatus sets the status of each vertex in the Graph.
-func WithStatus[V comparable](status string) func(g *Graph[V]) {
-	return func(g *Graph[V]) {
-		g.status = make(map[V]string)
-		for vertex := range g.vertices {
-			g.status[vertex] = status
-		}
 	}
 }
 
@@ -161,77 +142,6 @@ func (g *Graph[V]) Roots() []V {
 	return roots
 }
 
-// updateStatus updates the status of a vertex.
-func (g *Graph[V]) updateStatus(vertex V, status string) {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-	g.status[vertex] = status
-}
-
-// getStatus gets the status of a vertex.
-func (g *Graph[V]) getStatus(vertex V) string {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-	return g.status[vertex]
-}
-
-// getLeaves returns the leaves of a given vertex.
-func (g *Graph[V]) leaves() []V {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-	var leaves []V
-	for vtx := range g.vertices {
-		if len(g.vertices[vtx]) == 0 {
-			leaves = append(leaves, vtx)
-		}
-	}
-	return leaves
-}
-
-// getParents returns the parent vertices (incoming edges) of vertex.
-func (g *Graph[V]) parents(vtx V) []V {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-	var parents []V
-	for v, neighbors := range g.vertices {
-		if neighbors[vtx] {
-			parents = append(parents, v)
-		}
-	}
-	return parents
-}
-
-// getChildren returns the child vertices (outgoing edges) of vertex.
-func (g *Graph[V]) children(vtx V) []V {
-	g.lock.Lock()
-	defer g.lock.Unlock()
-	return g.Neighbors(vtx)
-}
-
-// filterParents filters parents based on the vertex status.
-func (g *Graph[V]) filterParents(vtx V, status string) []V {
-	parents := g.parents(vtx)
-	var filtered []V
-	for _, parent := range parents {
-		if g.getStatus(parent) == status {
-			filtered = append(filtered, parent)
-		}
-	}
-	return filtered
-}
-
-// filterChildren filters children based on the vertex status.
-func (g *Graph[V]) filterChildren(vtx V, status string) []V {
-	children := g.children(vtx)
-	var filtered []V
-	for _, child := range children {
-		if g.getStatus(child) == status {
-			filtered = append(filtered, child)
-		}
-	}
-	return filtered
-}
-
 func (g *Graph[V]) hasCycles(temp *findCycleTempVars[V], currVertex V) bool {
 	temp.status[currVertex] = visiting
 	for vertex := range g.vertices[currVertex] {
@@ -293,13 +203,12 @@ func (alg *TopologicalSorter[V]) traverse(g *Graph[V]) {
 //
 // An example graph and their ranks is shown below to illustrate:
 // .
-// ├── a          rank: 0
-// │   ├── c      rank: 1
-// │   │   └── f  rank: 2
-// │   └── d      rank: 1
-// └── b          rank: 0
-//
-//	└── e      rank: 1
+//├── a          rank: 0
+//│   ├── c      rank: 1
+//│   │   └── f  rank: 2
+//│   └── d      rank: 1
+//└── b          rank: 0
+//    └── e      rank: 1
 func TopologicalOrder[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], error) {
 	if vertices, isAcyclic := digraph.IsAcyclic(); !isAcyclic {
 		return nil, &errCycle[V]{
@@ -314,6 +223,112 @@ func TopologicalOrder[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], e
 	return topo, nil
 }
 
+// LabeledGraph extends a generic Graph by associating a label (or status) with each vertex.
+// It is concurrency-safe, utilizing a mutex lock for synchronized access.
+type LabeledGraph[V comparable] struct {
+	*Graph[V]
+	status map[V]string
+	lock   sync.Mutex
+}
+
+// NewLabeledGraph initializes a LabeledGraph with specified vertices and optional configurations.
+// It creates a base Graph with the vertices and applies any LabeledGraphOption to configure additional properties.
+func NewLabeledGraph[V comparable](vertices []V, opts ...LabeledGraphOption[V]) *LabeledGraph[V] {
+	g := New(vertices...)
+	lg := &LabeledGraph[V]{
+		Graph:  g,
+		status: make(map[V]string),
+	}
+	for _, opt := range opts {
+		opt(lg)
+	}
+	return lg
+}
+
+// LabeledGraphOption allows you to initialize Graph with additional properties.
+type LabeledGraphOption[V comparable] func(g *LabeledGraph[V])
+
+// WithStatus sets the status of each vertex in the Graph.
+func WithStatus[V comparable](status string) func(g *LabeledGraph[V]) {
+	return func(g *LabeledGraph[V]) {
+		g.status = make(map[V]string)
+		for vertex := range g.vertices {
+			g.status[vertex] = status
+		}
+	}
+}
+
+// updateStatus updates the status of a vertex.
+func (lg *LabeledGraph[V]) updateStatus(vertex V, status string) {
+	lg.lock.Lock()
+	defer lg.lock.Unlock()
+	lg.status[vertex] = status
+}
+
+// getStatus gets the status of a vertex.
+func (lg *LabeledGraph[V]) getStatus(vertex V) string {
+	lg.lock.Lock()
+	defer lg.lock.Unlock()
+	return lg.status[vertex]
+}
+
+// getLeaves returns the leaves of a given vertex.
+func (lg *LabeledGraph[V]) leaves() []V {
+	lg.lock.Lock()
+	defer lg.lock.Unlock()
+	var leaves []V
+	for vtx := range lg.vertices {
+		if len(lg.vertices[vtx]) == 0 {
+			leaves = append(leaves, vtx)
+		}
+	}
+	return leaves
+}
+
+// getParents returns the parent vertices (incoming edges) of vertex.
+func (lg *LabeledGraph[V]) parents(vtx V) []V {
+	lg.lock.Lock()
+	defer lg.lock.Unlock()
+	var parents []V
+	for v, neighbors := range lg.vertices {
+		if neighbors[vtx] {
+			parents = append(parents, v)
+		}
+	}
+	return parents
+}
+
+// getChildren returns the child vertices (outgoing edges) of vertex.
+func (lg *LabeledGraph[V]) children(vtx V) []V {
+	lg.lock.Lock()
+	defer lg.lock.Unlock()
+	return lg.Neighbors(vtx)
+}
+
+// filterParents filters parents based on the vertex status.
+func (lg *LabeledGraph[V]) filterParents(vtx V, status string) []V {
+	parents := lg.parents(vtx)
+	var filtered []V
+	for _, parent := range parents {
+		if lg.getStatus(parent) == status {
+			filtered = append(filtered, parent)
+		}
+	}
+	return filtered
+}
+
+// filterChildren filters children based on the vertex status.
+func (lg *LabeledGraph[V]) filterChildren(vtx V, status string) []V {
+	children := lg.children(vtx)
+	var filtered []V
+	for _, child := range children {
+		if lg.getStatus(child) == status {
+			filtered = append(filtered, child)
+		}
+	}
+	return filtered
+}
+
 /*
 UpwardTraversal performs an upward traversal on the graph starting from leaves (nodes with no children)
 and moving towards root nodes (nodes with children).
@@ -322,18 +337,18 @@ It applies the specified process function to each vertex in the graph, skipping 
 The traversal is concurrent and may process vertices in parallel.
 Returns an error if the traversal encounters any issues, or nil if successful.
 */
-func (g *Graph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
+func (lg *LabeledGraph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
 	traversal := &graphTraversal[V]{
 		mu:                       sync.Mutex{},
 		seen:                     make(map[V]struct{}),
-		findBoundaryVertices:     func(g *Graph[V]) []V { return g.leaves() },
-		findAdjacentVertices:     func(g *Graph[V], v V) []V { return g.parents(v) },
-		filterVerticesByStatus:   func(g *Graph[V], v V, status string) []V { return g.filterChildren(v, status) },
+		findBoundaryVertices:     func(lg *LabeledGraph[V]) []V { return lg.leaves() },
+		findAdjacentVertices:     func(lg *LabeledGraph[V], v V) []V { return lg.parents(v) },
+		filterVerticesByStatus:   func(g *LabeledGraph[V], v V, status string) []V { return g.filterChildren(v, status) },
 		requiredVertexStatus:     requiredVertexStatus,
 		adjacentVertexSkipStatus: adjacentVertexSkipStatus,
 		processVertex:            processVertexFunc,
 	}
-	return traversal.execute(ctx, g)
+	return traversal.execute(ctx, lg)
 }
 
 /*
@@ -344,37 +359,37 @@ until reaching vertices with the "requiredVertexStatus" status.
 The traversal is concurrent and may process vertices in parallel.
 Returns an error if the traversal encounters any issues.
 */
-func (g *Graph[V]) DownwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
+func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
 	traversal := &graphTraversal[V]{
 		mu:                       sync.Mutex{},
 		seen:                     make(map[V]struct{}),
-		findBoundaryVertices:     func(g *Graph[V]) []V { return g.Roots() },
-		findAdjacentVertices:     func(g *Graph[V], v V) []V { return g.children(v) },
-		filterVerticesByStatus:   func(g *Graph[V], v V, status string) []V { return g.filterParents(v, status) },
+		findBoundaryVertices:     func(lg *LabeledGraph[V]) []V { return lg.Roots() },
+		findAdjacentVertices:     func(lg *LabeledGraph[V], v V) []V { return lg.children(v) },
+		filterVerticesByStatus:   func(lg *LabeledGraph[V], v V, status string) []V { return lg.filterParents(v, status) },
 		requiredVertexStatus:     requiredVertexStatus,
 		adjacentVertexSkipStatus: adjacentVertexSkipStatus,
 		processVertex:            processVertexFunc,
 	}
-	return traversal.execute(ctx, g)
+	return traversal.execute(ctx, lg)
 }
 
 type graphTraversal[V comparable] struct {
 	mu                       sync.Mutex
 	seen                     map[V]struct{}
-	findBoundaryVertices     func(*Graph[V]) []V
-	findAdjacentVertices     func(*Graph[V], V) []V
-	filterVerticesByStatus   func(*Graph[V], V, string) []V
+	findBoundaryVertices     func(*LabeledGraph[V]) []V
+	findAdjacentVertices     func(*LabeledGraph[V], V) []V
+	filterVerticesByStatus   func(*LabeledGraph[V], V, string) []V
 	requiredVertexStatus     string
 	adjacentVertexSkipStatus string
 	processVertex            func(context.Context, V) error
 }
 
-func (t *graphTraversal[V]) execute(ctx context.Context, graph *Graph[V]) error {
+func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	vertexCount := len(graph.vertices)
+	vertexCount := len(lg.vertices)
 	if vertexCount == 0 {
 		return nil
 	}
@@ -382,7 +397,7 @@ func (t *graphTraversal[V]) execute(ctx context.Context, graph *Graph[V]) error 
 	vertexCh := make(chan V, vertexCount)
 	defer close(vertexCh)
 
-	processVertices := func(ctx context.Context, graph *Graph[V], eg *errgroup.Group, vertices []V, vertexCh chan V) {
+	processVertices := func(ctx context.Context, graph *LabeledGraph[V], eg *errgroup.Group, vertices []V, vertexCh chan V) {
 		for _, vertex := range vertices {
 			vertex := vertex
 			// Delay processing this vertex if any of its dependent vertices are yet to be processed.
@@ -409,17 +424,17 @@ func (t *graphTraversal[V]) execute(ctx context.Context, graph *Graph[V]) error 
 		for {
 			select {
 			case <-ctx.Done():
-				return nil
+				return ctx.Err()
 			case vertex := <-vertexCh:
 				vertexCount--
 				if vertexCount == 0 {
 					return nil
 				}
-				processVertices(ctx, graph, eg, t.findAdjacentVertices(graph, vertex), vertexCh)
+				processVertices(ctx, lg, eg, t.findAdjacentVertices(lg, vertex), vertexCh)
 			}
 		}
 	})
-	processVertices(ctx, graph, eg, t.findBoundaryVertices(graph), vertexCh)
+	processVertices(ctx, lg, eg, t.findBoundaryVertices(lg), vertexCh)
 	return eg.Wait()
 }
 

@@ -7728,13 +7728,12 @@ func (mr *MockdockerEngineRunnerMockRecorder) Exec(ctx, container, out, cmd inte
 }
 
 // IsContainerCompleteOrSuccess mocks base method.
-func (m *MockdockerEngineRunner) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (bool, int, error) {
+func (m *MockdockerEngineRunner) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsContainerCompleteOrSuccess", ctx, containerName)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(int)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // IsContainerCompleteOrSuccess indicates an expected call of IsContainerCompleteOrSuccess.
