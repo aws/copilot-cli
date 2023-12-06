@@ -738,18 +738,6 @@ func envFiles(unmarshaledManifest interface{}) map[string]string {
 	return nil
 }
 
-// ContainerDependencies returns a map of ContainerDependency objects from workload manifest.
-func ContainerDependencies(unmarshaledManifest interface{}) map[string]manifest.ContainerDependency {
-	type containerDependency interface {
-		ContainerDependencies() map[string]manifest.ContainerDependency
-	}
-	mf, ok := unmarshaledManifest.(containerDependency)
-	if ok {
-		return mf.ContainerDependencies()
-	}
-	return nil
-}
-
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 	if d.addons == nil {
 		return "", nil
