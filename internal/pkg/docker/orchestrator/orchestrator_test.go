@@ -229,6 +229,103 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 		},
+
+		"return nil error if non essential container exits": {
+			logOptions:      noLogs,
+			runUntilStopped: true,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				de := &dockerenginetest.Double{
+					DoesContainerExistFn: func(ctx context.Context, s string) (bool, error) {
+						return false, nil
+					},
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						if name == "prefix-foo" {
+							return false, fmt.Errorf("container %q exited with code %d", name, 143)
+						}
+						return true, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						return nil
+					},
+					StopFn: func(ctx context.Context, name string) error {
+						return nil
+					},
+					IsContainerCompleteOrSuccessFn: func(ctx context.Context, containerName string) (int, error) {
+						if containerName == "prefix-foo" {
+							return 143, nil
+						}
+						return -1, nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {
+								IsEssential: false,
+							},
+							"bar": {
+								IsEssential: true,
+							},
+						},
+					})
+				}, de
+			},
+		},
+
+		"success with dependsOn order": {
+			logOptions: noLogs,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				stopPause := make(chan struct{})
+				stopFoo := make(chan struct{})
+				de := &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						return true, nil
+					},
+					DoesContainerExistFn: func(ctx context.Context, s string) (bool, error) {
+						return false, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-bar" {
+							return errors.New("container `prefix-bar` exited with code 143")
+						}
+						if opts.ContainerName == "prefix-pause" {
+							// block pause container until Stop(pause)
+							<-stopPause
+						}
+						if opts.ContainerName == "prefix-foo" {
+							// block bar container until Stop(foo)
+							<-stopFoo
+						}
+						return nil
+					},
+					StopFn: func(ctx context.Context, s string) error {
+						if s == "prefix-pause" {
+							stopPause <- struct{}{}
+						}
+						if s == "prefix-foo" {
+							stopFoo <- struct{}{}
+						}
+						return nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {
+								IsEssential: true,
+							},
+							"bar": {
+								IsEssential: false,
+								DependsOn: map[string]string{
+									"foo": ctrStateStart,
+								},
+							},
+						},
+					})
+				}, de
+			},
+		},
+
 		"container run stops early with error": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
@@ -239,6 +336,9 @@ func TestOrchestrator(t *testing.T) {
 					},
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
+					},
+					IsContainerCompleteOrSuccessFn: func(ctx context.Context, containerName string) (int, error) {
+						return -1, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
 						if opts.ContainerName == "prefix-foo" {
@@ -259,7 +359,15 @@ func TestOrchestrator(t *testing.T) {
 				return func(t *testing.T, o *Orchestrator) {
 					o.RunTask(Task{
 						Containers: map[string]ContainerDefinition{
-							"foo": {},
+							"foo": {
+								IsEssential: true,
+							},
+							"bar": {
+								IsEssential: true,
+								DependsOn: map[string]string{
+									"foo": "start",
+								},
+							},
 						},
 					})
 				}, de
