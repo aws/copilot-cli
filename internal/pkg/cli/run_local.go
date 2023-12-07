@@ -737,7 +737,9 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 						Task:      taskID,
 						Container: containerName,
 					})
-					containerErr <- fmt.Errorf("container %s in task %s: %w", containerName, taskID, err)
+					if err != nil {
+						containerErr <- fmt.Errorf("container %s in task %s: %w", containerName, taskID, err)
+					}
 				}()
 			}
 		}
