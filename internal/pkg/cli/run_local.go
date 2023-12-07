@@ -285,15 +285,15 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 			return nil, err
 		}
 		mu.Lock()
+		defer mu.Unlock()
 		savedWriter = pipeWriter
 		os.Stdout = savedWriter
-		mu.Unlock()
 		return (io.Reader)(pipeReader), nil
 	}
 	o.releaseStdout = func() {
 		mu.Lock()
+		defer mu.Unlock()
 		os.Stdout = savedStdout
-		mu.Unlock()
 		savedWriter.Close()
 	}
 	return o, nil
@@ -731,12 +731,13 @@ func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]stri
 				containerName := aws.StringValue(container.Name)
 				go func() {
 					defer wg.Done()
-					containerErr <- o.ecsExecutor.ExecuteCommand(awsecs.ExecuteCommandInput{
+					err := o.ecsExecutor.ExecuteCommand(awsecs.ExecuteCommandInput{
 						Cluster:   svcDesc.ClusterName,
 						Command:   fmt.Sprintf("/bin/sh -c %q\n", curlContainerCredentialsCmd),
 						Task:      taskID,
 						Container: containerName,
 					})
+					containerErr <- fmt.Errorf("container %s in task %s: %w", containerName, taskID, err)
 				}()
 			}
 		}
