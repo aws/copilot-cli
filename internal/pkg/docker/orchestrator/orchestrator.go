@@ -531,55 +531,55 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, contain
 			for {
 				select {
 				case <-ticker.C:
-					switch state {
-					case ctrStateStart:
-						err := o.waitForContainerToStart(ctx, ctrId, isEssential)
-						if err != nil {
-							return err
-						}
-						if isEssential {
-							log.Successf("Successfully container %s is running\n", ctrId)
-							return nil
-						}
-						fmt.Printf("non-essential container %q started successfully\n", ctrId)
-						return nil
-					case ctrStateHealthy:
-						healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
-						if err != nil {
-							if !isEssential {
-								fmt.Printf("non-essential container %q failed to be %q: %v\n", ctrId, state, err)
-								return nil
-							}
-							return fmt.Errorf("essential container %q failed to be %q: %w", ctrId, state, err)
-						}
-						if healthy {
-							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
-							return nil
-						}
-					case ctrStateComplete:
-						exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
-						if err != nil {
-							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
-						}
-						if exitCode != -1 {
-							log.Successf("Successfully dependency container %q exited with code: %d\n", ctrId, exitCode)
-							return nil
-						}
-					case ctrStateSuccess:
-						exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
-						if err != nil {
-							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
-						}
-						if exitCode > 0 {
-							return fmt.Errorf("dependency container %q exited with code %d instead of %d exit code", ctrId, exitCode, 0)
-						}
-						if exitCode == 0 {
-							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
-							return nil
-						}
-					}
 				case <-ctx.Done():
 					return ctx.Err()
+				}
+				switch state {
+				case ctrStateStart:
+					err := o.waitForContainerToStart(ctx, ctrId, isEssential)
+					if err != nil {
+						return err
+					}
+					if isEssential {
+						log.Successf("Successfully container %s is running\n", ctrId)
+						return nil
+					}
+					fmt.Printf("non-essential container %q started successfully\n", ctrId)
+					return nil
+				case ctrStateHealthy:
+					healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
+					if err != nil {
+						if !isEssential {
+							fmt.Printf("non-essential container %q failed to be %q: %v\n", ctrId, state, err)
+							return nil
+						}
+						return fmt.Errorf("essential container %q failed to be %q: %w", ctrId, state, err)
+					}
+					if healthy {
+						log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
+						return nil
+					}
+				case ctrStateComplete:
+					exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+					if err != nil {
+						return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
+					}
+					if exitCode != -1 {
+						log.Successf("Successfully dependency container %q exited with code: %d\n", ctrId, exitCode)
+						return nil
+					}
+				case ctrStateSuccess:
+					exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+					if err != nil {
+						return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
+					}
+					if exitCode > 0 {
+						return fmt.Errorf("dependency container %q exited with code %d instead of %d exit code", ctrId, exitCode, 0)
+					}
+					if exitCode == 0 {
+						log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
+						return nil
+					}
 				}
 			}
 		})
