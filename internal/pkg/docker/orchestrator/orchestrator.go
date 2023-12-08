@@ -115,7 +115,8 @@ func New(docker DockerEngine, idPrefix string, logOptions logOptionsFunc) *Orche
 func (o *Orchestrator) Start() <-chan error {
 	// close done when all goroutines created by Orchestrator have finished
 	done := make(chan struct{})
-	// buffered channel so that the orchestrator routine does not block and can always send the errors from runErrs and action.Do
+	// buffered channel so that the orchestrator routine does not block and
+	// can always send the error from both runErrs and action.Do to errs.
 	errs := make(chan error, 1)
 
 	// orchestrator routine
@@ -570,7 +571,7 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, contain
 							return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 						}
 						if exitCode > 0 {
-							return fmt.Errorf("dependency container %q exited with code %d", ctrId, exitCode)
+							return fmt.Errorf("dependency container %q exited with code %d instead of %d exit code", ctrId, exitCode, 0)
 						}
 						if exitCode == 0 {
 							log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
@@ -664,13 +665,10 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 		// or from the currently running task
 		if taskID == pauseCtrTaskID || taskID == curTaskID {
 			var errContainerExited *dockerengine.ErrContainerExited
-			if errors.As(err, &errContainerExited) && !isEssential {
+			if !isEssential && (errors.As(err, &errContainerExited) || err == nil) {
 				return
 			}
 			if err == nil {
-				if !isEssential {
-					return
-				}
 				err = errors.New("container stopped unexpectedly")
 			}
 			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
