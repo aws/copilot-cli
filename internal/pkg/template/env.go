@@ -138,7 +138,6 @@ type EnvOpts struct {
 	ForceUpdateID      string
 
 	DelegateDNS bool
-	HostedZones *HostedZones
 }
 
 // PublicHTTPConfig represents configuration for a public facing Load Balancer.
@@ -243,12 +242,6 @@ type SecurityGroupRule struct {
 // VPCFlowLogs holds the fields to configure logging IP traffic using VPC flow logs.
 type VPCFlowLogs struct {
 	Retention *int
-}
-
-// HostedZones represents copilot managed hostedzones to route traffic to specific domain.
-type HostedZones struct {
-	RootDomainHostedZoneId string
-	AppDomainHostedZoneId  string
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

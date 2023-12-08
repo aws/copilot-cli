@@ -616,8 +616,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
       DomainName: example.com
       Aliases:
         - nlb.example.com
-      RootHostedZoneId: "Z00ABC"
-      AppHostedZoneId: "Z00DEF"
   NLBCustomDomainFunction:
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain
@@ -683,8 +681,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
       DomainName: example.com
       Aliases:
         - nlb.example.com
-      RootHostedZoneId: "Z00ABC"
-      AppHostedZoneId: "Z00DEF"
   NLBCertValidatorFunction:
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain

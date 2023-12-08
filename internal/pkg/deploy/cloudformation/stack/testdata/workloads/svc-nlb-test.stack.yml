@@ -504,8 +504,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
       Aliases: []
-      RootHostedZoneId: "Z00ABC"
-      AppHostedZoneId: "Z00DEF"
   NLBCertValidatorFunction:
     Type: AWS::Lambda::Function
     Condition: HasAssociatedDomain

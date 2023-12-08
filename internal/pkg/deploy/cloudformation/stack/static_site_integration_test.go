@@ -91,9 +91,8 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 		}
 		serializer, err := stack.NewStaticSite(&stack.StaticSiteConfig{
 			App: &config.Application{
-				Name:               appName,
-				Domain:             "example.com",
-				DomainHostedZoneID: "Z00ABC",
+				Name:   appName,
+				Domain: "example.com",
 			},
 			EnvManifest: envConfig,
 			Manifest:    v,
@@ -105,7 +104,6 @@ func TestStaticSiteService_TemplateAndParamsGeneration(t *testing.T) {
 			ArtifactBucketName: "stackset-bucket",
 			AssetMappingURL:    "s3://stackset-bucket/mappingfile",
 			RootUserARN:        "arn:aws:iam::123456789123:root",
-			AppHostedZoneID:    "Z00DEF",
 		})
 		require.NoError(t, err, "stack should be able to be initialized")
 		tpl, err := serializer.Template()
