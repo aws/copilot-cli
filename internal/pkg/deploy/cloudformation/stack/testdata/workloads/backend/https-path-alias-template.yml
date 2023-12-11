@@ -29,6 +29,9 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
   LogRetention:
     Type: Number
     Default: 30
@@ -137,7 +140,7 @@ Resources:
                 Action:
                   - 'kms:Decrypt'
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                  - !Ref ArtifactKeyARN
         - !If
           # Optional IAM permission required by ECS task def env file
           # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam

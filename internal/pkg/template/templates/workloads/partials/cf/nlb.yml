@@ -139,10 +139,6 @@ NLBCustomDomainAction:
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
     Aliases: {{ if .NLB.Aliases }} {{ fmtSlice .NLB.Aliases }} {{ else }} [] {{ end }}
-    {{- if .HostedZones}}
-    RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
-    AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
-    {{- end}}
 
 NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
@@ -223,10 +219,6 @@ NLBCertValidatorAction:
     RootDNSRole: {{ .AppDNSDelegationRole }}
     DomainName:  {{ .AppDNSName }}
     Aliases: {{ if .NLB.Aliases }} {{ fmtSlice .NLB.Aliases }} {{ else }} [] {{ end }}
-    {{- if .HostedZones}}
-    RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
-    AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
-    {{- end}}
 
 NLBCertValidatorFunction:
   Type: AWS::Lambda::Function

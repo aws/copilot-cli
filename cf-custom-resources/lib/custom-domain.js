@@ -98,10 +98,7 @@ const writeCustomDomainRecord = async function (
   accessDNS,
   accessHostedZone,
   aliasTypes,
-  action,
-  rootHostedZoneId,
-  appHostedZoneId,
-  envHostedZoneId
+  action
 ) {
   const actions = [];
   for (const alias of aliases) {
@@ -114,8 +111,7 @@ const writeCustomDomainRecord = async function (
           accessDNS,
           accessHostedZone,
           aliasType.domain,
-          action,
-          envHostedZoneId
+          action
         ));
         break;
       case aliasTypes.AppDomainZone:
@@ -125,8 +121,7 @@ const writeCustomDomainRecord = async function (
           accessDNS,
           accessHostedZone,
           aliasType.domain,
-          action,
-          appHostedZoneId
+          action
         ));
         break;
       case aliasTypes.RootDomainZone:
@@ -136,8 +131,7 @@ const writeCustomDomainRecord = async function (
           accessDNS,
           accessHostedZone,
           aliasType.domain,
-          action,
-          rootHostedZoneId
+          action
         ));
         break;
       // We'll skip if it is the other alias type since it will be in another account's route53.
@@ -153,10 +147,9 @@ const writeARecord = async function (
   accessDNS,
   accessHostedZone,
   domain,
-  action,
-  hostedZoneID
+  action
 ) {
-  let hostedZoneId = hostedZoneID || hostedZoneCache.get(domain);
+  let hostedZoneId = hostedZoneCache.get(domain);
   if (!hostedZoneId) {
     const hostedZones = await route53
       .listHostedZonesByName({
@@ -240,9 +233,6 @@ exports.handler = async function (event, context) {
           props.PublicAccessHostedZone,
           aliasTypes,
           changeRecordAction.Upsert,
-          props.RootHostedZoneId,
-          props.AppHostedZoneId,
-          props.EnvHostedZoneId
         );
         break;
       case "Update":
@@ -254,9 +244,6 @@ exports.handler = async function (event, context) {
           props.PublicAccessHostedZone,
           aliasTypes,
           changeRecordAction.Upsert,
-          props.RootHostedZoneId,
-          props.AppHostedZoneId,
-          props.EnvHostedZoneId
         );
         // After upserting new aliases, delete unused ones. For example: previously we have ["foo.com", "bar.com"],
         // and now the aliases param is updated to just ["foo.com"] then we'll delete "bar.com".
@@ -274,9 +261,6 @@ exports.handler = async function (event, context) {
           props.PublicAccessHostedZone,
           aliasTypes,
           changeRecordAction.Delete,
-          props.RootHostedZoneId,
-          props.AppHostedZoneId,
-          props.EnvHostedZoneId
         );
         break;
       case "Delete":
@@ -287,10 +271,7 @@ exports.handler = async function (event, context) {
           props.PublicAccessDNS,
           props.PublicAccessHostedZone,
           aliasTypes,
-          changeRecordAction.Delete,
-          props.RootHostedZoneId,
-          props.AppHostedZoneId,
-          props.EnvHostedZoneId
+          changeRecordAction.Delete
         );
         break;
       default:

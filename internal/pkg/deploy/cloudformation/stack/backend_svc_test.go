@@ -681,6 +681,10 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterValue: aws.String(""),
 		},
 		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
 			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 			ParameterValue: aws.String("frontend"),
 		},
