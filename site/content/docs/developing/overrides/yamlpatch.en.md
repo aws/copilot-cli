@@ -14,7 +14,7 @@ or 2) you have to write only a handful modifications.
 
 You can extend your CloudFormation template with YAML patches by running the `copilot [noun] override` command.
 For example, you can run `copilot svc override` to update the template of a Load Balanced Web Service.
-The command will generate a sample `cfn.patches.yml` file under the `copilot/[name]/override` directory.
+The command will generate a sample `cfn.patches.yml` file under the `copilot/[name]/overrides` directory.
 
 ## How does it work?
 
