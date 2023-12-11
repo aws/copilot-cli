@@ -170,6 +170,7 @@ func (d *staticSiteDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		Manifest:           d.staticSiteMft,
 		RawManifest:        d.rawMft,
 		ArtifactBucketName: d.resources.S3Bucket,
+		ArtifactKey:        d.resources.KMSKeyARN,
 		RuntimeConfig:      *rc,
 		RootUserARN:        in.RootUserARN,
 		Addons:             d.addons,

@@ -152,6 +152,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 			Manifest:           d.rdwsMft,
 			RawManifest:        d.rawMft,
 			ArtifactBucketName: d.resources.S3Bucket,
+			ArtifactKey:        d.resources.KMSKeyARN,
 			RuntimeConfig:      *rc,
 			Addons:             d.addons,
 		})

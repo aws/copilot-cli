@@ -34,6 +34,9 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
   EnvFileARNFornginx:
     Description: 'URL of the environment file for the nginx sidecar.'
     Type: String
@@ -208,7 +211,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Action:
                   - 'kms:Decrypt'
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                  - !Ref ArtifactKeyARN
         - !If
           # Optional IAM permission required by ECS task def env file
           # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam

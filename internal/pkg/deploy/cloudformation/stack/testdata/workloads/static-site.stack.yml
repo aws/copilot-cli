@@ -15,6 +15,9 @@ Parameters:
     Description: URL of the addons nested stack template within the S3 bucket.
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
 
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
@@ -292,9 +295,7 @@ Resources:
                   - arn:aws:s3:::stackset-bucket/local-assets/*
               - Effect: Allow
                 Action: kms:Decrypt
-                Resource:
-                  Fn::ImportValue:
-                    !Sub "${AppName}-ArtifactKey"
+                Resource: !Ref ArtifactKeyARN
                 Condition:
                   StringEquals:
                     kms:EncryptionContext:aws:s3:arn: "arn:aws:s3:::stackset-bucket"
