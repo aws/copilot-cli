@@ -2226,6 +2226,7 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 	if err != nil {
 		return err
 	}
+
 	port, err := strconv.ParseUint(aws.StringValue(nlbReceiverPort), 10, 16)
 	if err != nil {
 		return err
@@ -2242,6 +2243,11 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}
 
+	// Handle TLS termination of container exposed port protocol
+	if targetProtocol == TLS {
+		targetProtocol = TCP
+	}
+
 	// Prefer `nlb.target_container`, then existing exposed port mapping, then fallback on name of main container
 	targetContainer := mainContainerName
 	if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
@@ -2256,6 +2262,7 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 
 func validateAndPopulateExposedPortMapping(portExposedTo map[uint16]containerNameAndProtocol, targetPort uint16, targetProtocol string, targetContainer string) error {
 	exposedContainerAndProtocol, alreadyExposed := portExposedTo[targetPort]
+	targetProtocol = strings.ToUpper(targetProtocol)
 
 	// Port is not associated with container and protocol, populate map
 	if !alreadyExposed {
