@@ -233,9 +233,8 @@ Outputs:
 
 		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
 			App: &config.Application{
-				Name:               "phonetool",
-				Domain:             "phonetool.com",
-				DomainHostedZoneID: "Z00ABC",
+				Name:   "phonetool",
+				Domain: "phonetool.com",
 			},
 			EnvManifest: &manifest.Environment{
 				Workload: manifest.Workload{
@@ -255,7 +254,6 @@ Outputs:
 			},
 			Addons:             mockAddons{},
 			ArtifactBucketName: "bucket",
-			AppHostedZoneID:    "Z00DEF",
 		}, func(s *LoadBalancedWebService) {
 			s.parser = parser
 		})
@@ -354,10 +352,6 @@ Outputs:
 					ContainerPort: 80,
 					ContainerName: "frontend",
 				},
-			},
-			HostedZones: &template.HostedZones{
-				RootDomainHostedZoneId: "Z00ABC",
-				AppDomainHostedZoneId:  "Z00DEF",
 			},
 		}, actual)
 	})

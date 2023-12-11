@@ -242,9 +242,6 @@ Resources:
       CustomDomain: {{ .Alias }}
       AppDNSRole: {{ .AppDNSDelegationRole }}
       AppDNSName: {{ .AppDNSName }}
-      {{- if .HostedZones}}
-      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
-      {{- end}}
 
   CustomResourceRole:
     Metadata:

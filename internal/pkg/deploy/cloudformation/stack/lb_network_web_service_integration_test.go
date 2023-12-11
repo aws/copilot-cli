@@ -102,7 +102,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			},
 		}
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App:                &config.Application{Name: appName, Domain: "example.com", DomainHostedZoneID: "Z00ABC"},
+			App:                &config.Application{Name: appName, Domain: "example.com"},
 			EnvManifest:        envConfig,
 			Manifest:           v,
 			ArtifactBucketName: "bucket",
@@ -114,8 +114,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 				Version:                  "v1.29.0",
 			},
-			RootUserARN:     "arn:aws:iam::123456789123:root",
-			AppHostedZoneID: "Z00DEF",
+			RootUserARN: "arn:aws:iam::123456789123:root",
 		})
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
