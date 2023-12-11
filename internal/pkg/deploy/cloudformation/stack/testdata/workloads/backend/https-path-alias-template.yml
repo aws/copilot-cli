@@ -427,7 +427,6 @@ Resources:
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
-      Aliases: ["example.com", "foobar.com", "*.foobar.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [InternalALBWorkloads]
       EnvVersion: v1.42.0
