@@ -135,6 +135,7 @@ const (
 
 	enableContainerInsightsFlag = "container-insights"
 	defaultConfigFlag           = "default-config"
+	allowFederatedSessionFlag   = "federated-session"
 
 	accessKeyIDFlag     = "aws-access-key-id"
 	secretAccessKeyFlag = "aws-secret-access-key"
@@ -412,6 +413,7 @@ Cannot be specified with --default-config or any of the --override flags.`
 
 	enableContainerInsightsFlagDescription = "Optional. Enable CloudWatch Container Insights."
 	defaultConfigFlagDescription           = "Optional. Skip prompting and use default environment configuration."
+	allowFederatedSessionFlagDescription   = "Optional. Shorthand to add additional permissions to the Assume Role policy required for federated sessions with a source identity or transitive session tags."
 
 	profileFlagDescription         = "Name of the profile for the environment account."
 	accessKeyIDFlagDescription     = "Optional. An AWS access key for the environment account."

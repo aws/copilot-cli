@@ -490,6 +490,7 @@ func (o *initOpts) deployEnv() error {
 		// Set the application name from app init to the env init command, and check whether a flag has been passed for envName.
 		initEnvCmd.appName = *o.appName
 		initEnvCmd.name = o.initVars.envName
+		initEnvCmd.federatedSession = true
 	}
 
 	if err := o.askEnvNameAndMaybeInit(); err != nil {

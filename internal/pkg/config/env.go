@@ -30,11 +30,12 @@ type Environment struct {
 
 // CustomizeEnv represents the custom environment config.
 type CustomizeEnv struct {
-	ImportVPC                   *ImportVPC `json:"importVPC,omitempty"`
-	VPCConfig                   *AdjustVPC `json:"adjustVPC,omitempty"`
-	ImportCertARNs              []string   `json:"importCertARNs,omitempty"`
-	InternalALBSubnets          []string   `json:"internalALBSubnets,omitempty"`
-	EnableInternalALBVPCIngress bool       `json:"enableInternalALBVPCIngress,omitempty"`
+	ImportVPC                       *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig                       *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportCertARNs                  []string   `json:"importCertARNs,omitempty"`
+	InternalALBSubnets              []string   `json:"internalALBSubnets,omitempty"`
+	EnableInternalALBVPCIngress     bool       `json:"enableInternalALBVPCIngress,omitempty"`
+	AdditionalAssumeRolePermissions []string   `json:"additionalAssumeRolePermissions,omitempty"`
 }
 
 // IsEmpty returns true if CustomizeEnv is an empty struct.
@@ -42,7 +43,7 @@ func (c *CustomizeEnv) IsEmpty() bool {
 	if c == nil {
 		return true
 	}
-	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0 && len(c.InternalALBSubnets) == 0 && !c.EnableInternalALBVPCIngress
+	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0 && len(c.InternalALBSubnets) == 0 && !c.EnableInternalALBVPCIngress && len(c.AdditionalAssumeRolePermissions) == 0
 }
 
 // ImportVPC holds the fields to import VPC resources.

@@ -70,11 +70,19 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 			Network: environmentNetworkConfig{
 				VPC: vpc,
 			},
-			HTTPConfig:    http,
-			Observability: obs,
+			HTTPConfig:                      http,
+			Observability:                   obs,
+			AdditionalAssumeRolePermissions: additionalAssumeRolePermissions(cfg.CustomConfig),
 		},
 		parser: parser,
 	}
+}
+
+func additionalAssumeRolePermissions(cfg *config.CustomizeEnv) (permissions []string) {
+	if cfg == nil {
+		return permissions
+	}
+	return cfg.AdditionalAssumeRolePermissions
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
@@ -91,10 +99,11 @@ func (e *Environment) MarshalBinary() ([]byte, error) {
 
 // EnvironmentConfig defines the configuration settings for an environment manifest
 type EnvironmentConfig struct {
-	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
-	Observability environmentObservability `yaml:"observability,omitempty,flow"`
-	HTTPConfig    EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
-	CDNConfig     EnvironmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	Network                         environmentNetworkConfig `yaml:"network,omitempty,flow"`
+	Observability                   environmentObservability `yaml:"observability,omitempty,flow"`
+	HTTPConfig                      EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	CDNConfig                       EnvironmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	AdditionalAssumeRolePermissions []string                 `yaml:"additionalAssumeRolePermissions,omitempty"`
 }
 
 // IsPublicLBIngressRestrictedToCDN returns whether an environment has its

@@ -113,7 +113,8 @@ Resources:
           - Effect: Allow
             Principal:
               AWS: !Sub ${ToolsAccountPrincipalARN}
-            Action: sts:AssumeRole
+            Action:
+              - sts:AssumeRole
       Path: /
       Policies:
         - PolicyName: root

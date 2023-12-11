@@ -102,18 +102,19 @@ type EnvConfig struct {
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
-	ImportVPCConfig     *config.ImportVPC     // Optional configuration if users have an existing VPC.
-	AdjustVPCConfig     *config.AdjustVPC     // Optional configuration if users want to override default VPC configuration.
-	ImportCertARNs      []string              // Optional configuration if users want to import certificates.
-	InternalALBSubnets  []string              // Optional configuration if users want to specify internal ALB placement.
-	AllowVPCIngress     bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
-	CIDRPrefixListIDs   []string              // Optional configuration to specify public security group ingress based on prefix lists.
-	PublicALBSourceIPs  []string              // Optional configuration to specify public security group ingress based on customer given source IPs.
-	InternalLBSourceIPs []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
-	Telemetry           *config.Telemetry     // Optional observability and monitoring configuration.
-	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
-	RawMft              string                // Content of the environment manifest with env var interpolation only.
-	ForceUpdate         bool
+	ImportVPCConfig                 *config.ImportVPC     // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig                 *config.AdjustVPC     // Optional configuration if users want to override default VPC configuration.
+	ImportCertARNs                  []string              // Optional configuration if users want to import certificates.
+	InternalALBSubnets              []string              // Optional configuration if users want to specify internal ALB placement.
+	AllowVPCIngress                 bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
+	CIDRPrefixListIDs               []string              // Optional configuration to specify public security group ingress based on prefix lists.
+	PublicALBSourceIPs              []string              // Optional configuration to specify public security group ingress based on customer given source IPs.
+	InternalLBSourceIPs             []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
+	Telemetry                       *config.Telemetry     // Optional observability and monitoring configuration.
+	AdditionalAssumeRolePermissions []string              // Optional configuration to specify additional permissions to put into the Environment Manager Role for that environment.
+	Mft                             *manifest.Environment // Unmarshaled and interpolated manifest object.
+	RawMft                          string                // Content of the environment manifest with env var interpolation only.
+	ForceUpdate                     bool
 }
 
 func (cfg *EnvConfig) loadCustomResourceURLs(crs []uploadable) error {
@@ -202,18 +203,19 @@ func (e *Env) Template() (string, error) {
 		forceUpdateID = id.String()
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:              e.in.App.Name,
-		EnvName:              e.in.Name,
-		CustomResources:      crs,
-		Addons:               addons,
-		ArtifactBucketARN:    e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
-		PermissionsBoundary:  e.in.PermissionsBoundary,
-		PublicHTTPConfig:     e.publicHTTPConfig(),
-		VPCConfig:            vpcConfig,
-		PrivateHTTPConfig:    e.privateHTTPConfig(),
-		Telemetry:            e.telemetryConfig(),
-		CDNConfig:            e.cdnConfig(),
+		AppName:                         e.in.App.Name,
+		EnvName:                         e.in.Name,
+		CustomResources:                 crs,
+		Addons:                          addons,
+		ArtifactBucketARN:               e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:            e.in.ArtifactBucketKeyARN,
+		PermissionsBoundary:             e.in.PermissionsBoundary,
+		PublicHTTPConfig:                e.publicHTTPConfig(),
+		VPCConfig:                       vpcConfig,
+		PrivateHTTPConfig:               e.privateHTTPConfig(),
+		Telemetry:                       e.telemetryConfig(),
+		CDNConfig:                       e.cdnConfig(),
+		AdditionalAssumeRolePermissions: e.in.AdditionalAssumeRolePermissions,
 
 		LatestVersion:      e.in.Version,
 		SerializedManifest: string(e.in.RawMft),
@@ -414,9 +416,10 @@ type BootstrapEnv Env
 // Template returns the CloudFormation template to bootstrap environment resources.
 func (e *BootstrapEnv) Template() (string, error) {
 	content, err := e.parser.ParseEnvBootstrap(&template.EnvOpts{
-		ArtifactBucketARN:    e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
-		PermissionsBoundary:  e.in.PermissionsBoundary,
+		ArtifactBucketARN:               e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:            e.in.ArtifactBucketKeyARN,
+		PermissionsBoundary:             e.in.PermissionsBoundary,
+		AdditionalAssumeRolePermissions: e.in.AdditionalAssumeRolePermissions,
 	})
 	if err != nil {
 		return "", err

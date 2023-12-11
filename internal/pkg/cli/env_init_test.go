@@ -1023,6 +1023,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		enableContainerInsights bool
 		allowDowngrade          bool
+		allowFederatedSession   bool
 		setupMocks              func(m *initEnvExecuteMocks)
 		wantedErrorS            string
 	}{
@@ -1154,6 +1155,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		"success": {
 			enableContainerInsights: true,
 			allowDowngrade:          true,
+			allowFederatedSession:   true,
 			setupMocks: func(m *initEnvExecuteMocks) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.store.EXPECT().CreateEnvironment(&config.Environment{
@@ -1338,6 +1340,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						EnableContainerInsights: tc.enableContainerInsights,
 					},
 					allowAppDowngrade: tc.allowDowngrade,
+					federatedSession:  tc.allowFederatedSession,
 				},
 				store:       m.store,
 				envDeployer: m.deployer,

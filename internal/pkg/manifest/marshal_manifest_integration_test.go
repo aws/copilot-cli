@@ -379,6 +379,15 @@ func TestEnvironment_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestData: "environment-import-vpc.yml",
 		},
+		"with additional assume role permissions": {
+			inProps: EnvironmentProps{
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					AdditionalAssumeRolePermissions: []string{"sts:SetSourceIdentity"},
+				},
+			},
+			wantedTestData: "environment-assume-role-permissions.yml",
+		},
 		"basic manifest": {
 			inProps: EnvironmentProps{
 				Name: "test",

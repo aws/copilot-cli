@@ -270,6 +270,15 @@ type DeployEnvironmentInput struct {
 	Detach              bool
 }
 
+// AdditionalAssumeRolePermissions helper method to export the additional assume role permissions of environment roles
+// from the manifest.
+func (dei DeployEnvironmentInput) AdditionalAssumeRolePermissions() []string {
+	if dei.Manifest == nil {
+		return []string{}
+	}
+	return dei.Manifest.AdditionalAssumeRolePermissions
+}
+
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
 func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
 	stackInput, err := d.buildStackInput(in)
@@ -420,18 +429,19 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 			RootDomainHostedZoneId: d.app.DomainHostedZoneID,
 			AppDomainHostedZoneId:  appHostedZoneID,
 		},
-		AdditionalTags:       d.app.Tags,
-		Addons:               addons,
-		CustomResourcesURLs:  in.CustomResourcesURLs,
-		ArtifactBucketARN:    awss3.FormatARN(partition.ID(), resources.S3Bucket),
-		ArtifactBucketKeyARN: resources.KMSKeyARN,
-		CIDRPrefixListIDs:    cidrPrefixListIDs,
-		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
-		Mft:                  in.Manifest,
-		ForceUpdate:          in.ForceNewUpdate,
-		RawMft:               in.RawManifest,
-		PermissionsBoundary:  in.PermissionsBoundary,
-		Version:              in.Version,
+		AdditionalTags:                  d.app.Tags,
+		Addons:                          addons,
+		CustomResourcesURLs:             in.CustomResourcesURLs,
+		ArtifactBucketARN:               awss3.FormatARN(partition.ID(), resources.S3Bucket),
+		ArtifactBucketKeyARN:            resources.KMSKeyARN,
+		CIDRPrefixListIDs:               cidrPrefixListIDs,
+		PublicALBSourceIPs:              d.publicALBSourceIPs(in),
+		Mft:                             in.Manifest,
+		AdditionalAssumeRolePermissions: in.AdditionalAssumeRolePermissions(),
+		ForceUpdate:                     in.ForceNewUpdate,
+		RawMft:                          in.RawManifest,
+		PermissionsBoundary:             in.PermissionsBoundary,
+		Version:                         in.Version,
 	}, nil
 }
 
