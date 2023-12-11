@@ -2227,11 +2227,6 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 		return err
 	}
 
-	// Handle termination of TLS protocol
-	if strings.ToUpper(aws.StringValue(nlbProtocol)) == TLS {
-		nlbProtocol = aws.String(TCP)
-	}
-
 	port, err := strconv.ParseUint(aws.StringValue(nlbReceiverPort), 10, 16)
 	if err != nil {
 		return err
@@ -2246,6 +2241,11 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 	targetProtocol := defaultProtocol
 	if nlbProtocol != nil {
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
+	}
+
+	// Handle TLS termination of container exposed port protocol
+	if targetProtocol == TLS {
+		targetProtocol = TCP
 	}
 
 	// Prefer `nlb.target_container`, then existing exposed port mapping, then fallback on name of main container
