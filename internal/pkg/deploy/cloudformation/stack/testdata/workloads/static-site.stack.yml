@@ -15,6 +15,9 @@ Parameters:
     Description: URL of the addons nested stack template within the S3 bucket.
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
 
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
@@ -292,9 +295,7 @@ Resources:
                   - arn:aws:s3:::stackset-bucket/local-assets/*
               - Effect: Allow
                 Action: kms:Decrypt
-                Resource:
-                  Fn::ImportValue:
-                    !Sub "${AppName}-ArtifactKey"
+                Resource: !Ref ArtifactKeyARN
                 Condition:
                   StringEquals:
                     kms:EncryptionContext:aws:s3:arn: "arn:aws:s3:::stackset-bucket"
@@ -377,8 +378,6 @@ Resources:
       RootDNSRole: arn:aws:iam::123456789123:role/my-app-DNSDelegationRole
       DomainName: example.com
       Aliases: ["*.example.com"]
-      RootHostedZoneId: "Z00ABC"
-      AppHostedZoneId: "Z00DEF"
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -441,8 +440,6 @@ Resources:
       DomainName: example.com
       IsCloudFrontCertificate: true
       Aliases: ["*.example.com"]
-      RootHostedZoneId: "Z00ABC"
-      AppHostedZoneId: "Z00DEF"
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function

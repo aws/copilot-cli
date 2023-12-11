@@ -50,6 +50,9 @@ Parameters:
     Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar.'
     Default: ""
 {{- end }}
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
   TargetContainer:
     Type: String
   TargetPort:

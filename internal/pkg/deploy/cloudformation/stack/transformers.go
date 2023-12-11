@@ -1357,13 +1357,3 @@ func (in uploadableCRs) convert() []uploadable {
 	}
 	return out
 }
-
-func convertHostedZones(app deploy.AppInformation) *template.HostedZones {
-	if app.Domain == "" {
-		return nil
-	}
-	return &template.HostedZones{
-		RootDomainHostedZoneId: app.RootDomainHostedZoneId,
-		AppDomainHostedZoneId:  app.AppDomainHostedZoneId,
-	}
-}
