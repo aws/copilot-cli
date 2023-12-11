@@ -59,6 +59,7 @@ type LoadBalancedWebServiceConfig struct {
 	RuntimeConfig      RuntimeConfig
 	RootUserARN        string
 	ArtifactBucketName string
+	ArtifactKey        string
 	Addons             NestedStackConfigurer
 	AppHostedZoneID    string
 }
@@ -101,6 +102,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				app:                conf.App.Name,
 				permBound:          conf.App.PermissionsBoundary,
 				artifactBucketName: conf.ArtifactBucketName,
+				artifactKey:        conf.ArtifactKey,
 				rc:                 conf.RuntimeConfig,
 				image:              conf.Manifest.ImageConfig.Image,
 				rawManifest:        conf.RawManifest,

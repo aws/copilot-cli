@@ -169,6 +169,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 			Manifest:           d.lbMft,
 			RawManifest:        d.rawMft,
 			ArtifactBucketName: d.resources.S3Bucket,
+			ArtifactKey:        d.resources.KMSKeyARN,
 			RuntimeConfig:      *rc,
 			RootUserARN:        in.RootUserARN,
 			Addons:             d.addons,
