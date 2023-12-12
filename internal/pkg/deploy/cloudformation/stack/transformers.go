@@ -95,7 +95,10 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 	sort.Strings(keys)
 	for _, name := range keys {
 		config := s[name]
-		imageURI := rc.PushedImages[name].URI()
+		var imageURI string
+		if image, ok := rc.PushedImages[name]; ok {
+			imageURI = image.URI()
+		}
 		if uri, hasLocation := config.ImageURI(); hasLocation {
 			imageURI = uri
 		}

@@ -173,8 +173,8 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.PushedImages != nil {
-		img = w.rc.PushedImages[w.name].URI()
+	if image, ok := w.rc.PushedImages[w.name]; ok {
+		img = image.URI()
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -416,8 +416,8 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.PushedImages != nil {
-		img = w.rc.PushedImages[w.name].URI()
+	if image, ok := w.rc.PushedImages[w.name]; ok {
+		img = image.URI()
 	}
 
 	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
