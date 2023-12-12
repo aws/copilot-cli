@@ -37,6 +37,7 @@ const (
 	WorkloadTaskCountParamKey         = "TaskCount"
 	WorkloadLogRetentionParamKey      = "LogRetention"
 	WorkloadEnvFileARNParamKey        = "EnvFileARN"
+	WorkloadArtifactKeyARNParamKey    = "ArtifactKeyARN"
 	WorkloadLoggingEnvFileARNParamKey = "LoggingEnvFileARN"
 
 	FmtSidecarEnvFileARNParamKey = "EnvFileARNFor%s"
@@ -152,6 +153,7 @@ type wkld struct {
 	app                string
 	permBound          string
 	artifactBucketName string
+	artifactKey        string
 	rc                 RuntimeConfig
 	image              location
 	rawManifest        string
@@ -373,6 +375,10 @@ func (w *ecsWkld) envFileParams() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(w.rc.EnvFileARNs[w.name]),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(w.wkld.artifactKey),
 		},
 	}
 	// Decide whether to inject a Log container env file. If there is log configuration

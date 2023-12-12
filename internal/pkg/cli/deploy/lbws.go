@@ -161,13 +161,6 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 	if err := d.validateNLBRuntime(); err != nil {
 		return nil, err
 	}
-	var appHostedZoneID string
-	if d.app.Domain != "" {
-		appHostedZoneID, err = appDomainHostedZoneId(d.app.Name, d.app.Domain, d.domainHostedZoneGetter)
-		if err != nil {
-			return nil, err
-		}
-	}
 	var opts []stack.LoadBalancedWebServiceOption
 	if !d.lbMft.NLBConfig.IsEmpty() {
 		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
@@ -195,10 +188,10 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 			Manifest:           d.lbMft,
 			RawManifest:        d.rawMft,
 			ArtifactBucketName: d.resources.S3Bucket,
+			ArtifactKey:        d.resources.KMSKeyARN,
 			RuntimeConfig:      *rc,
 			RootUserARN:        in.RootUserARN,
 			Addons:             d.addons,
-			AppHostedZoneID:    appHostedZoneID,
 		}, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("create stack configuration: %w", err)

@@ -67,8 +67,8 @@ type LoadBalancedWebServiceConfig struct {
 	RuntimeConfig      RuntimeConfig
 	RootUserARN        string
 	ArtifactBucketName string
+	ArtifactKey        string
 	Addons             NestedStackConfigurer
-	AppHostedZoneID    string
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
@@ -85,11 +85,9 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	if conf.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                   conf.App.Name,
-			Domain:                 conf.App.Domain,
-			AccountPrincipalARN:    conf.RootUserARN,
-			RootDomainHostedZoneId: conf.App.DomainHostedZoneID,
-			AppDomainHostedZoneId:  conf.AppHostedZoneID,
+			Name:                conf.App.Name,
+			Domain:              conf.App.Domain,
+			AccountPrincipalARN: conf.RootUserARN,
 		}
 		httpsEnabled = true
 	}
@@ -109,6 +107,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				app:                conf.App.Name,
 				permBound:          conf.App.PermissionsBoundary,
 				artifactBucketName: conf.ArtifactBucketName,
+				artifactKey:        conf.ArtifactKey,
 				rc:                 conf.RuntimeConfig,
 				image:              conf.Manifest.ImageConfig.Image,
 				rawManifest:        conf.RawManifest,
@@ -249,7 +248,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,
 		AppDNSDelegationRole: nlbConfig.appDNSDelegationRole,
-		HostedZones:          convertHostedZones(s.appInfo),
 		NLB:                  nlbConfig.settings,
 
 		// service connect and service discovery options.
