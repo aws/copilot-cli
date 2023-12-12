@@ -5255,6 +5255,21 @@ func (mr *MockenvDescriberMockRecorder) Manifest() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockenvDescriber)(nil).Manifest))
 }
 
+// PublicCIDRBlocks mocks base method.
+func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublicCIDRBlocks")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublicCIDRBlocks indicates an expected call of PublicCIDRBlocks.
+func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
+}
+
 // ValidateCFServiceDomainAliases mocks base method.
 func (m *MockenvDescriber) ValidateCFServiceDomainAliases() error {
 	m.ctrl.T.Helper()
