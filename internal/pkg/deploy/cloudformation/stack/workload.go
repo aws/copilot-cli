@@ -197,6 +197,10 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(w.rc.AddonsTemplateURL),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(w.artifactKey),
+		},
 	}, nil
 }
 
@@ -375,10 +379,6 @@ func (w *ecsWkld) envFileParams() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(w.rc.EnvFileARNs[w.name]),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
-			ParameterValue: aws.String(w.wkld.artifactKey),
 		},
 	}
 	// Decide whether to inject a Log container env file. If there is log configuration
