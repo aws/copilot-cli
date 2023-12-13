@@ -34,6 +34,8 @@ image:
     nginx: start
 env_file: ./magic.env
 
+platform: linux/x86_64
+
 http:
   # Requests to this path will be forwarded to your service. 
   # To match all requests you can use the "/" path. 
@@ -48,12 +50,12 @@ cpu: 256
 memory: 512
 # Number of tasks that should be running in your service.
 count: 1
-
 sidecars:
   nginx:
     port: 80
     image:
-	  build: nginx/Dockerfile
+      build: nginx/Dockerfile
+      context: ./nginx
     variables:
       NGINX_PORT: 80
     env_file: ./magic.env
@@ -157,10 +159,10 @@ var _ = Describe("sidecars flow", func() {
 		)
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:       svcName,
-				SvcType:    "Load Balanced Web Service",
-				Dockerfile: "./hello/Dockerfile",
-				SvcPort:    "3000",
+				Name:    svcName,
+				SvcType: "Load Balanced Web Service",
+				Image:   mainImageURI,
+				SvcPort: "3000",
 			})
 		})
 
