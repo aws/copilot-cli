@@ -28,7 +28,7 @@ NetworkLoadBalancerSecurityGroup:
 {{- end}}
     VpcId:
       Fn::ImportValue:
-        !Sub "${AppName}-${EnvName}-VpcId" 
+        !Sub "${AppName}-${EnvName}-VpcId"
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvName}-${WorkloadName}-nlb'
