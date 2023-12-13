@@ -13,7 +13,6 @@ import (
 // Double is a test double for dockerengine.DockerCmdClient
 type Double struct {
 	StopFn                         func(context.Context, string) error
-	DoesContainerExistFn           func(context.Context, string) (bool, error)
 	IsContainerRunningFn           func(context.Context, string) (bool, error)
 	RunFn                          func(context.Context, *dockerengine.RunOptions) error
 	BuildFn                        func(context.Context, *dockerengine.BuildArguments, io.Writer) error
@@ -29,14 +28,6 @@ func (d *Double) Stop(ctx context.Context, name string) error {
 		return nil
 	}
 	return d.StopFn(ctx, name)
-}
-
-// DoesContainerExist calls the stubbed function.
-func (d *Double) DoesContainerExist(ctx context.Context, name string) (bool, error) {
-	if d.IsContainerRunningFn == nil {
-		return false, nil
-	}
-	return d.DoesContainerExistFn(ctx, name)
 }
 
 // IsContainerRunning calls the stubbed function.

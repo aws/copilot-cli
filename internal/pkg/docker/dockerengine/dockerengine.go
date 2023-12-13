@@ -361,15 +361,6 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 	return g.Wait()
 }
 
-// DoesContainerExist checks if a specific Docker container exists.
-func (c DockerCmdClient) DoesContainerExist(ctx context.Context, name string) (bool, error) {
-	output, err := c.containerID(ctx, name)
-	if err != nil {
-		return false, err
-	}
-	return output != "", nil
-}
-
 // IsContainerRunning checks if a specific Docker container is running.
 func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (bool, error) {
 	state, err := c.containerState(ctx, name)
