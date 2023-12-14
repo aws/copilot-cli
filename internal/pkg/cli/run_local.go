@@ -42,6 +42,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -107,27 +108,28 @@ type runLocalVars struct {
 type runLocalOpts struct {
 	runLocalVars
 
-	sel                 deploySelector
-	ecsClient           ecsClient
-	ssm                 secretGetter
-	secretsManager      secretGetter
-	sessProvider        sessionProvider
-	sess                *session.Session
-	envManagerSess      *session.Session
-	targetEnv           *config.Environment
-	targetApp           *config.Application
-	store               store
-	ws                  wsWlDirReader
-	cmd                 execRunner
-	dockerEngine        dockerEngineRunner
-	repository          repositoryService
-	prog                progress
-	orchestrator        containerOrchestrator
-	hostFinder          hostFinder
-	envChecker          versionCompatibilityChecker
-	debounceTime        time.Duration
-	newRecursiveWatcher func() (recursiveWatcher, error)
+	sel            deploySelector
+	ecsClient      ecsClient
+	ssm            secretGetter
+	secretsManager secretGetter
+	sessProvider   sessionProvider
+	sess           *session.Session
+	envManagerSess *session.Session
+	targetEnv      *config.Environment
+	targetApp      *config.Application
+	store          store
+	ws             wsWlDirReader
+	cmd            execRunner
+	dockerEngine   dockerEngineRunner
+	repository     repositoryService
+	prog           progress
+	orchestrator   containerOrchestrator
+	hostFinder     hostFinder
+	envChecker     versionCompatibilityChecker
+	debounceTime   time.Duration
 
+	newRecursiveWatcher  func() (recursiveWatcher, error)
+	dockerignoreExcludes func(wsPath string) ([]string, error)
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
@@ -256,6 +258,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
 		return file.NewRecursiveWatcher(0)
 	}
+	o.dockerignoreExcludes = dockerfile.ReadDockerignore
 	return o, nil
 }
 
@@ -559,6 +562,11 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 	watchCh := make(chan interface{})
 	watchErrCh := make(chan error)
 
+	excludes, err := o.dockerignoreExcludes(workspacePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read excludes: %w", err)
+	}
+
 	watcher, err := o.newRecursiveWatcher()
 	if err != nil {
 		return nil, nil, fmt.Errorf("file: %w", err)
@@ -572,6 +580,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 	watcherErrors := watcher.Errors()
 
 	debounceTimer := time.NewTimer(o.debounceTime)
+	debounceTimerRunning := false
 	if !debounceTimer.Stop() {
 		// flush the timer in case stop is called after the timer finishes
 		<-debounceTimer.C
@@ -600,11 +609,12 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					break
 				}
 
-				// check if any subdirectories within copilot directory are hidden
-				isHidden := false
 				parent := workspacePath
 				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
+
+				// check if any subdirectories within copilot directory are hidden
 				// fsnotify events are always of form /a/b/c, don't use filepath.Split as that's OS dependent
+				isHidden := false
 				for _, child := range strings.Split(suffix, "/") {
 					parent = filepath.Join(parent, child)
 					subdirHidden, err := file.IsHiddenFile(child)
@@ -616,11 +626,33 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					}
 				}
 
-				// TODO(Aiden): implement dockerignore blacklist for update
-				if !isHidden {
+				// skip updates from files matching .dockerignore patterns
+				isExcluded := false
+				for _, pattern := range excludes {
+					matches, err := filepath.Match(pattern, suffix)
+					if err != nil {
+						break
+					}
+					if matches {
+						isExcluded = true
+					}
+				}
+
+				if !isHidden && !isExcluded {
+					if !debounceTimerRunning {
+						fmt.Println("Restarting task...")
+						debounceTimerRunning = true
+					}
 					debounceTimer.Reset(o.debounceTime)
 				}
 			case <-debounceTimer.C:
+				excludes, err = o.dockerignoreExcludes(workspacePath)
+				if err != nil {
+					watchErrCh <- fmt.Errorf("read excludes: %w", err)
+					return
+				}
+
+				debounceTimerRunning = false
 				watchCh <- nil
 			}
 		}

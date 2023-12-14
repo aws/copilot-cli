@@ -16,6 +16,7 @@ require (
 	github.com/imdario/mergo v0.3.16
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.11.6
+	github.com/moby/patternmatcher v0.6.0
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/robfig/cron/v3 v3.0.1
