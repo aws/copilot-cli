@@ -119,6 +119,7 @@ type runLocalOpts struct {
 
 	sel            deploySelector
 	ecsClient      ecsClient
+	ecsExecutor    ecsCommandExecutor
 	ssm            secretGetter
 	secretsManager secretGetter
 	sessProvider   sessionProvider
