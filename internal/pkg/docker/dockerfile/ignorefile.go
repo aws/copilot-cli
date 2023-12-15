@@ -12,12 +12,14 @@ import (
 	"github.com/spf13/afero"
 )
 
+// DockerignoreFile represents a .dockerignore file holding information of excluded files.
 type DockerignoreFile struct {
 	excludes []string
 
 	fs afero.Fs
 }
 
+// NewDockerignoreFile returns a DockerignoreFile read from a given filesystem.
 func NewDockerignoreFile(fs afero.Fs, contextDir string) (*DockerignoreFile, error) {
 	df := &DockerignoreFile{
 		fs:       fs,
