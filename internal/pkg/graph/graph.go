@@ -203,12 +203,13 @@ func (alg *TopologicalSorter[V]) traverse(g *Graph[V]) {
 //
 // An example graph and their ranks is shown below to illustrate:
 // .
-//├── a          rank: 0
-//│   ├── c      rank: 1
-//│   │   └── f  rank: 2
-//│   └── d      rank: 1
-//└── b          rank: 0
-//    └── e      rank: 1
+// ├── a          rank: 0
+// │   ├── c      rank: 1
+// │   │   └── f  rank: 2
+// │   └── d      rank: 1
+// └── b          rank: 0
+//
+//	└── e      rank: 1
 func TopologicalOrder[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], error) {
 	if vertices, isAcyclic := digraph.IsAcyclic(); !isAcyclic {
 		return nil, &errCycle[V]{
@@ -322,7 +323,6 @@ The traversal is concurrent, handling vertices in parallel, and returns an error
 */
 func (lg *LabeledGraph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error) error {
 	traversal := &graphTraversal[V]{
-		mu:                             sync.Mutex{},
 		findStartVertices:              func(lg *LabeledGraph[V]) []V { return lg.leaves() },
 		findNextVertices:               func(lg *LabeledGraph[V], v V) []V { return lg.parents(v) },
 		filterPreviousVerticesByStatus: func(g *LabeledGraph[V], v V, status vertexStatus) []V { return g.filterChildren(v, status) },
@@ -338,7 +338,6 @@ It conducts concurrent processing of vertices and returns an error for any encou
 */
 func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error) error {
 	traversal := &graphTraversal[V]{
-		mu:                             sync.Mutex{},
 		findStartVertices:              func(lg *LabeledGraph[V]) []V { return lg.Roots() },
 		findNextVertices:               func(lg *LabeledGraph[V], v V) []V { return lg.children(v) },
 		filterPreviousVerticesByStatus: func(lg *LabeledGraph[V], v V, status vertexStatus) []V { return lg.filterParents(v, status) },
@@ -348,7 +347,6 @@ func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexF
 }
 
 type graphTraversal[V comparable] struct {
-	mu                             sync.Mutex
 	findStartVertices              func(*LabeledGraph[V]) []V
 	findNextVertices               func(*LabeledGraph[V], V) []V
 	filterPreviousVerticesByStatus func(*LabeledGraph[V], V, vertexStatus) []V
