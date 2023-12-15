@@ -391,7 +391,7 @@ func TestOrchestrator(t *testing.T) {
 					})
 				}, de
 			},
-			errs: []string{"upward traversal: wait for container bar dependencies: essential container \"prefix-foo\" failed to be \"healthy\": container `prefix-foo` is unhealthy"},
+			errs: []string{"upward traversal: wait for container bar dependencies: essential container \"prefix-foo\" is not healthy: container `prefix-foo` is unhealthy"},
 		},
 
 		"return error when dependency container complete failed": {
@@ -424,11 +424,11 @@ func TestOrchestrator(t *testing.T) {
 						}
 						return nil
 					},
-					IsContainerCompleteOrSuccessFn: func(ctx context.Context, containerName string) (int, error) {
-						if containerName == "prefix-foo" {
+					ContainerExitCodeFn: func(ctx context.Context, name string) (int, error) {
+						if name == "prefix-foo" {
 							return 143, fmt.Errorf("some error")
 						}
-						return -1, nil
+						return 0, fmt.Errorf("container %q has not exited", name)
 					},
 				}
 				return func(t *testing.T, o *Orchestrator) {
@@ -447,10 +447,10 @@ func TestOrchestrator(t *testing.T) {
 					})
 				}, de
 			},
-			errs: []string{"upward traversal: wait for container bar dependencies: dependency container \"prefix-foo\" failed to be \"complete\": some error"},
+			errs: []string{"upward traversal: wait for container bar dependencies: wait for container \"prefix-foo\" to complete: some error"},
 		},
 
-		"return error when container with exit code other than zero if condition is success": {
+		"return error when container with non zero exitcode if condition is success": {
 			logOptions:     noLogs,
 			stopAfterNErrs: 1,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
@@ -480,11 +480,11 @@ func TestOrchestrator(t *testing.T) {
 						}
 						return nil
 					},
-					IsContainerCompleteOrSuccessFn: func(ctx context.Context, containerName string) (int, error) {
+					ContainerExitCodeFn: func(ctx context.Context, containerName string) (int, error) {
 						if containerName == "prefix-foo" {
 							return 143, nil
 						}
-						return -1, nil
+						return 0, fmt.Errorf("container %q has not exited", containerName)
 					},
 				}
 				return func(t *testing.T, o *Orchestrator) {
@@ -503,7 +503,7 @@ func TestOrchestrator(t *testing.T) {
 					})
 				}, de
 			},
-			errs: []string{"upward traversal: wait for container bar dependencies: dependency container \"prefix-foo\" exited with code 143 instead of 0 exit code"},
+			errs: []string{"upward traversal: wait for container bar dependencies: dependency container \"prefix-foo\" exited with non-zero exit code 143"},
 		},
 
 		"container run stops early with error": {
@@ -514,7 +514,7 @@ func TestOrchestrator(t *testing.T) {
 					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
 						return true, nil
 					},
-					IsContainerCompleteOrSuccessFn: func(ctx context.Context, containerName string) (int, error) {
+					ContainerExitCodeFn: func(ctx context.Context, containerName string) (int, error) {
 						return -1, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {

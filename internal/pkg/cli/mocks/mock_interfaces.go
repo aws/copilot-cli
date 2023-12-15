@@ -7693,6 +7693,21 @@ func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).CheckDockerEngineRunning))
 }
 
+// ContainerExitCode mocks base method.
+func (m *MockdockerEngineRunner) ContainerExitCode(ctx context.Context, containerName string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerExitCode", ctx, containerName)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContainerExitCode indicates an expected call of ContainerExitCode.
+func (mr *MockdockerEngineRunnerMockRecorder) ContainerExitCode(ctx, containerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExitCode", reflect.TypeOf((*MockdockerEngineRunner)(nil).ContainerExitCode), ctx, containerName)
+}
+
 // Exec mocks base method.
 func (m *MockdockerEngineRunner) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
 	m.ctrl.T.Helper()
@@ -7710,21 +7725,6 @@ func (mr *MockdockerEngineRunnerMockRecorder) Exec(ctx, container, out, cmd inte
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, container, out, cmd}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockdockerEngineRunner)(nil).Exec), varargs...)
-}
-
-// IsContainerCompleteOrSuccess mocks base method.
-func (m *MockdockerEngineRunner) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsContainerCompleteOrSuccess", ctx, containerName)
-	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsContainerCompleteOrSuccess indicates an expected call of IsContainerCompleteOrSuccess.
-func (mr *MockdockerEngineRunnerMockRecorder) IsContainerCompleteOrSuccess(ctx, containerName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerCompleteOrSuccess", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerCompleteOrSuccess), ctx, containerName)
 }
 
 // IsContainerHealthy mocks base method.

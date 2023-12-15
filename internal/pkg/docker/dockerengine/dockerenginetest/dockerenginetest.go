@@ -12,14 +12,14 @@ import (
 
 // Double is a test double for dockerengine.DockerCmdClient
 type Double struct {
-	StopFn                         func(context.Context, string) error
-	IsContainerRunningFn           func(context.Context, string) (bool, error)
-	RunFn                          func(context.Context, *dockerengine.RunOptions) error
-	BuildFn                        func(context.Context, *dockerengine.BuildArguments, io.Writer) error
-	ExecFn                         func(context.Context, string, io.Writer, string, ...string) error
-	IsContainerHealthyFn           func(ctx context.Context, containerName string) (bool, error)
-	IsContainerCompleteOrSuccessFn func(ctx context.Context, containerName string) (int, error)
-	RmFn                           func(context.Context, string) error
+	StopFn               func(context.Context, string) error
+	IsContainerRunningFn func(context.Context, string) (bool, error)
+	RunFn                func(context.Context, *dockerengine.RunOptions) error
+	BuildFn              func(context.Context, *dockerengine.BuildArguments, io.Writer) error
+	ExecFn               func(context.Context, string, io.Writer, string, ...string) error
+	IsContainerHealthyFn func(ctx context.Context, containerName string) (bool, error)
+	ContainerExitCodeFn  func(ctx context.Context, containerName string) (int, error)
+	RmFn                 func(context.Context, string) error
 }
 
 // Stop calls the stubbed function.
@@ -70,12 +70,12 @@ func (d *Double) Rm(ctx context.Context, name string) error {
 	return d.RmFn(ctx, name)
 }
 
-// IsContainerCompleteOrSuccess implements orchestrator.DockerEngine.
-func (d *Double) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
-	if d.IsContainerCompleteOrSuccessFn == nil {
-		return -1, nil
+// ContainerExitCode implements orchestrator.DockerEngine.
+func (d *Double) ContainerExitCode(ctx context.Context, containerName string) (int, error) {
+	if d.ContainerExitCodeFn == nil {
+		return 0, nil
 	}
-	return d.IsContainerCompleteOrSuccessFn(ctx, containerName)
+	return d.ContainerExitCodeFn(ctx, containerName)
 }
 
 // IsContainerHealthy implements orchestrator.DockerEngine.

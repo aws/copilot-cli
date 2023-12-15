@@ -376,14 +376,14 @@ func (c DockerCmdClient) IsContainerRunning(ctx context.Context, name string) (b
 	return false, nil
 }
 
-// IsContainerCompleteOrSuccess returns true if a docker container exits with an exitcode.
-func (c DockerCmdClient) IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error) {
-	state, err := c.containerState(ctx, containerName)
+// ContainerExitCode returns the exit code of a container.
+func (c DockerCmdClient) ContainerExitCode(ctx context.Context, name string) (int, error) {
+	state, err := c.containerState(ctx, name)
 	if err != nil {
 		return 0, err
 	}
 	if state.Status == containerStatusRunning {
-		return -1, nil
+		return 0, fmt.Errorf("container %q has not exited", name)
 	}
 	return state.ExitCode, nil
 }

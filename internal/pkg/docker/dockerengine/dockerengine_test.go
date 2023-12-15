@@ -1052,7 +1052,7 @@ func TestDockerCommand_IsContainerHealthy(t *testing.T) {
 	}
 }
 
-func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
+func TestDockerCommand_ContainerExitCode(t *testing.T) {
 	tests := map[string]struct {
 		mockContainerName string
 		mockHealthStatus  string
@@ -1127,7 +1127,7 @@ func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("run docker ps: some error"),
 		},
-		"return negative exitcode if container is running": {
+		"return err if container is running": {
 			mockContainerName: "mockContainer",
 			mockHealthStatus:  "unhealthy",
 			setupMocks: func(controller *gomock.Controller) *MockCmd {
@@ -1154,7 +1154,7 @@ func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 				})
 				return mockCmd
 			},
-			wantExitCode: -1,
+			wantErr: fmt.Errorf(`container "mockContainer" has not exited`),
 		},
 	}
 
@@ -1167,7 +1167,7 @@ func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 				runner: tc.setupMocks(ctrl),
 			}
 
-			expectedCode, err := s.IsContainerCompleteOrSuccess(context.Background(), tc.mockContainerName)
+			expectedCode, err := s.ContainerExitCode(context.Background(), tc.mockContainerName)
 			require.Equal(t, tc.wantExitCode, expectedCode)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
