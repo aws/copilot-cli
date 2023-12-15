@@ -129,12 +129,13 @@ type runLocalOpts struct {
 	debounceTime   time.Duration
 
 	newRecursiveWatcher  func() (recursiveWatcher, error)
-	dockerignoreExcludes func(wsPath string) ([]string, error)
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
+
+	dockerignoreExcludes []string
 }
 
 func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
@@ -225,6 +226,25 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		return nil
 	}
 	o.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
+		var dockerfileDir string
+		switch v := mft.Manifest().(type) {
+		case *manifest.LoadBalancedWebService:
+			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.ImageWithPort.Image.Build.BuildString))
+		case *manifest.BackendService:
+			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.ImageWithOptionalPort.Image.Build.BuildString))
+		case *manifest.ScheduledJob:
+			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
+		case *manifest.RequestDrivenWebService:
+			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
+		case *manifest.WorkerService:
+			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
+		}
+		excludes, err := dockerfile.ReadDockerignore(filepath.Join(o.ws.Path(), dockerfileDir))
+		if err != nil {
+			return nil, err
+		}
+		o.dockerignoreExcludes = excludes
+
 		gitShortCommit := imageTagFromGit(o.cmd)
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
@@ -258,7 +278,6 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
 		return file.NewRecursiveWatcher(0)
 	}
-	o.dockerignoreExcludes = dockerfile.ReadDockerignore
 	return o, nil
 }
 
@@ -562,11 +581,6 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 	watchCh := make(chan interface{})
 	watchErrCh := make(chan error)
 
-	excludes, err := o.dockerignoreExcludes(workspacePath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("read excludes: %w", err)
-	}
-
 	watcher, err := o.newRecursiveWatcher()
 	if err != nil {
 		return nil, nil, fmt.Errorf("file: %w", err)
@@ -628,7 +642,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 
 				// skip updates from files matching .dockerignore patterns
 				isExcluded := false
-				for _, pattern := range excludes {
+				for _, pattern := range o.dockerignoreExcludes {
 					matches, err := filepath.Match(pattern, suffix)
 					if err != nil {
 						break
@@ -646,12 +660,6 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					debounceTimer.Reset(o.debounceTime)
 				}
 			case <-debounceTimer.C:
-				excludes, err = o.dockerignoreExcludes(workspacePath)
-				if err != nil {
-					watchErrCh <- fmt.Errorf("read excludes: %w", err)
-					return
-				}
-
 				debounceTimerRunning = false
 				watchCh <- nil
 			}
