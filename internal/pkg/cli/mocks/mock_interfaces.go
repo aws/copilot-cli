@@ -7694,20 +7694,6 @@ func (mr *MockdockerignoreFileMockRecorder) Excludes() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Excludes", reflect.TypeOf((*MockdockerignoreFile)(nil).Excludes))
 }
 
-// ReadDockerignore mocks base method.
-func (m *MockdockerignoreFile) ReadDockerignore(contextDir string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadDockerignore", contextDir)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReadDockerignore indicates an expected call of ReadDockerignore.
-func (mr *MockdockerignoreFileMockRecorder) ReadDockerignore(contextDir interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDockerignore", reflect.TypeOf((*MockdockerignoreFile)(nil).ReadDockerignore), contextDir)
-}
-
 // MockdockerEngineRunner is a mock of dockerEngineRunner interface.
 type MockdockerEngineRunner struct {
 	ctrl     *gomock.Controller
