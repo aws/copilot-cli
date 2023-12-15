@@ -203,13 +203,12 @@ func (alg *TopologicalSorter[V]) traverse(g *Graph[V]) {
 //
 // An example graph and their ranks is shown below to illustrate:
 // .
-// ├── a          rank: 0
-// │   ├── c      rank: 1
-// │   │   └── f  rank: 2
-// │   └── d      rank: 1
-// └── b          rank: 0
-//
-//	└── e      rank: 1
+//├── a          rank: 0
+//│   ├── c      rank: 1
+//│   │   └── f  rank: 2
+//│   └── d      rank: 1
+//└── b          rank: 0
+//    └── e      rank: 1
 func TopologicalOrder[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], error) {
 	if vertices, isAcyclic := digraph.IsAcyclic(); !isAcyclic {
 		return nil, &errCycle[V]{
