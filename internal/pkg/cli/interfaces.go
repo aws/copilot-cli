@@ -706,6 +706,7 @@ type templateDiffer interface {
 type dockerEngineRunner interface {
 	CheckDockerEngineRunning() error
 	Run(context.Context, *dockerengine.RunOptions) error
+	DoesContainerExist(context.Context, string) (bool, error)
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
 	Rm(string) error

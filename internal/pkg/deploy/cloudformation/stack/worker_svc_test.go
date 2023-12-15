@@ -325,5 +325,9 @@ func TestWorkerService_Parameters(t *testing.T) {
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(""),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(""),
+		},
 	}, params)
 }

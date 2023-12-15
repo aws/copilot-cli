@@ -34,6 +34,7 @@ type BackendServiceConfig struct {
 	EnvManifest        *manifest.Environment
 	Manifest           *manifest.BackendService
 	ArtifactBucketName string
+	ArtifactKey        string
 	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
@@ -55,6 +56,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 				app:                conf.App.Name,
 				permBound:          conf.App.PermissionsBoundary,
 				artifactBucketName: conf.ArtifactBucketName,
+				artifactKey:        conf.ArtifactKey,
 				rc:                 conf.RuntimeConfig,
 				image:              conf.Manifest.ImageConfig.Image,
 				rawManifest:        conf.RawManifest,

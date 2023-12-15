@@ -405,6 +405,9 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 				ParameterKey:   aws.String("AddonsTemplateURL"),
 				ParameterValue: aws.String(""),
 			}, {
+				ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+				ParameterValue: aws.String(""),
+			}, {
 				ParameterKey:   aws.String(RDWkldImageRepositoryType),
 				ParameterValue: aws.String("ECR_PUBLIC"),
 			}, {
@@ -491,9 +494,10 @@ func TestRequestDrivenWebService_SerializedParameters(t *testing.T) {
 	c := &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
-				name: aws.StringValue(testRDWebServiceManifest.Name),
-				env:  testEnvName,
-				app:  testAppName,
+				name:        aws.StringValue(testRDWebServiceManifest.Name),
+				env:         testEnvName,
+				app:         testAppName,
+				artifactKey: "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 				rc: RuntimeConfig{
 					PushedImages: map[string]ECRImage{
 						aws.StringValue(testRDWebServiceManifest.Name): {
@@ -515,6 +519,7 @@ func TestRequestDrivenWebService_SerializedParameters(t *testing.T) {
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "phonetool",
+    "ArtifactKeyARN": "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
     "ContainerImage": "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
     "EnvName": "test",
