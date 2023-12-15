@@ -53,7 +53,7 @@ type logOptionsFunc func(name string, ctr ContainerDefinition) dockerengine.RunL
 type DockerEngine interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
-	IsContainerCompleteOrSuccess(ctx context.Context, containerName string) (int, error)
+	ContainerExitCode(ctx context.Context, containerName string) (int, error)
 	IsContainerHealthy(ctx context.Context, containerName string) (bool, error)
 	Stop(context.Context, string) error
 	Build(ctx context.Context, args *dockerengine.BuildArguments, w io.Writer) error
@@ -238,7 +238,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	depGraph := buildDependencyGraph(a.task.Containers)
 	err := depGraph.UpwardTraversal(ctx, func(ctx context.Context, containerName string) error {
 		if len(a.task.Containers[containerName].DependsOn) > 0 {
-			if err := o.waitForContainerDependencies(ctx, containerName, a); err != nil {
+			if err := o.waitForContainerDependencies(ctx, containerName, a.task.Containers); err != nil {
 				return fmt.Errorf("wait for container %s dependencies: %w", containerName, err)
 			}
 		}
@@ -464,6 +464,7 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 }
 
 // waitForContainerToStart blocks until the container specified by id starts.
+// If the container is not essential, then waitForContainerToStart returns nil.
 func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string, isEssential bool) error {
 	for {
 		isRunning, err := o.docker.IsContainerRunning(ctx, id)
@@ -485,19 +486,19 @@ func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string, i
 	}
 }
 
-func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name string, a *runTaskAction) error {
+func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name string, definitions map[string]ContainerDefinition) error {
 	var deps []string
-	for depName, state := range a.task.Containers[name].DependsOn {
+	for depName, state := range definitions[name].DependsOn {
 		deps = append(deps, fmt.Sprintf("%s->%s", depName, state))
 	}
 	logMsg := strings.Join(deps, ", ")
 	fmt.Printf("Waiting for container %q dependencies: [%s]\n", name, color.Emphasize(logMsg))
 	eg, ctx := errgroup.WithContext(ctx)
-	for name, state := range a.task.Containers[name].DependsOn {
+	for name, state := range definitions[name].DependsOn {
 		name, state := name, state
 		eg.Go(func() error {
 			ctrId := o.containerID(name)
-			isEssential := a.task.Containers[name].IsEssential
+			isEssential := definitions[name].IsEssential
 			ticker := time.NewTicker(700 * time.Millisecond)
 			defer ticker.Stop()
 			for {
@@ -532,20 +533,26 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 						return nil
 					}
 				case ctrStateComplete:
-					exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+					exitCode, err := o.docker.ContainerExitCode(ctx, ctrId)
+					if errors.Is(err, fmt.Errorf("container %q has not exited", name)) {
+						continue
+					}
 					if err != nil {
 						return fmt.Errorf("wait for container %q to complete: %w", ctrId, err)
 					}
-					if exitCode != -1 {
+					if exitCode != 0 {
 						log.Successf("%q's dependency container %q exited with code: %d\n", name, ctrId, exitCode)
 						return nil
 					}
 				case ctrStateSuccess:
-					exitCode, err := o.docker.IsContainerCompleteOrSuccess(ctx, ctrId)
+					exitCode, err := o.docker.ContainerExitCode(ctx, ctrId)
+					if errors.Is(err, fmt.Errorf("container %q has not exited", name)) {
+						continue
+					}
 					if err != nil {
 						return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
 					}
-					if exitCode > 0 {
+					if exitCode != 0 {
 						return fmt.Errorf("dependency container %q exited with non-zero exit code %d", ctrId, exitCode)
 					}
 					if exitCode == 0 {
