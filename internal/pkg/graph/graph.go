@@ -227,46 +227,32 @@ func TopologicalOrder[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], e
 // It is concurrency-safe, utilizing a mutex lock for synchronized access.
 type LabeledGraph[V comparable] struct {
 	*Graph[V]
-	status map[V]string
+	status map[V]vertexStatus
 	lock   sync.Mutex
 }
 
 // NewLabeledGraph initializes a LabeledGraph with specified vertices and optional configurations.
 // It creates a base Graph with the vertices and applies any LabeledGraphOption to configure additional properties.
-func NewLabeledGraph[V comparable](vertices []V, opts ...LabeledGraphOption[V]) *LabeledGraph[V] {
-	g := New(vertices...)
+func NewLabeledGraph[V comparable](vertices []V) *LabeledGraph[V] {
 	lg := &LabeledGraph[V]{
-		Graph:  g,
-		status: make(map[V]string),
+		Graph:  New(vertices...),
+		status: make(map[V]vertexStatus),
 	}
-	for _, opt := range opts {
-		opt(lg)
+	for _, vertex := range vertices {
+		lg.status[vertex] = unvisited
 	}
 	return lg
 }
 
-// LabeledGraphOption allows you to initialize Graph with additional properties.
-type LabeledGraphOption[V comparable] func(g *LabeledGraph[V])
-
-// WithStatus sets the status of each vertex in the Graph.
-func WithStatus[V comparable](status string) func(g *LabeledGraph[V]) {
-	return func(g *LabeledGraph[V]) {
-		g.status = make(map[V]string)
-		for vertex := range g.vertices {
-			g.status[vertex] = status
-		}
-	}
-}
-
 // updateStatus updates the status of a vertex.
-func (lg *LabeledGraph[V]) updateStatus(vertex V, status string) {
+func (lg *LabeledGraph[V]) updateStatus(vertex V, status vertexStatus) {
 	lg.lock.Lock()
 	defer lg.lock.Unlock()
 	lg.status[vertex] = status
 }
 
 // getStatus gets the status of a vertex.
-func (lg *LabeledGraph[V]) getStatus(vertex V) string {
+func (lg *LabeledGraph[V]) getStatus(vertex V) vertexStatus {
 	lg.lock.Lock()
 	defer lg.lock.Unlock()
 	return lg.status[vertex]
@@ -306,7 +292,7 @@ func (lg *LabeledGraph[V]) children(vtx V) []V {
 }
 
 // filterParents filters parents based on the vertex status.
-func (lg *LabeledGraph[V]) filterParents(vtx V, status string) []V {
+func (lg *LabeledGraph[V]) filterParents(vtx V, status vertexStatus) []V {
 	parents := lg.parents(vtx)
 	var filtered []V
 	for _, parent := range parents {
@@ -318,7 +304,7 @@ func (lg *LabeledGraph[V]) filterParents(vtx V, status string) []V {
 }
 
 // filterChildren filters children based on the vertex status.
-func (lg *LabeledGraph[V]) filterChildren(vtx V, status string) []V {
+func (lg *LabeledGraph[V]) filterChildren(vtx V, status vertexStatus) []V {
 	children := lg.children(vtx)
 	var filtered []V
 	for _, child := range children {
@@ -330,44 +316,32 @@ func (lg *LabeledGraph[V]) filterChildren(vtx V, status string) []V {
 }
 
 /*
-UpwardTraversal performs an upward traversal on the graph starting from leaves (nodes with no children)
-and moving towards root nodes (nodes with children).
-It applies the specified process function to each vertex in the graph, skipping vertices with the
-"adjacentVertexSkipStatus" status, and continuing traversal until reaching vertices with the "requiredVertexStatus" status.
-The traversal is concurrent and may process vertices in parallel.
-Returns an error if the traversal encounters any issues, or nil if successful.
+UpwardTraversal performs a traversal from leaf nodes (with no children) to root nodes (with children).
+It processes each vertex using processVertexFunc, and skips processing for vertices with specific statuses.
+The traversal is concurrent, handling vertices in parallel, and returns an error if any issue occurs.
 */
-func (lg *LabeledGraph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, nextVertexSkipStatus, requiredVertexStatus string) error {
+func (lg *LabeledGraph[V]) UpwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error) error {
 	traversal := &graphTraversal[V]{
 		mu:                             sync.Mutex{},
-		seen:                           make(map[V]struct{}),
 		findStartVertices:              func(lg *LabeledGraph[V]) []V { return lg.leaves() },
 		findNextVertices:               func(lg *LabeledGraph[V], v V) []V { return lg.parents(v) },
-		filterPreviousVerticesByStatus: func(g *LabeledGraph[V], v V, status string) []V { return g.filterChildren(v, status) },
-		requiredVertexStatus:           requiredVertexStatus,
-		nextVertexSkipStatus:           nextVertexSkipStatus,
+		filterPreviousVerticesByStatus: func(g *LabeledGraph[V], v V, status vertexStatus) []V { return g.filterChildren(v, status) },
 		processVertex:                  processVertexFunc,
 	}
 	return traversal.execute(ctx, lg)
 }
 
 /*
-DownwardTraversal performs a downward traversal on the graph starting from root nodes (nodes with no parents)
-and moving towards leaf nodes (nodes with parents). It applies the specified process function to each
-vertex in the graph, skipping vertices with the "adjacentVertexSkipStatus" status, and continuing traversal
-until reaching vertices with the "requiredVertexStatus" status.
-The traversal is concurrent and may process vertices in parallel.
-Returns an error if the traversal encounters any issues.
+DownwardTraversal performs a traversal from root nodes (with no parents) to leaf nodes (with parents).
+It applies processVertexFunc to each vertex, skipping those with specified statuses.
+It conducts concurrent processing of vertices and returns an error for any encountered issues.
 */
-func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error, adjacentVertexSkipStatus, requiredVertexStatus string) error {
+func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexFunc func(context.Context, V) error) error {
 	traversal := &graphTraversal[V]{
 		mu:                             sync.Mutex{},
-		seen:                           make(map[V]struct{}),
 		findStartVertices:              func(lg *LabeledGraph[V]) []V { return lg.Roots() },
 		findNextVertices:               func(lg *LabeledGraph[V], v V) []V { return lg.children(v) },
-		filterPreviousVerticesByStatus: func(lg *LabeledGraph[V], v V, status string) []V { return lg.filterParents(v, status) },
-		requiredVertexStatus:           requiredVertexStatus,
-		nextVertexSkipStatus:           adjacentVertexSkipStatus,
+		filterPreviousVerticesByStatus: func(lg *LabeledGraph[V], v V, status vertexStatus) []V { return lg.filterParents(v, status) },
 		processVertex:                  processVertexFunc,
 	}
 	return traversal.execute(ctx, lg)
@@ -375,12 +349,9 @@ func (lg *LabeledGraph[V]) DownwardTraversal(ctx context.Context, processVertexF
 
 type graphTraversal[V comparable] struct {
 	mu                             sync.Mutex
-	seen                           map[V]struct{}
 	findStartVertices              func(*LabeledGraph[V]) []V
 	findNextVertices               func(*LabeledGraph[V], V) []V
-	filterPreviousVerticesByStatus func(*LabeledGraph[V], V, string) []V
-	requiredVertexStatus           string
-	nextVertexSkipStatus           string
+	filterPreviousVerticesByStatus func(*LabeledGraph[V], V, vertexStatus) []V
 	processVertex                  func(context.Context, V) error
 }
 
@@ -401,19 +372,21 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 		for _, vertex := range vertices {
 			vertex := vertex
 			// Delay processing this vertex if any of its dependent vertices are yet to be processed.
-			if len(t.filterPreviousVerticesByStatus(graph, vertex, t.nextVertexSkipStatus)) != 0 {
+			if len(t.filterPreviousVerticesByStatus(graph, vertex, unvisited)) != 0 {
 				continue
 			}
-			if !t.markAsSeen(vertex) {
-				// Skip this vertex if it's already been processed by another routine.
+			// Check if the vertex is already visited or being visited
+			if graph.getStatus(vertex) != unvisited {
 				continue
 			}
+			// Mark the vertex as visiting
+			graph.updateStatus(vertex, visiting)
 			eg.Go(func() error {
 				if err := t.processVertex(ctx, vertex); err != nil {
 					return err
 				}
 				// Assign new status to the vertex upon successful processing.
-				graph.updateStatus(vertex, t.requiredVertexStatus)
+				graph.updateStatus(vertex, visited)
 				vertexCh <- vertex
 				return nil
 			})
@@ -436,14 +409,4 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 	})
 	processVertices(ctx, lg, eg, t.findStartVertices(lg), vertexCh)
 	return eg.Wait()
-}
-
-func (t *graphTraversal[V]) markAsSeen(vertex V) bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if _, seen := t.seen[vertex]; seen {
-		return false
-	}
-	t.seen[vertex] = struct{}{}
-	return true
 }

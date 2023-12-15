@@ -76,12 +76,6 @@ const (
 )
 
 const (
-	ctrStateUnknown         = "unknown"
-	ctrStateRunningOrExited = "runningOrExited"
-	ctrStateRemoved         = "removed"
-)
-
-const (
 	ctrStateHealthy  = "healthy"
 	ctrStateComplete = "complete"
 	ctrStateSuccess  = "success"
@@ -208,9 +202,8 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 			cancel()
 		}
 	}()
-
+	o.curTask = a.task
 	if taskID == 1 {
-		o.curTask = a.task
 		if err := o.buildPauseContainer(ctx); err != nil {
 			return fmt.Errorf("build pause container: %w", err)
 		}
@@ -241,8 +234,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 			return fmt.Errorf("stop existing task: %w", err)
 		}
 	}
-	o.curTask = a.task
-	depGraph := buildDependencyGraph(a.task.Containers, ctrStateUnknown)
+	depGraph := buildDependencyGraph(a.task.Containers)
 	err := depGraph.UpwardTraversal(ctx, func(ctx context.Context, containerName string) error {
 		if len(a.task.Containers[containerName].DependsOn) > 0 {
 			if err := o.waitForContainerDependencies(ctx, containerName, a); err != nil {
@@ -251,7 +243,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		}
 		o.run(taskID, o.containerRunOptions(containerName, a.task.Containers[containerName]), a.task.Containers[containerName].IsEssential, cancel)
 		return o.waitForContainerToStart(ctx, o.containerID(containerName), a.task.Containers[containerName].IsEssential)
-	}, ctrStateUnknown, ctrStateRunningOrExited)
+	})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return nil
@@ -261,12 +253,12 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 	return nil
 }
 
-func buildDependencyGraph(containers map[string]ContainerDefinition, status string) *graph.LabeledGraph[string] {
+func buildDependencyGraph(containers map[string]ContainerDefinition) *graph.LabeledGraph[string] {
 	var vertices []string
 	for vertex := range containers {
 		vertices = append(vertices, vertex)
 	}
-	dependencyGraph := graph.NewLabeledGraph(vertices, graph.WithStatus[string](status))
+	dependencyGraph := graph.NewLabeledGraph(vertices)
 	for containerName, container := range containers {
 		for depCtr := range container.DependsOn {
 			dependencyGraph.Add(graph.Edge[string]{
@@ -420,15 +412,14 @@ func (a *stopAction) Do(o *Orchestrator) error {
 	}
 
 	// stop pause container
-	fmt.Printf("Stopping and Removing %q\n", "pause")
+	fmt.Printf("Stopping and removing %q\n", "pause")
 	if err := o.docker.Stop(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("stop %q: %w", "pause", err))
 	}
 	if err := o.docker.Rm(context.Background(), o.containerID("pause")); err != nil {
 		errs = append(errs, fmt.Errorf("remove %q: %w", "pause", err))
 	}
-	fmt.Printf("Stopped and Removed %q\n", "pause")
-
+	fmt.Printf("Stopped and removed %q\n", "pause")
 	return errors.Join(errs...)
 }
 
@@ -440,9 +431,9 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 
 	// errCh gets one error per container
 	errCh := make(chan error, len(task.Containers))
-	depGraph := buildDependencyGraph(task.Containers, ctrStateRunningOrExited)
+	depGraph := buildDependencyGraph(task.Containers)
 	err := depGraph.DownwardTraversal(ctx, func(ctx context.Context, name string) error {
-		fmt.Printf("Stopping and Removing %q\n", name)
+		fmt.Printf("Stopping and removing %q\n", name)
 		if err := o.docker.Stop(ctx, o.containerID(name)); err != nil {
 			errCh <- fmt.Errorf("stop %q: %w", name, err)
 			return nil
@@ -451,10 +442,10 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 			errCh <- fmt.Errorf("remove %q: %w", name, err)
 			return nil
 		}
-		fmt.Printf("Stopped and Removed %q\n", name)
+		fmt.Printf("Stopped and removed %q\n", name)
 		errCh <- nil
 		return nil
-	}, ctrStateRunningOrExited, ctrStateRemoved)
+	})
 
 	if err != nil {
 		return fmt.Errorf("downward traversal: %w", err)
