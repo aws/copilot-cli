@@ -217,6 +217,7 @@ type runLocalExecuteMocks struct {
 	watcher        *filetest.Double
 	hostFinder     *hostFinderDouble
 	envChecker     *mocks.MockversionCompatibilityChecker
+	dockerignore   *mocks.MockdockerignoreFile
 }
 
 type mockProvider struct {
@@ -875,7 +876,7 @@ ecs exec method not implemented`),
 				}
 			},
 		},
-		"watch flag receives hidden file update, doesn't restart": {
+		"watch flag receives hidden file and ignored file update, doesn't restart": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
 			inputEnvName:  testEnvName,
@@ -886,11 +887,16 @@ ecs exec method not implemented`),
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.ws.EXPECT().Path().Return("")
+				m.dockerignore.EXPECT().Excludes().Return([]string{"ignoredDir/*"}).Times(2)
 
-				eventCh := make(chan fsnotify.Event, 1)
+				eventCh := make(chan fsnotify.Event, 2)
 				m.watcher.EventsFn = func() <-chan fsnotify.Event {
 					eventCh <- fsnotify.Event{
 						Name: ".hiddensubdir/mockFilename",
+						Op:   fsnotify.Write,
+					}
+					eventCh <- fsnotify.Event{
+						Name: "ignoredDir/mockFilename",
 						Op:   fsnotify.Write,
 					}
 					return eventCh
@@ -926,6 +932,7 @@ ecs exec method not implemented`),
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
 				m.ws.EXPECT().Path().Return("")
+				m.dockerignore.EXPECT().Excludes().Return(nil)
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(alteredTaskDef, nil)
 
 				eventCh := make(chan fsnotify.Event, 1)
@@ -1012,6 +1019,7 @@ ecs exec method not implemented`),
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
 				m.ws.EXPECT().Path().Return("")
+				m.dockerignore.EXPECT().Excludes().Return(nil)
 
 				eventCh := make(chan fsnotify.Event, 1)
 				m.watcher.EventsFn = func() <-chan fsnotify.Event {
@@ -1067,6 +1075,7 @@ ecs exec method not implemented`),
 				watcher:        &filetest.Double{},
 				hostFinder:     &hostFinderDouble{},
 				envChecker:     mocks.NewMockversionCompatibilityChecker(ctrl),
+				dockerignore:   mocks.NewMockdockerignoreFile(ctrl),
 			}
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
@@ -1126,6 +1135,7 @@ ecs exec method not implemented`),
 				orchestrator: m.orchestrator,
 				hostFinder:   m.hostFinder,
 				envChecker:   m.envChecker,
+				dockerignore: m.dockerignore,
 				debounceTime: 0, // disable debounce during testing
 				newRecursiveWatcher: func() (recursiveWatcher, error) {
 					return m.watcher, nil

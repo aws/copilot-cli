@@ -7657,6 +7657,57 @@ func (mr *MocktemplateDifferMockRecorder) DeployDiff(inTmpl interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployDiff", reflect.TypeOf((*MocktemplateDiffer)(nil).DeployDiff), inTmpl)
 }
 
+// MockdockerignoreFile is a mock of dockerignoreFile interface.
+type MockdockerignoreFile struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerignoreFileMockRecorder
+}
+
+// MockdockerignoreFileMockRecorder is the mock recorder for MockdockerignoreFile.
+type MockdockerignoreFileMockRecorder struct {
+	mock *MockdockerignoreFile
+}
+
+// NewMockdockerignoreFile creates a new mock instance.
+func NewMockdockerignoreFile(ctrl *gomock.Controller) *MockdockerignoreFile {
+	mock := &MockdockerignoreFile{ctrl: ctrl}
+	mock.recorder = &MockdockerignoreFileMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdockerignoreFile) EXPECT() *MockdockerignoreFileMockRecorder {
+	return m.recorder
+}
+
+// Excludes mocks base method.
+func (m *MockdockerignoreFile) Excludes() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Excludes")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// Excludes indicates an expected call of Excludes.
+func (mr *MockdockerignoreFileMockRecorder) Excludes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Excludes", reflect.TypeOf((*MockdockerignoreFile)(nil).Excludes))
+}
+
+// ReadDockerignore mocks base method.
+func (m *MockdockerignoreFile) ReadDockerignore(contextDir string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadDockerignore", contextDir)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReadDockerignore indicates an expected call of ReadDockerignore.
+func (mr *MockdockerignoreFileMockRecorder) ReadDockerignore(contextDir interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDockerignore", reflect.TypeOf((*MockdockerignoreFile)(nil).ReadDockerignore), contextDir)
+}
+
 // MockdockerEngineRunner is a mock of dockerEngineRunner interface.
 type MockdockerEngineRunner struct {
 	ctrl     *gomock.Controller

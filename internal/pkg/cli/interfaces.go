@@ -705,7 +705,6 @@ type templateDiffer interface {
 }
 
 type dockerignoreFile interface {
-	ReadDockerignore(contextDir string) error
 	Excludes() []string
 }
 
