@@ -126,6 +126,7 @@ type runLocalOpts struct {
 	orchestrator   containerOrchestrator
 	hostFinder     hostFinder
 	envChecker     versionCompatibilityChecker
+	dockerignore   dockerignoreFile
 	debounceTime   time.Duration
 
 	newRecursiveWatcher  func() (recursiveWatcher, error)
@@ -134,8 +135,6 @@ type runLocalOpts struct {
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
-
-	dockerignoreExcludes []string
 }
 
 func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
@@ -171,6 +170,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		dockerEngine:       dockerengine.New(exec.NewCmd()),
 		labeledTermPrinter: labeledTermPrinter,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
+		dockerignore:       &dockerfile.DockerignoreFile{},
 	}
 	o.configureClients = func() error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -239,11 +239,10 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		case *manifest.WorkerService:
 			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
 		}
-		excludes, err := dockerfile.ReadDockerignore(filepath.Join(o.ws.Path(), dockerfileDir))
+		err := o.dockerignore.ReadDockerignore(filepath.Join(o.ws.Path(), dockerfileDir))
 		if err != nil {
 			return nil, err
 		}
-		o.dockerignoreExcludes = excludes
 
 		gitShortCommit := imageTagFromGit(o.cmd)
 		image := clideploy.ContainerImageIdentifier{
@@ -642,7 +641,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 
 				// skip updates from files matching .dockerignore patterns
 				isExcluded := false
-				for _, pattern := range o.dockerignoreExcludes {
+				for _, pattern := range o.dockerignore.Excludes() {
 					matches, err := filepath.Match(pattern, suffix)
 					if err != nil {
 						break

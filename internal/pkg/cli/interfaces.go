@@ -704,6 +704,11 @@ type templateDiffer interface {
 	DeployDiff(inTmpl string) (string, error)
 }
 
+type dockerignoreFile interface {
+	ReadDockerignore(contextDir string) error
+	Excludes() []string
+}
+
 type dockerEngineRunner interface {
 	CheckDockerEngineRunning() error
 	Run(context.Context, *dockerengine.RunOptions) error

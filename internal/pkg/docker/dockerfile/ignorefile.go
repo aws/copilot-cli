@@ -11,22 +11,32 @@ import (
 	"github.com/moby/patternmatcher/ignorefile"
 )
 
+type DockerignoreFile struct {
+	excludes []string
+}
+
 // ReadDockerignore reads the .dockerignore file in the context directory and
-// returns the list of paths to exclude
-func ReadDockerignore(contextDir string) ([]string, error) {
+// returns the list of paths to exclude.
+func (df *DockerignoreFile) ReadDockerignore(contextDir string) error {
 	f, err := os.Open(filepath.Join(contextDir, ".dockerignore"))
 	switch {
 	case os.IsNotExist(err):
-		return nil, nil
+		return nil
 	case err != nil:
-		return nil, err
+		return err
 	}
 	defer f.Close()
 
 	patterns, err := ignorefile.ReadAll(f)
 	if err != nil {
-		return nil, fmt.Errorf("error reading .dockerignore: %w", err)
+		return fmt.Errorf("error reading .dockerignore: %w", err)
 	}
 
-	return patterns, nil
+	df.excludes = patterns
+	return nil
+}
+
+// Excludes returns the exclude patterns of a .dockerignore file.
+func (df *DockerignoreFile) Excludes() []string {
+	return df.excludes
 }
