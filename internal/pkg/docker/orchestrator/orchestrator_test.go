@@ -256,37 +256,6 @@ func TestOrchestrator(t *testing.T) {
 			},
 		},
 
-		"return error if essential container exits": {
-			logOptions:      noLogs,
-			runUntilStopped: true,
-			stopAfterNErrs:  1,
-			test: func(t *testing.T) (test, *dockerenginetest.Double) {
-				de := &dockerenginetest.Double{
-					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
-						if name == "prefix-foo" {
-							return false, &dockerengine.ErrContainerExited{}
-						}
-						return true, nil
-					},
-					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
-						return nil
-					},
-					StopFn: func(ctx context.Context, name string) error {
-						return nil
-					},
-				}
-				return func(t *testing.T, o *Orchestrator) {
-					o.RunTask(Task{
-						Containers: map[string]ContainerDefinition{
-							"foo": {
-								IsEssential: true,
-							},
-						},
-					})
-				}, de
-			},
-			errs: []string{"upward traversal: check if \"prefix-foo\" is running: container \"\" exited with code 0"},
-		},
 		"success with dependsOn order": {
 			logOptions: noLogs,
 			test: func(t *testing.T) (test, *dockerenginetest.Double) {
@@ -391,7 +360,7 @@ func TestOrchestrator(t *testing.T) {
 					})
 				}, de
 			},
-			errs: []string{"upward traversal: wait for container bar dependencies: essential container \"prefix-foo\" is not healthy: container `prefix-foo` is unhealthy"},
+			errs: []string{"upward traversal: wait for container bar dependencies: container \"prefix-foo\" is not healthy: container `prefix-foo` is unhealthy"},
 		},
 
 		"return error when dependency container complete failed": {
@@ -587,7 +556,7 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 			stopAfterNErrs: 1,
-			errs:           []string{`run "prefix-foo": container stopped unexpectedly`},
+			errs:           []string{`run "prefix-foo": essential container stopped unexpectedly`},
 		},
 		"proxy setup, connection returns error": {
 			logOptions:      noLogs,

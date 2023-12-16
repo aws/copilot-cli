@@ -212,7 +212,7 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		// start the pause container
 		opts := o.pauseRunOptions(a.task)
 		o.run(pauseCtrTaskID, opts, true, cancel)
-		if err := o.waitForContainerToStart(ctx, opts.ContainerName, true); err != nil {
+		if err := o.waitForContainerToStart(ctx, opts.ContainerName); err != nil {
 			return fmt.Errorf("wait for pause container to start: %w", err)
 		}
 
@@ -243,7 +243,11 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 			}
 		}
 		o.run(taskID, o.containerRunOptions(containerName, a.task.Containers[containerName]), a.task.Containers[containerName].IsEssential, cancel)
-		return o.waitForContainerToStart(ctx, o.containerID(containerName), a.task.Containers[containerName].IsEssential)
+		var errContainerExited *dockerengine.ErrContainerExited
+		if err := o.waitForContainerToStart(ctx, o.containerID(containerName)); err != nil && !errors.As(err, &errContainerExited) {
+			return fmt.Errorf("wait for container %s to start: %w", containerName, err)
+		}
+		return nil
 	})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -464,20 +468,16 @@ func (o *Orchestrator) stopTask(ctx context.Context, task Task) error {
 }
 
 // waitForContainerToStart blocks until the container specified by id starts.
-// If the container is not essential, then waitForContainerToStart returns nil.
-func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string, isEssential bool) error {
+func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string) error {
 	for {
 		isRunning, err := o.docker.IsContainerRunning(ctx, id)
 		switch {
 		case err != nil:
-			var errContainerExited *dockerengine.ErrContainerExited
-			if errors.As(err, &errContainerExited) && !isEssential {
-				return nil
-			}
 			return fmt.Errorf("check if %q is running: %w", id, err)
 		case isRunning:
 			return nil
 		}
+
 		select {
 		case <-time.After(1 * time.Second):
 		case <-ctx.Done():
@@ -498,7 +498,6 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 		name, state := name, state
 		eg.Go(func() error {
 			ctrId := o.containerID(name)
-			isEssential := definitions[name].IsEssential
 			ticker := time.NewTicker(700 * time.Millisecond)
 			defer ticker.Stop()
 			for {
@@ -509,27 +508,20 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 				}
 				switch state {
 				case ctrStateStart:
-					err := o.waitForContainerToStart(ctx, ctrId, isEssential)
-					if err != nil {
-						return err
+					var errContainerExited *dockerengine.ErrContainerExited
+					err := o.waitForContainerToStart(ctx, ctrId)
+					if err != nil && !errors.As(err, &errContainerExited) {
+						return fmt.Errorf("wait for container %q to start: %w", ctrId, err)
 					}
-					if isEssential {
-						log.Successf("Successfully started container %s\n", ctrId)
-						return nil
-					}
-					fmt.Printf("non-essential container %q started successfully\n", ctrId)
+					log.Successf("Successfully started container %s\n", ctrId)
 					return nil
 				case ctrStateHealthy:
 					healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
 					if err != nil {
-						if !isEssential {
-							fmt.Printf("non-essential container %q is not healthy: %v\n", ctrId, err)
-							return nil
-						}
-						return fmt.Errorf("essential container %q is not healthy: %w", ctrId, err)
+						return fmt.Errorf("container %q is not healthy: %w", ctrId, err)
 					}
 					if healthy {
-						log.Successf("Successfully dependency container %q reached %q\n", ctrId, state)
+						log.Successf("Successfully dependency container %q reached healthy\n", ctrId)
 						return nil
 					}
 				case ctrStateComplete:
@@ -552,15 +544,13 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 						continue
 					}
 					if err != nil {
-						return fmt.Errorf("dependency container %q failed to be %q: %w", ctrId, state, err)
+						return fmt.Errorf("wait for container %q to success: %w", ctrId, err)
 					}
 					if exitCode != 0 {
 						return fmt.Errorf("dependency container %q exited with non-zero exit code %d", ctrId, exitCode)
 					}
-					if exitCode == 0 {
-						log.Successf("%q's dependency container %q exited with code: %d\n", name, ctrId, exitCode)
-						return nil
-					}
+					log.Successf("%q's dependency container %q exited with code: %d\n", name, ctrId, exitCode)
+					return nil
 				}
 			}
 		})
@@ -650,7 +640,7 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 				return
 			}
 			if err == nil {
-				err = errors.New("container stopped unexpectedly")
+				err = errors.New("essential container stopped unexpectedly")
 			}
 			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
 			cancel()
