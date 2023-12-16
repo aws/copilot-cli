@@ -363,6 +363,59 @@ func TestOrchestrator(t *testing.T) {
 			errs: []string{"upward traversal: wait for container bar dependencies: wait for container \"prefix-foo\" to be healthy: container `prefix-foo` is unhealthy"},
 		},
 
+		"return error when dependency container is not started": {
+			logOptions:     noLogs,
+			stopAfterNErrs: 1,
+			test: func(t *testing.T) (test, *dockerenginetest.Double) {
+				stopPause := make(chan struct{})
+				stopFoo := make(chan struct{})
+				de := &dockerenginetest.Double{
+					IsContainerRunningFn: func(ctx context.Context, name string) (bool, error) {
+						if name == "prefix-foo" {
+							return false, fmt.Errorf("some error")
+						}
+						return true, nil
+					},
+					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
+						if opts.ContainerName == "prefix-pause" {
+							// block pause container until Stop(pause)
+							<-stopPause
+						}
+						if opts.ContainerName == "prefix-foo" {
+							// block bar container until Stop(foo)
+							<-stopFoo
+						}
+						return nil
+					},
+					StopFn: func(ctx context.Context, s string) error {
+						if s == "prefix-pause" {
+							stopPause <- struct{}{}
+						}
+						if s == "prefix-foo" {
+							stopFoo <- struct{}{}
+						}
+						return nil
+					},
+				}
+				return func(t *testing.T, o *Orchestrator) {
+					o.RunTask(Task{
+						Containers: map[string]ContainerDefinition{
+							"foo": {
+								IsEssential: false,
+							},
+							"bar": {
+								IsEssential: true,
+								DependsOn: map[string]string{
+									"foo": ctrStateStart,
+								},
+							},
+						},
+					})
+				}, de
+			},
+			errs: []string{"upward traversal: wait for container foo to start: check if \"prefix-foo\" is running: some error"},
+		},
+
 		"return error when dependency container complete failed": {
 			logOptions:     noLogs,
 			stopAfterNErrs: 1,
