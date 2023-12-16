@@ -534,7 +534,8 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 					}
 				case ctrStateComplete:
 					exitCode, err := o.docker.ContainerExitCode(ctx, ctrId)
-					if errors.Is(err, fmt.Errorf("container %q has not exited", name)) {
+					var errContainerNotExited *dockerengine.ErrContainerNotExited
+					if errors.As(err, &errContainerNotExited) {
 						continue
 					}
 					if err != nil {
@@ -546,7 +547,8 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 					}
 				case ctrStateSuccess:
 					exitCode, err := o.docker.ContainerExitCode(ctx, ctrId)
-					if errors.Is(err, fmt.Errorf("container %q has not exited", name)) {
+					var errContainerNotExited *dockerengine.ErrContainerNotExited
+					if errors.As(err, &errContainerNotExited) {
 						continue
 					}
 					if err != nil {

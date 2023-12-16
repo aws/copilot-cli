@@ -383,7 +383,7 @@ func (c DockerCmdClient) ContainerExitCode(ctx context.Context, name string) (in
 		return 0, err
 	}
 	if state.Status == containerStatusRunning {
-		return 0, fmt.Errorf("container %q has not exited", name)
+		return 0, &ErrContainerNotExited{name: name}
 	}
 	return state.ExitCode, nil
 }
@@ -613,4 +613,14 @@ type errEmptyImageTags struct {
 
 func (e *errEmptyImageTags) Error() string {
 	return fmt.Sprintf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", e.uri)
+}
+
+// ErrContainerNotExited represents an error when a Docker container has not exited.
+type ErrContainerNotExited struct {
+	name string
+}
+
+// Error returns the error message.
+func (e *ErrContainerNotExited) Error() string {
+	return fmt.Sprintf("container %q has not exited", e.name)
 }

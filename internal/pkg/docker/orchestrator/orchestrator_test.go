@@ -428,7 +428,7 @@ func TestOrchestrator(t *testing.T) {
 						if name == "prefix-foo" {
 							return 143, fmt.Errorf("some error")
 						}
-						return 0, fmt.Errorf("container %q has not exited", name)
+						return 0, &dockerengine.ErrContainerNotExited{}
 					},
 				}
 				return func(t *testing.T, o *Orchestrator) {
@@ -484,7 +484,7 @@ func TestOrchestrator(t *testing.T) {
 						if containerName == "prefix-foo" {
 							return 143, nil
 						}
-						return 0, fmt.Errorf("container %q has not exited", containerName)
+						return 0, &dockerengine.ErrContainerNotExited{}
 					},
 				}
 				return func(t *testing.T, o *Orchestrator) {
@@ -515,7 +515,7 @@ func TestOrchestrator(t *testing.T) {
 						return true, nil
 					},
 					ContainerExitCodeFn: func(ctx context.Context, containerName string) (int, error) {
-						return -1, nil
+						return 0, nil
 					},
 					RunFn: func(ctx context.Context, opts *dockerengine.RunOptions) error {
 						if opts.ContainerName == "prefix-foo" {
