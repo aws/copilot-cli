@@ -960,7 +960,7 @@ ecs exec: all containers failed to retrieve credentials`),
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.ws.EXPECT().Path().Return("")
-				m.dockerignore.EXPECT().Excludes().Return([]string{"ignoredDir/*"}).Times(2)
+				m.dockerignore.EXPECT().Excludes().Return([]string{"ignoredDir/*"}).AnyTimes()
 
 				eventCh := make(chan fsnotify.Event, 2)
 				m.watcher.EventsFn = func() <-chan fsnotify.Event {
@@ -975,12 +975,12 @@ ecs exec: all containers failed to retrieve credentials`),
 					return eventCh
 				}
 
-				watcherErrCh := make(chan error, 1)
+				watcherErrCh := make(chan error, 2)
 				m.watcher.ErrorsFn = func() <-chan error {
 					return watcherErrCh
 				}
 
-				errCh := make(chan error, 1)
+				errCh := make(chan error, 2)
 				m.orchestrator.StartFn = func() <-chan error {
 					return errCh
 				}
