@@ -202,8 +202,9 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 			cancel()
 		}
 	}()
+	prevTask := o.curTask
+	o.curTask = a.task
 	if taskID == 1 {
-		o.curTask = a.task
 		if err := o.buildPauseContainer(ctx); err != nil {
 			return fmt.Errorf("build pause container: %w", err)
 		}
@@ -222,19 +223,18 @@ func (a *runTaskAction) Do(o *Orchestrator) error {
 		}
 	} else {
 		// ensure no pause container changes
-		curOpts := o.pauseRunOptions(o.curTask)
+		prevOpts := o.pauseRunOptions(prevTask)
 		newOpts := o.pauseRunOptions(a.task)
-		if !maps.Equal(curOpts.EnvVars, newOpts.EnvVars) ||
-			!maps.Equal(curOpts.Secrets, newOpts.Secrets) ||
-			!maps.Equal(curOpts.ContainerPorts, newOpts.ContainerPorts) {
+		if !maps.Equal(prevOpts.EnvVars, newOpts.EnvVars) ||
+			!maps.Equal(prevOpts.Secrets, newOpts.Secrets) ||
+			!maps.Equal(prevOpts.ContainerPorts, newOpts.ContainerPorts) {
 			return errors.New("new task requires recreating pause container")
 		}
 
-		if err := o.stopTask(ctx, o.curTask); err != nil {
+		if err := o.stopTask(ctx, prevTask); err != nil {
 			return fmt.Errorf("stop existing task: %w", err)
 		}
 	}
-	o.curTask = a.task
 	depGraph := buildDependencyGraph(a.task.Containers)
 	err := depGraph.UpwardTraversal(ctx, func(ctx context.Context, containerName string) error {
 		if len(a.task.Containers[containerName].DependsOn) > 0 {
