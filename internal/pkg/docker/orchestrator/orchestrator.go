@@ -518,7 +518,7 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 				case ctrStateHealthy:
 					healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
 					if err != nil {
-						return fmt.Errorf("container %q is not healthy: %w", ctrId, err)
+						return fmt.Errorf("wait for container %q to be healthy: %w", ctrId, err)
 					}
 					if healthy {
 						log.Successf("Successfully dependency container %q reached healthy\n", ctrId)

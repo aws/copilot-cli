@@ -360,7 +360,7 @@ func TestOrchestrator(t *testing.T) {
 					})
 				}, de
 			},
-			errs: []string{"upward traversal: wait for container bar dependencies: container \"prefix-foo\" is not healthy: container `prefix-foo` is unhealthy"},
+			errs: []string{"upward traversal: wait for container bar dependencies: wait for container \"prefix-foo\" to be healthy: container `prefix-foo` is unhealthy"},
 		},
 
 		"return error when dependency container complete failed": {
