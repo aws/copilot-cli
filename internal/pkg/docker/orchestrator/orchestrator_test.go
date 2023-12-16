@@ -556,7 +556,7 @@ func TestOrchestrator(t *testing.T) {
 				}, de
 			},
 			stopAfterNErrs: 1,
-			errs:           []string{`run "prefix-foo": essential container stopped unexpectedly`},
+			errs:           []string{`run "prefix-foo": container stopped unexpectedly`},
 		},
 		"proxy setup, connection returns error": {
 			logOptions:      noLogs,

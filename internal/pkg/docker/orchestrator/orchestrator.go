@@ -640,7 +640,7 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 				return
 			}
 			if err == nil {
-				err = errors.New("essential container stopped unexpectedly")
+				err = errors.New("container stopped unexpectedly")
 			}
 			// cancel context to indicate all the other go routines spawned by `graph.UpwardTarversal`.
 			cancel()
