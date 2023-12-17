@@ -6,7 +6,7 @@ From getting started, pushing to staging, and releasing to production, Copilot c
 
 ## Installing
 
-You can install AWS Copilot through [Homebrew](https://brew.sh/) or by downloading the binaries directly. If you don't want to use Homebrew, you can install [manually](./getting-started/install.en.md). 
+You can install AWS Copilot through [Homebrew](https://brew.sh/) (make sure brew is installed without Rosetta) or by downloading the binaries directly. If you don't want to use Homebrew, you can install [manually](./getting-started/install.en.md). 
 
 ```sh
 $ brew install aws/tap/copilot-cli
