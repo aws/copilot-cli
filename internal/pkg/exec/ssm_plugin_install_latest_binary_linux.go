@@ -5,6 +5,7 @@
 package exec
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,10 +33,31 @@ func (s SSMPluginCommand) InstallLatestBinary() error {
 }
 
 func (s SSMPluginCommand) isUbuntu() (bool, error) {
-	if err := s.runner.Run("uname", []string{"-a"}, Stdout(&s.linuxDistVersionBuffer)); err != nil {
-		return false, fmt.Errorf("get linux distribution version: %w", err)
+	if err := s.runner.Run("cat", []string{"/etc/os-release"}, Stdout(&s.linuxDistVersionBuffer)); err != nil {
+		return false, fmt.Errorf("get linux distribution based on ubuntu: %w", err)
 	}
-	return strings.Contains(s.linuxDistVersionBuffer.String(), "Ubuntu"), nil
+	/*
+	   Example output of /etc/os-release:
+	   "ID=ubuntu"
+	   "ID_LIKE="debian""
+	*/
+	scanner := bufio.NewScanner(strings.NewReader(s.linuxDistVersionBuffer.String()))
+	for scanner.Scan() {
+		line := scanner.Text()
+		keyValuePair := strings.SplitN(strings.Trim(strings.TrimSpace(line), `"'`), "=", 2) // Remove potential quotes and newlines.
+		if len(keyValuePair) != 2 {
+			continue
+		}
+		key := keyValuePair[0]
+		value := strings.Trim(strings.TrimSpace(keyValuePair[1]), `"'`) // Remove potential quotes and newlines.
+		if (key == "ID" || key == "ID_LIKE") && strings.Contains(strings.ToLower(value), "ubuntu") {
+			return true, nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func (s SSMPluginCommand) installLinuxBinary() error {
