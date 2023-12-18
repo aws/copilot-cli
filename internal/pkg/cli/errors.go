@@ -173,9 +173,11 @@ func (e *errTaskRoleRetrievalFailed) Error() string {
 }
 
 func (e *errTaskRoleRetrievalFailed) RecommendActions() string {
-	return fmt.Sprintf(`TaskRole retrieval failed. You can manually add permissions for your account to assume TaskRole by adding the following YAML override to your service:
+	return fmt.Sprintf(`TaskRole retrieval failed. If your containers don't require the TaskRole for local testing, you can use %s to disable this feature.
+If you require the TaskRole, you can manually add permissions for your account to assume TaskRole by adding the following YAML override to your service:
 %s
 For more information on YAML overrides see %s`,
+		color.HighlightCode(`copilot run local --use-task-role=false`),
 		color.HighlightCodeBlock(`- op: add
   path: /Resources/TaskRole/Properties/AssumeRolePolicyDocument/Statement/-
   value:
