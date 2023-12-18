@@ -31,7 +31,7 @@ func TestSSMPluginCommand_InstallLatestBinary_linux(t *testing.T) {
 				mockRunner.EXPECT().Run("cat", []string{"/etc/os-release"}, gomock.Any()).
 					Return(mockError)
 			},
-			wantedError: fmt.Errorf("get linux distribution version: some error"),
+			wantedError: fmt.Errorf("run cat /etc/os-release:: some error"),
 		},
 		"return error if fail to install binary on linux": {
 			linuxVersion: "Linux ip-172-31-35-135.us-west-2.compute.internal 4.14.203-156.332.amzn2.x86_64 #1 SMP Fri Oct 30 19:19:33 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux",

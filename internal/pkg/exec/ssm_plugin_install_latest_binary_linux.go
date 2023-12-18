@@ -34,7 +34,7 @@ func (s SSMPluginCommand) InstallLatestBinary() error {
 
 func (s SSMPluginCommand) isUbuntu() (bool, error) {
 	if err := s.runner.Run("cat", []string{"/etc/os-release"}, Stdout(&s.linuxDistVersionBuffer)); err != nil {
-		return false, fmt.Errorf("get linux distribution based on ubuntu: %w", err)
+		return false, fmt.Errorf("run cat /etc/os-release: %w", err)
 	}
 	/*
 	   Example output of /etc/os-release:
