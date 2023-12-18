@@ -637,6 +637,7 @@ func (o *Orchestrator) run(taskID int32, opts dockerengine.RunOptions, isEssenti
 		if taskID == pauseCtrTaskID || taskID == curTaskID {
 			var errContainerExited *dockerengine.ErrContainerExited
 			if !isEssential && (errors.As(err, &errContainerExited) || err == nil) {
+				fmt.Printf("non-essential container %q stopped\n", opts.ContainerName)
 				return
 			}
 			if err == nil {
