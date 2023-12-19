@@ -61,6 +61,8 @@ environments:
         - path: "/"
           allowed_source_ips: ["67.170.82.40/32", "0.0.0.0/0"]
           alias: example.com
+    count:
+      response_time: 2s
     network:
       vpc:
         security_groups:
