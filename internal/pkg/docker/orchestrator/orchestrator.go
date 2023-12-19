@@ -475,6 +475,7 @@ func (o *Orchestrator) waitForContainerToStart(ctx context.Context, id string) e
 		case err != nil:
 			return fmt.Errorf("check if %q is running: %w", id, err)
 		case isRunning:
+			log.Successf("Successfully started container %s\n", id)
 			return nil
 		}
 
@@ -508,12 +509,6 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 				}
 				switch state {
 				case ctrStateStart:
-					var errContainerExited *dockerengine.ErrContainerExited
-					err := o.waitForContainerToStart(ctx, ctrId)
-					if err != nil && !errors.As(err, &errContainerExited) {
-						return fmt.Errorf("wait for container %q to start: %w", ctrId, err)
-					}
-					log.Successf("Successfully started container %s\n", ctrId)
 					return nil
 				case ctrStateHealthy:
 					healthy, err := o.docker.IsContainerHealthy(ctx, ctrId)
@@ -533,10 +528,8 @@ func (o *Orchestrator) waitForContainerDependencies(ctx context.Context, name st
 					if err != nil {
 						return fmt.Errorf("wait for container %q to complete: %w", ctrId, err)
 					}
-					if exitCode != 0 {
-						log.Successf("%q's dependency container %q exited with code: %d\n", name, ctrId, exitCode)
-						return nil
-					}
+					log.Successf("%q's dependency container %q exited with code: %d\n", name, ctrId, exitCode)
+					return nil
 				case ctrStateSuccess:
 					exitCode, err := o.docker.ContainerExitCode(ctx, ctrId)
 					var errContainerNotExited *dockerengine.ErrContainerNotExited
