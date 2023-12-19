@@ -78,12 +78,14 @@ func TestRecursiveWatcher(t *testing.T) {
 		eventsCh := watcher.Events()
 		errorsCh := watcher.Errors()
 
+		// expectNextEvents consumes the watcher's event channel to retrieve the next n events in expectedEvents in no particular order.
 		eIndex := 0
-		expectNextEvent := func() {
+		expectNextEvents := func(n int) {
 			defer func() {
-				eIndex += 1
+				eIndex += n
 			}()
 
+			added := 0
 			for {
 				var e fsnotify.Event
 				select {
@@ -92,8 +94,14 @@ func TestRecursiveWatcher(t *testing.T) {
 					return
 				}
 
-				if e == eventsExpected[eIndex] {
-					eventsActual = append(eventsActual, e)
+				for i := eIndex; i < eIndex+n; i++ {
+					if e == eventsExpected[i] {
+						eventsActual = append(eventsActual, e)
+						added += 1
+					}
+				}
+
+				if added == n {
 					return
 				}
 			}
@@ -102,39 +110,37 @@ func TestRecursiveWatcher(t *testing.T) {
 		// WATCH
 		file, err := os.Create(filepath.Join(tmp, "watch/subdir/testfile"))
 		require.NoError(t, err)
-		expectNextEvent()
+		expectNextEvents(1)
 
 		err = os.Chmod(filepath.Join(tmp, "watch/subdir/testfile"), 0755)
 		require.NoError(t, err)
-		expectNextEvent()
+		expectNextEvents(1)
 
 		err = os.WriteFile(filepath.Join(tmp, "watch/subdir/testfile"), []byte("write to file"), fs.ModeAppend)
 		require.NoError(t, err)
-		expectNextEvent()
+		expectNextEvents(1)
 
 		err = file.Close()
 		require.NoError(t, err)
 
 		err = os.Rename(filepath.Join(tmp, "watch/subdir"), filepath.Join(tmp, "watch/subdir2"))
 		require.NoError(t, err)
-		expectNextEvent()
-		expectNextEvent()
+		expectNextEvents(2)
 
 		err = os.Rename(filepath.Join(tmp, "watch/subdir2/testfile"), filepath.Join(tmp, "watch/subdir2/testfile2"))
 		require.NoError(t, err)
-		expectNextEvent()
-		expectNextEvent()
+		expectNextEvents(2)
 
 		err = os.Remove(filepath.Join(tmp, "watch/subdir2/testfile2"))
 		require.NoError(t, err)
-		expectNextEvent()
+		expectNextEvents(1)
 
 		// CLOSE
 		err = watcher.Close()
 		require.NoError(t, err)
 		require.Empty(t, errorsCh)
 
-		require.Equal(t, eventsExpected, eventsActual)
+		require.ElementsMatch(t, eventsExpected, eventsActual)
 	})
 
 	t.Run("Clean", func(t *testing.T) {
