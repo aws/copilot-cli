@@ -85,6 +85,7 @@ func TestRecursiveWatcher(t *testing.T) {
 				select {
 				case e = <-eventsCh:
 				case <-time.After(time.Second):
+					return
 				}
 
 				if e == eventsExpected[eIndex] {
