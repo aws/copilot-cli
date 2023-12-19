@@ -16,10 +16,10 @@ import (
 // returns the list of paths to exclude.
 func ReadDockerignore(fs afero.Fs, contextDir string) ([]string, error) {
 	f, err := fs.Open(filepath.Join(contextDir, ".dockerignore"))
-	switch {
-	case os.IsNotExist(err):
-		return nil, nil
-	case err != nil:
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer f.Close()
