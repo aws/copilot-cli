@@ -850,7 +850,6 @@ type WorkloadOpts struct {
 	AWSSDKLayer          *string
 	AppDNSDelegationRole *string
 	AppDNSName           *string
-	HostedZones          *HostedZones
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts

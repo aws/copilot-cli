@@ -57,7 +57,7 @@ InstanceRole:
               Action:
                 - 'kms:Decrypt'
               Resource:
-                - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                - !Ref ArtifactKeyARN
       {{- end }}
       {{- if .Publish }}
       {{- if .Publish.Topics }}

@@ -44,6 +44,9 @@ Parameters:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ''
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
 
 Conditions:
   # App Runner will not accept an AccessRole for ImageRepositoryTypes other than ECR.
@@ -239,9 +242,6 @@ Resources:
       CustomDomain: {{ .Alias }}
       AppDNSRole: {{ .AppDNSDelegationRole }}
       AppDNSName: {{ .AppDNSName }}
-      {{- if .HostedZones}}
-      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
-      {{- end}}
 
   CustomResourceRole:
     Metadata:
