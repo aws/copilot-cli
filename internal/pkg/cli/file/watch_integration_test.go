@@ -131,7 +131,7 @@ func TestRecursiveWatcher(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, errorsCh)
 
-		require.Subset(t, eventsExpected, eventsActual)
+		require.Equal(t, eventsExpected, eventsActual)
 	})
 
 	t.Run("Clean", func(t *testing.T) {
