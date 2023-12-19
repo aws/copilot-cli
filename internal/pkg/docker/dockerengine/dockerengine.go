@@ -303,9 +303,6 @@ func (in *RunOptions) generateRunArguments() []string {
 
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
-	type exitCodeError interface {
-		ExitCode() int
-	}
 	// set default options
 	if options.LogOptions.Color == nil {
 		options.LogOptions.Color = color.New()
@@ -346,11 +343,11 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			exec.Stdout(stdout),
 			exec.Stderr(stderr),
 			exec.NewProcessGroup()); err != nil {
-			var ec exitCodeError
-			if errors.As(err, &ec) {
+			var errorContainerExited *ErrContainerExited
+			if errors.As(err, &errorContainerExited) {
 				return &ErrContainerExited{
 					name:     options.ContainerName,
-					exitcode: ec.ExitCode(),
+					exitcode: errorContainerExited.ExitCode(),
 				}
 			}
 			return fmt.Errorf("running container: %w", err)
@@ -451,23 +448,6 @@ func (d *DockerCmdClient) containerID(ctx context.Context, containerName string)
 		return "", fmt.Errorf("run docker ps: %w", err)
 	}
 	return strings.TrimSpace(buf.String()), nil
-}
-
-// ErrContainerExited represents an error when a Docker container has exited.
-// It includes the container name and exit code in the error message.
-type ErrContainerExited struct {
-	name     string
-	exitcode int
-}
-
-// ExitCode returns the OS exit code configured for this error.
-func (e *ErrContainerExited) ExitCode() int {
-	return e.exitcode
-}
-
-// ErrContainerExited represents docker container exited with an exitcode.
-func (e *ErrContainerExited) Error() string {
-	return fmt.Sprintf("container %q exited with code %d", e.name, e.exitcode)
 }
 
 // Stop calls `docker stop` to stop a running container.
@@ -605,22 +585,4 @@ func userHomeDirectory() string {
 	}
 
 	return home
-}
-
-type errEmptyImageTags struct {
-	uri string
-}
-
-func (e *errEmptyImageTags) Error() string {
-	return fmt.Sprintf("tags to reference an image should not be empty for building and pushing into the ECR repository %s", e.uri)
-}
-
-// ErrContainerNotExited represents an error when a Docker container has not exited.
-type ErrContainerNotExited struct {
-	name string
-}
-
-// Error returns the error message.
-func (e *ErrContainerNotExited) Error() string {
-	return fmt.Sprintf("container %q has not exited", e.name)
 }
