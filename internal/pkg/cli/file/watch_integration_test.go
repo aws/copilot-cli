@@ -30,7 +30,7 @@ func TestRecursiveWatcher(t *testing.T) {
 	eventsExpected = []fsnotify.Event{
 		{
 			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
-			Op:   fsnotify.Write,
+			Op:   fsnotify.Create,
 		},
 		{
 			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
@@ -80,6 +80,10 @@ func TestRecursiveWatcher(t *testing.T) {
 
 		eIndex := 0
 		expectNextEvent := func() {
+			defer func() {
+				eIndex += 1
+			}()
+
 			for {
 				var e fsnotify.Event
 				select {
@@ -90,7 +94,6 @@ func TestRecursiveWatcher(t *testing.T) {
 
 				if e == eventsExpected[eIndex] {
 					eventsActual = append(eventsActual, e)
-					eIndex += 1
 					return
 				}
 			}
