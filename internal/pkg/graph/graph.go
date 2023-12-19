@@ -369,7 +369,8 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 		for _, vertex := range vertices {
 			vertex := vertex
 			// If any of the vertices that should be visited before this vertex are yet to be processed, we delay processing it.
-			if len(t.filterPreviousVerticesByStatus(graph, vertex, unvisited)) != 0 {
+			if len(t.filterPreviousVerticesByStatus(graph, vertex, unvisited)) != 0 ||
+				len(t.filterPreviousVerticesByStatus(graph, vertex, visiting)) != 0 {
 				continue
 			}
 			// Check if the vertex is already visited or being visited
