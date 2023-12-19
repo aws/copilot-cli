@@ -220,7 +220,6 @@ type runLocalExecuteMocks struct {
 	watcher        *filetest.Double
 	hostFinder     *hostFinderDouble
 	envChecker     *mocks.MockversionCompatibilityChecker
-	dockerignore   *mocks.MockdockerignoreFile
 }
 
 type mockProvider struct {
@@ -484,16 +483,17 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inputAppName       string
-		inputEnvName       string
-		inputWkldName      string
-		inputEnvOverrides  map[string]string
-		inputPortOverrides []string
-		inputWatch         bool
-		inputTaskRole      bool
-		inputProxy         bool
-		inputReader        io.Reader
-		buildImagesError   error
+		inputAppName        string
+		inputEnvName        string
+		inputWkldName       string
+		inputEnvOverrides   map[string]string
+		inputPortOverrides  []string
+		inputDockerExcludes []string
+		inputWatch          bool
+		inputTaskRole       bool
+		inputProxy          bool
+		inputReader         io.Reader
+		buildImagesError    error
 
 		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
 		wantedWkldName string
@@ -950,17 +950,17 @@ ecs exec: all containers failed to retrieve credentials`),
 			},
 		},
 		"watch flag receives hidden file and ignored file update, doesn't restart": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inputWatch:    true,
+			inputAppName:        testAppName,
+			inputWkldName:       testWkldName,
+			inputEnvName:        testEnvName,
+			inputWatch:          true,
+			inputDockerExcludes: []string{"ignoredDir/*"},
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.ws.EXPECT().Path().Return("")
-				m.dockerignore.EXPECT().Excludes().Return([]string{"ignoredDir/*"}).AnyTimes()
 
 				eventCh := make(chan fsnotify.Event, 2)
 				m.watcher.EventsFn = func() <-chan fsnotify.Event {
@@ -1005,7 +1005,6 @@ ecs exec: all containers failed to retrieve credentials`),
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
 				m.ws.EXPECT().Path().Return("")
-				m.dockerignore.EXPECT().Excludes().Return(nil)
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(alteredTaskDef, nil)
 
 				eventCh := make(chan fsnotify.Event, 1)
@@ -1092,7 +1091,6 @@ ecs exec: all containers failed to retrieve credentials`),
 				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil).Times(2)
 				m.interpolator.EXPECT().Interpolate("").Return("", nil).Times(2)
 				m.ws.EXPECT().Path().Return("")
-				m.dockerignore.EXPECT().Excludes().Return(nil)
 
 				eventCh := make(chan fsnotify.Event, 1)
 				m.watcher.EventsFn = func() <-chan fsnotify.Event {
@@ -1149,7 +1147,6 @@ ecs exec: all containers failed to retrieve credentials`),
 				watcher:        &filetest.Double{},
 				hostFinder:     &hostFinderDouble{},
 				envChecker:     mocks.NewMockversionCompatibilityChecker(ctrl),
-				dockerignore:   mocks.NewMockdockerignoreFile(ctrl),
 			}
 			tc.setupMocks(t, m)
 			opts := runLocalOpts{
@@ -1201,17 +1198,17 @@ ecs exec: all containers failed to retrieve credentials`),
 						Credentials: credentials.NewStaticCredentials("myEnvID", "myEnvSecret", "myEnvToken"),
 					},
 				},
-				cmd:          m.mockRunner,
-				dockerEngine: m.dockerEngine,
-				repository:   m.repository,
-				targetEnv:    &mockEnv,
-				targetApp:    &mockApp,
-				prog:         m.prog,
-				orchestrator: m.orchestrator,
-				hostFinder:   m.hostFinder,
-				envChecker:   m.envChecker,
-				dockerignore: m.dockerignore,
-				debounceTime: 0, // disable debounce during testing
+				cmd:            m.mockRunner,
+				dockerEngine:   m.dockerEngine,
+				repository:     m.repository,
+				targetEnv:      &mockEnv,
+				targetApp:      &mockApp,
+				prog:           m.prog,
+				orchestrator:   m.orchestrator,
+				hostFinder:     m.hostFinder,
+				envChecker:     m.envChecker,
+				debounceTime:   0, // disable debounce during testing
+				dockerExcludes: tc.inputDockerExcludes,
 				newRecursiveWatcher: func() (recursiveWatcher, error) {
 					return m.watcher, nil
 				},

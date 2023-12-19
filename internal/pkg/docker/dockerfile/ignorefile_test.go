@@ -23,11 +23,11 @@ func TestDockerignoreFile(t *testing.T) {
 	}{
 		"reads file that doesn't exist": {
 			dockerignoreFilePath: "./falsepath",
-			wantedExcludes:       []string{},
+			wantedExcludes:       nil,
 		},
 		"dockerignore file is empty": {
 			dockerignoreFilePath: defaultPath,
-			wantedExcludes:       []string{},
+			wantedExcludes:       nil,
 		},
 		"parse dockerignore file": {
 			dockerignoreFilePath: defaultPath,
@@ -55,12 +55,12 @@ copilot/*/*
 				t.FailNow()
 			}
 
-			dockerignoreFile, err := NewDockerignoreFile(fs.Fs, tc.dockerignoreFilePath)
+			actualExcludes, err := ReadDockerignore(fs.Fs, tc.dockerignoreFilePath)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedExcludes, dockerignoreFile.Excludes())
+				require.Equal(t, tc.wantedExcludes, actualExcludes)
 			}
 		})
 	}

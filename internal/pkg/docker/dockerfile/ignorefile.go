@@ -12,46 +12,22 @@ import (
 	"github.com/spf13/afero"
 )
 
-// DockerignoreFile represents a .dockerignore file holding information of excluded files.
-type DockerignoreFile struct {
-	excludes []string
-
-	fs afero.Fs
-}
-
-// NewDockerignoreFile returns a DockerignoreFile read from a given filesystem.
-func NewDockerignoreFile(fs afero.Fs, contextDir string) (*DockerignoreFile, error) {
-	df := &DockerignoreFile{
-		fs:       fs,
-		excludes: []string{},
-	}
-	return df, df.readDockerignore(contextDir)
-}
-
 // ReadDockerignore reads the .dockerignore file in the context directory and
 // returns the list of paths to exclude.
-func (df *DockerignoreFile) readDockerignore(contextDir string) error {
-	f, err := df.fs.Open(filepath.Join(contextDir, ".dockerignore"))
+func ReadDockerignore(fs afero.Fs, contextDir string) ([]string, error) {
+	f, err := fs.Open(filepath.Join(contextDir, ".dockerignore"))
 	switch {
 	case os.IsNotExist(err):
-		return nil
+		return nil, nil
 	case err != nil:
-		return err
+		return nil, err
 	}
 	defer f.Close()
 
 	patterns, err := ignorefile.ReadAll(f)
 	if err != nil {
-		return fmt.Errorf("error reading .dockerignore: %w", err)
+		return nil, fmt.Errorf("error reading .dockerignore: %w", err)
 	}
 
-	if patterns != nil {
-		df.excludes = patterns
-	}
-	return nil
-}
-
-// Excludes returns the exclude patterns of a .dockerignore file.
-func (df *DockerignoreFile) Excludes() []string {
-	return df.excludes
+	return patterns, nil
 }

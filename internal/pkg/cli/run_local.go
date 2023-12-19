@@ -136,12 +136,12 @@ type runLocalOpts struct {
 	orchestrator   containerOrchestrator
 	hostFinder     hostFinder
 	envChecker     versionCompatibilityChecker
-	dockerignore   dockerignoreFile
 	debounceTime   time.Duration
+	dockerExcludes []string
 
 	newRecursiveWatcher  func() (recursiveWatcher, error)
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
-	newDockerignoreFile  func(fs afero.Fs, contextDir string) (*dockerfile.DockerignoreFile, error)
+	readDockerignoreFile func(fs afero.Fs, contextDir string) ([]string, error)
 	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
@@ -172,19 +172,19 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
 	}
 	o := &runLocalOpts{
-		runLocalVars:        vars,
-		sel:                 selector.NewDeploySelect(prompt.New(), store, deployStore),
-		store:               store,
-		ws:                  ws,
-		newInterpolator:     newManifestInterpolator,
-		sessProvider:        sessProvider,
-		unmarshal:           manifest.UnmarshalWorkload,
-		sess:                defaultSess,
-		cmd:                 exec.NewCmd(),
-		dockerEngine:        dockerengine.New(exec.NewCmd()),
-		labeledTermPrinter:  labeledTermPrinter,
-		prog:                termprogress.NewSpinner(log.DiagnosticWriter),
-		newDockerignoreFile: dockerfile.NewDockerignoreFile,
+		runLocalVars:         vars,
+		sel:                  selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:                store,
+		ws:                   ws,
+		newInterpolator:      newManifestInterpolator,
+		sessProvider:         sessProvider,
+		unmarshal:            manifest.UnmarshalWorkload,
+		sess:                 defaultSess,
+		cmd:                  exec.NewCmd(),
+		dockerEngine:         dockerengine.New(exec.NewCmd()),
+		labeledTermPrinter:   labeledTermPrinter,
+		prog:                 termprogress.NewSpinner(log.DiagnosticWriter),
+		readDockerignoreFile: dockerfile.ReadDockerignore,
 	}
 	o.configureClients = func() error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -254,7 +254,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		case *manifest.WorkerService:
 			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
 		}
-		o.dockerignore, err = o.newDockerignoreFile(afero.NewOsFs(), filepath.Join(ws.Path(), dockerfileDir))
+		o.dockerExcludes, err = o.readDockerignoreFile(afero.NewOsFs(), filepath.Join(ws.Path(), dockerfileDir))
 		if err != nil {
 			return nil, err
 		}
@@ -682,7 +682,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 
 				// skip updates from files matching .dockerignore patterns
 				isExcluded := false
-				for _, pattern := range o.dockerignore.Excludes() {
+				for _, pattern := range o.dockerExcludes {
 					matches, err := filepath.Match(pattern, suffix)
 					if err != nil {
 						break
