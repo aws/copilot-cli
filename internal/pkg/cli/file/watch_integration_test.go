@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -79,13 +80,7 @@ func TestRecursiveWatcher(t *testing.T) {
 		errorsCh := watcher.Errors()
 
 		// expectNextEvents consumes the watcher's event channel to retrieve the next n events in expectedEvents in no particular order.
-		eIndex := 0
 		expectNextEvents := func(n int) {
-			defer func() {
-				eIndex += n
-			}()
-
-			added := 0
 			for {
 				var e fsnotify.Event
 				select {
@@ -94,14 +89,12 @@ func TestRecursiveWatcher(t *testing.T) {
 					return
 				}
 
-				for i := eIndex; i < eIndex+n; i++ {
-					if e == eventsExpected[i] {
-						eventsActual = append(eventsActual, e)
-						added += 1
-					}
+				if slices.Contains(eventsExpected, e) && !slices.Contains(eventsActual, e) {
+					eventsActual = append(eventsActual, e)
+					n -= 1
 				}
 
-				if added == n {
+				if n == 0 {
 					return
 				}
 			}
