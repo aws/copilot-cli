@@ -303,6 +303,9 @@ func (in *RunOptions) generateRunArguments() []string {
 
 // Run runs a Docker container with the sepcified options.
 func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
+	type exitCodeError interface {
+		ExitCode() int
+	}
 	// set default options
 	if options.LogOptions.Color == nil {
 		options.LogOptions.Color = color.New()
@@ -343,11 +346,11 @@ func (c DockerCmdClient) Run(ctx context.Context, options *RunOptions) error {
 			exec.Stdout(stdout),
 			exec.Stderr(stderr),
 			exec.NewProcessGroup()); err != nil {
-			var errorContainerExited *ErrContainerExited
-			if errors.As(err, &errorContainerExited) {
+			var ec exitCodeError
+			if errors.As(err, &ec) {
 				return &ErrContainerExited{
 					name:     options.ContainerName,
-					exitcode: errorContainerExited.ExitCode(),
+					exitcode: ec.ExitCode(),
 				}
 			}
 			return fmt.Errorf("running container: %w", err)
