@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	osexec "os/exec"
 	"path/filepath"
 	"strings"
@@ -680,13 +681,35 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"run",
-					"--rm",
 					"--name", mockPauseContainer,
 					"mockImageUri",
 					"sleep", "infinity"}, gomock.Any(), gomock.Any(), gomock.Any()).Return(mockError)
 			},
 			wantedError: fmt.Errorf("running container: %w", mockError),
 		},
+
+		"should return error when container exits": {
+			containerName: mockPauseContainer,
+			command:       mockCommand,
+			uri:           mockImageURI,
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+
+				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", []string{"run",
+					"--name", mockPauseContainer,
+					"mockImageUri",
+					"sleep", "infinity"}, gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, name string, args []string, opts ...exec.CmdOption) error {
+						// Simulate an zero exit code.
+						return &osexec.ExitError{ProcessState: &os.ProcessState{}}
+					})
+			},
+			wantedError: &ErrContainerExited{
+				name:     mockPauseContainer,
+				exitcode: 0,
+			},
+		},
+
 		"success with run options for pause container": {
 			containerName: mockPauseContainer,
 			ports:         mockContainerPorts,
@@ -695,7 +718,6 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
-					"--rm",
 					"--name", mockPauseContainer,
 					"--publish", "8080:8080",
 					"--publish", "8081:8081",
@@ -712,7 +734,6 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
-					"--rm",
 					"--name", mockContainerName,
 					"--network", "container:pauseContainer",
 					"--env", "DB_PASSWORD=mysecretPassword",
@@ -733,7 +754,6 @@ func TestDockerCommand_Run(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
 				mockCmd.EXPECT().RunWithContext(gomock.Any(), "docker", gomock.InAnyOrder([]string{"run",
-					"--rm",
 					"--name", mockContainerName,
 					"--network", "container:pauseContainer",
 					"--env", "DB_PASSWORD=mysecretPassword",
@@ -1032,7 +1052,7 @@ func TestDockerCommand_IsContainerHealthy(t *testing.T) {
 	}
 }
 
-func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
+func TestDockerCommand_ContainerExitCode(t *testing.T) {
 	tests := map[string]struct {
 		mockContainerName string
 		mockHealthStatus  string
@@ -1107,7 +1127,7 @@ func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("run docker ps: some error"),
 		},
-		"return negative exitcode if container is running": {
+		"return err if container is running": {
 			mockContainerName: "mockContainer",
 			mockHealthStatus:  "unhealthy",
 			setupMocks: func(controller *gomock.Controller) *MockCmd {
@@ -1134,7 +1154,7 @@ func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 				})
 				return mockCmd
 			},
-			wantExitCode: -1,
+			wantErr: fmt.Errorf(`container "mockContainer" has not exited`),
 		},
 	}
 
@@ -1147,7 +1167,7 @@ func TestDockerCommand_IsContainerCompleteOrSuccess(t *testing.T) {
 				runner: tc.setupMocks(ctrl),
 			}
 
-			expectedCode, err := s.IsContainerCompleteOrSuccess(context.Background(), tc.mockContainerName)
+			expectedCode, err := s.ContainerExitCode(context.Background(), tc.mockContainerName)
 			require.Equal(t, tc.wantExitCode, expectedCode)
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())

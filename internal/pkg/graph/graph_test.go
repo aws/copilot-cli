@@ -373,7 +373,7 @@ func TestTopologicalOrder(t *testing.T) {
 
 func buildGraphWithSingleParent() *LabeledGraph[string] {
 	vertices := []string{"A", "B", "C", "D"}
-	graph := NewLabeledGraph[string](vertices, WithStatus[string]("started"))
+	graph := NewLabeledGraph[string](vertices)
 	graph.Add(Edge[string]{From: "D", To: "C"}) // D -> C
 	graph.Add(Edge[string]{From: "C", To: "B"}) // C -> B
 	graph.Add(Edge[string]{From: "B", To: "A"}) // B -> A
@@ -388,14 +388,14 @@ func TestTraverseInDependencyOrder(t *testing.T) {
 			visited = append(visited, v)
 			return nil
 		}
-		err := graph.UpwardTraversal(context.Background(), processFn, "started", "stopped")
+		err := graph.UpwardTraversal(context.Background(), processFn)
 		require.NoError(t, err)
 		expected := []string{"A", "B", "C", "D"}
 		require.Equal(t, expected, visited)
 	})
 	t.Run("graph with multiple parents and boundary nodes", func(t *testing.T) {
 		vertices := []string{"A", "B", "C", "D"}
-		graph := NewLabeledGraph[string](vertices, WithStatus[string]("started"))
+		graph := NewLabeledGraph[string](vertices)
 		graph.Add(Edge[string]{From: "A", To: "C"})
 		graph.Add(Edge[string]{From: "A", To: "D"})
 		graph.Add(Edge[string]{From: "B", To: "D"})
@@ -412,7 +412,7 @@ func TestTraverseInDependencyOrder(t *testing.T) {
 		err := graph.DownwardTraversal(context.Background(), func(ctx context.Context, vtx string) error {
 			vtxChan <- vtx
 			return nil
-		}, "started", "stopped")
+		})
 		require.NoError(t, err, "Error during iteration")
 		close(vtxChan)
 		<-done
@@ -432,7 +432,7 @@ func TestTraverseInReverseDependencyOrder(t *testing.T) {
 			visited = append(visited, v)
 			return nil
 		}
-		err := graph.DownwardTraversal(context.Background(), processFn, "started", "stopped")
+		err := graph.DownwardTraversal(context.Background(), processFn)
 		require.NoError(t, err)
 		expected := []string{"D", "C", "B", "A"}
 		require.Equal(t, expected, visited)
