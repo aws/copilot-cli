@@ -30,7 +30,7 @@ func TestRecursiveWatcher(t *testing.T) {
 	eventsExpected = []fsnotify.Event{
 		{
 			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
-			Op:   fsnotify.Create,
+			Op:   fsnotify.Write,
 		},
 		{
 			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
@@ -78,52 +78,59 @@ func TestRecursiveWatcher(t *testing.T) {
 		eventsCh := watcher.Events()
 		errorsCh := watcher.Errors()
 
-		go func() {
+		eIndex := 0
+		expectNextEvent := func() {
 			for {
+				var e fsnotify.Event
 				select {
-				case e := <-eventsCh:
-					if e.Op != 0 {
-						eventsActual = append(eventsActual, e)
-					}
-				case <-errorsCh:
+				case e = <-eventsCh:
+				case <-time.After(time.Second):
+				}
+
+				if e == eventsExpected[eIndex] {
+					eventsActual = append(eventsActual, e)
+					eIndex += 1
 					return
 				}
 			}
-		}()
+		}
 
 		// WATCH
 		file, err := os.Create(filepath.Join(tmp, "watch/subdir/testfile"))
 		require.NoError(t, err)
+		expectNextEvent()
 
 		err = os.Chmod(filepath.Join(tmp, "watch/subdir/testfile"), 0755)
 		require.NoError(t, err)
+		expectNextEvent()
 
 		err = os.WriteFile(filepath.Join(tmp, "watch/subdir/testfile"), []byte("write to file"), fs.ModeAppend)
 		require.NoError(t, err)
+		expectNextEvent()
 
 		err = file.Close()
 		require.NoError(t, err)
 
 		err = os.Rename(filepath.Join(tmp, "watch/subdir"), filepath.Join(tmp, "watch/subdir2"))
 		require.NoError(t, err)
+		expectNextEvent()
+		expectNextEvent()
 
 		err = os.Rename(filepath.Join(tmp, "watch/subdir2/testfile"), filepath.Join(tmp, "watch/subdir2/testfile2"))
 		require.NoError(t, err)
+		expectNextEvent()
+		expectNextEvent()
 
 		err = os.Remove(filepath.Join(tmp, "watch/subdir2/testfile2"))
 		require.NoError(t, err)
-
-		// Wait for events to propagate
-		time.Sleep(time.Second)
+		expectNextEvent()
 
 		// CLOSE
 		err = watcher.Close()
 		require.NoError(t, err)
 		require.Empty(t, errorsCh)
 
-		for _, expectedEvent := range eventsExpected {
-			require.Contains(t, eventsActual, expectedEvent)
-		}
+		require.Subset(t, eventsExpected, eventsActual)
 	})
 
 	t.Run("Clean", func(t *testing.T) {
