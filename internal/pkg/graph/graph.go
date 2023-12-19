@@ -368,7 +368,7 @@ func (t *graphTraversal[V]) execute(ctx context.Context, lg *LabeledGraph[V]) er
 	processVertices := func(ctx context.Context, graph *LabeledGraph[V], eg *errgroup.Group, vertices []V, vertexCh chan V) {
 		for _, vertex := range vertices {
 			vertex := vertex
-			// Delay processing this vertex if any of its dependent vertices are yet to be processed.
+			// If any of the vertices that should be visited before this vertex are yet to be processed, we delay processing it.
 			if len(t.filterPreviousVerticesByStatus(graph, vertex, unvisited)) != 0 {
 				continue
 			}
