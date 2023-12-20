@@ -8230,3 +8230,40 @@ func (mr *MocksecretGetterMockRecorder) GetSecretValue(arg0, arg1 interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretValue", reflect.TypeOf((*MocksecretGetter)(nil).GetSecretValue), arg0, arg1)
 }
+
+// MockdockerWorkload is a mock of dockerWorkload interface.
+type MockdockerWorkload struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerWorkloadMockRecorder
+}
+
+// MockdockerWorkloadMockRecorder is the mock recorder for MockdockerWorkload.
+type MockdockerWorkloadMockRecorder struct {
+	mock *MockdockerWorkload
+}
+
+// NewMockdockerWorkload creates a new mock instance.
+func NewMockdockerWorkload(ctrl *gomock.Controller) *MockdockerWorkload {
+	mock := &MockdockerWorkload{ctrl: ctrl}
+	mock.recorder = &MockdockerWorkloadMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockdockerWorkload) EXPECT() *MockdockerWorkloadMockRecorder {
+	return m.recorder
+}
+
+// Dockerfile mocks base method.
+func (m *MockdockerWorkload) Dockerfile() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dockerfile")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Dockerfile indicates an expected call of Dockerfile.
+func (mr *MockdockerWorkloadMockRecorder) Dockerfile() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockdockerWorkload)(nil).Dockerfile))
+}
