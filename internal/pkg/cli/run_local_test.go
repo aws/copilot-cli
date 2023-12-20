@@ -1978,3 +1978,45 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 		})
 	}
 }
+
+type runLocalFilterDockerExcludesMocks struct {
+	ws *mocks.MockwsWlDirReader
+}
+
+func TestRunLocal_FilterDockerExcludes(t *testing.T) {
+	tests := map[string]struct {
+		setupMocks func(t *testing.T, m *runLocalFilterDockerExcludesMocks)
+
+		inputDockerExcludes  []string
+		wantedDockerExcludes []string
+	}{
+		"filter out all copilot directories": {
+			setupMocks: func(t *testing.T, m *runLocalFilterDockerExcludesMocks) {
+				m.ws.EXPECT().Path().Return("/ws")
+			},
+			inputDockerExcludes:  []string{"/ws/copilot/*", "/ws/ignoredfile.go", "/ws/copilot/environments/*"},
+			wantedDockerExcludes: []string{"/ws/ignoredfile.go"},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &runLocalFilterDockerExcludesMocks{
+				ws: mocks.NewMockwsWlDirReader(ctrl),
+			}
+			tc.setupMocks(t, m)
+			opts := runLocalOpts{
+				dockerExcludes: tc.inputDockerExcludes,
+				ws:             m.ws,
+			}
+
+			// WHEN
+			opts.filterDockerExcludes()
+
+			// THEN
+			require.Equal(t, opts.dockerExcludes, tc.wantedDockerExcludes)
+		})
+	}
+}

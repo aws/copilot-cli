@@ -141,7 +141,6 @@ type runLocalOpts struct {
 
 	newRecursiveWatcher  func() (recursiveWatcher, error)
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
-	readDockerignoreFile func(fs afero.Fs, contextDir string) ([]string, error)
 	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
@@ -172,19 +171,18 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		return syncbuffer.NewLabeledTermPrinter(fw, bufs, opts...)
 	}
 	o := &runLocalOpts{
-		runLocalVars:         vars,
-		sel:                  selector.NewDeploySelect(prompt.New(), store, deployStore),
-		store:                store,
-		ws:                   ws,
-		newInterpolator:      newManifestInterpolator,
-		sessProvider:         sessProvider,
-		unmarshal:            manifest.UnmarshalWorkload,
-		sess:                 defaultSess,
-		cmd:                  exec.NewCmd(),
-		dockerEngine:         dockerengine.New(exec.NewCmd()),
-		labeledTermPrinter:   labeledTermPrinter,
-		prog:                 termprogress.NewSpinner(log.DiagnosticWriter),
-		readDockerignoreFile: dockerfile.ReadDockerignore,
+		runLocalVars:       vars,
+		sel:                selector.NewDeploySelect(prompt.New(), store, deployStore),
+		store:              store,
+		ws:                 ws,
+		newInterpolator:    newManifestInterpolator,
+		sessProvider:       sessProvider,
+		unmarshal:          manifest.UnmarshalWorkload,
+		sess:               defaultSess,
+		cmd:                exec.NewCmd(),
+		dockerEngine:       dockerengine.New(exec.NewCmd()),
+		labeledTermPrinter: labeledTermPrinter,
+		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 	o.configureClients = func() error {
 		defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnv.Region)
@@ -241,23 +239,15 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		return nil
 	}
 	o.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
-		var dockerfileDir string
-		switch v := mft.Manifest().(type) {
-		case *manifest.LoadBalancedWebService:
-			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.ImageWithPort.Image.Build.BuildString))
-		case *manifest.BackendService:
-			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.ImageWithOptionalPort.Image.Build.BuildString))
-		case *manifest.ScheduledJob:
-			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
-		case *manifest.RequestDrivenWebService:
-			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
-		case *manifest.WorkerService:
-			dockerfileDir, _ = filepath.Split(aws.StringValue(v.ImageConfig.Image.Build.BuildString))
+		var dfDir string
+		if dockerWkld, ok := mft.Manifest().(dockerWorkload); ok {
+			dfDir = filepath.Dir(dockerWkld.Dockerfile())
 		}
-		o.dockerExcludes, err = o.readDockerignoreFile(afero.NewOsFs(), filepath.Join(ws.Path(), dockerfileDir))
+		o.dockerExcludes, err = dockerfile.ReadDockerignore(afero.NewOsFs(), filepath.Join(ws.Path(), dfDir))
 		if err != nil {
 			return nil, err
 		}
+		o.filterDockerExcludes()
 
 		gitShortCommit := imageTagFromGit(o.cmd)
 		image := clideploy.ContainerImageIdentifier{
@@ -613,6 +603,23 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 	}
 
 	return task, nil
+}
+
+func (o *runLocalOpts) filterDockerExcludes() {
+	filter := func(excludes []string, match func(string) bool) []string {
+		result := []string{}
+		for _, exclude := range excludes {
+			if !match(exclude) {
+				result = append(result, exclude)
+			}
+		}
+		return result
+	}
+
+	wsPath := o.ws.Path()
+	o.dockerExcludes = filter(o.dockerExcludes, func(s string) bool {
+		return strings.HasPrefix(s, filepath.ToSlash(filepath.Join(wsPath, workspace.CopilotDirName)))
+	})
 }
 
 func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
