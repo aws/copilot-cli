@@ -166,36 +166,38 @@ func (i Image) GetLocation() string {
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
-// Prefer the following hierarchy:
-// 1. Specific dockerfile, specific context
-// 2. Specific dockerfile, context = dockerfile dir
-// 3. "Dockerfile" located in context dir
-// 4. "Dockerfile" located in ws root.
 func (i *ImageLocationOrBuild) BuildConfig(rootDirectory string) *DockerBuildArgs {
-	df := i.dockerfile()
-	ctx := i.context()
-	dockerfile := aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
-	context := aws.String(rootDirectory)
-
-	if df != "" && ctx != "" {
-		dockerfile = aws.String(filepath.Join(rootDirectory, df))
-		context = aws.String(filepath.Join(rootDirectory, ctx))
-	}
-	if df != "" && ctx == "" {
-		dockerfile = aws.String(filepath.Join(rootDirectory, df))
-		context = aws.String(filepath.Join(rootDirectory, filepath.Dir(df)))
-	}
-	if df == "" && ctx != "" {
-		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, defaultDockerfileName))
-		context = aws.String(filepath.Join(rootDirectory, ctx))
-	}
 	return &DockerBuildArgs{
-		Dockerfile: dockerfile,
-		Context:    context,
+		Dockerfile: aws.String(filepath.Join(rootDirectory, i.dockerfilePath())),
+		Context:    aws.String(filepath.Join(rootDirectory, i.contextPath())),
 		Args:       i.args(),
 		Target:     i.target(),
 		CacheFrom:  i.cacheFrom(),
 	}
+}
+
+// dockerfilePath returns the relative path of a dockerfile.
+// Prefer a specific dockerfile, then a dockerfile in the context directory.
+func (i *ImageLocationOrBuild) dockerfilePath() string {
+	df := i.dockerfile()
+	ctx := i.context()
+
+	if df != "" {
+		return df
+	}
+	return filepath.Join(ctx, defaultDockerfileName)
+}
+
+// dockerfileContext returns the relative context of an image.
+// Prefer a specific context, then the dockerfile directory.
+func (i *ImageLocationOrBuild) contextPath() string {
+	df := i.dockerfile()
+	ctx := i.context()
+
+	if ctx != "" {
+		return ctx
+	}
+	return filepath.Dir(df)
 }
 
 // dockerfile returns the path to the workload's Dockerfile. If no dockerfile is specified,
@@ -390,7 +392,7 @@ func (b *BuildArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 
 // DockerBuildArgs represents the options specifiable under the "build" field
 // of Docker Compose services. For more information, see:
-// https://docs.docker.com/compose/compose-file/#build
+// https://docs.docker.com/compose/compose-file/build
 type DockerBuildArgs struct {
 	Context    *string           `yaml:"context,omitempty"`
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`

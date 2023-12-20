@@ -103,6 +103,11 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *BackendService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Port returns the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {

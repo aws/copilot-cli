@@ -135,6 +135,11 @@ func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *RequestDrivenWebService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Port returns the exposed the exposed port in the manifest.
 // A RequestDrivenWebService always has a port exposed therefore the boolean is always true.
 func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {

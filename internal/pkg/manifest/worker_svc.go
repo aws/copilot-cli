@@ -34,6 +34,11 @@ type WorkerService struct {
 	parser       template.Parser
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *WorkerService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Publish returns the list of topics where notifications can be published.
 func (s *WorkerService) Publish() []Topic {
 	return s.WorkerServiceConfig.PublishConfig.publishedTopics()
