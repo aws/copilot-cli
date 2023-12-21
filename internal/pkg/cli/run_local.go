@@ -4,9 +4,12 @@
 package cli
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -65,6 +68,12 @@ const (
 	workloadAskPrompt = "Which workload would you like to run locally?"
 )
 
+const (
+	// Command to retrieve container credentials with ecs exec. See more at https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html.
+	// Example output: {"AccessKeyId":"ACCESS_KEY_ID","Expiration":"EXPIRATION_DATE","RoleArn":"TASK_ROLE_ARN","SecretAccessKey":"SECRET_ACCESS_KEY","Token":"SECURITY_TOKEN_STRING"}
+	curlContainerCredentialsCmd = "curl 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
+)
+
 type containerOrchestrator interface {
 	Start() <-chan error
 	RunTask(orchestrator.Task, ...orchestrator.RunTaskOption)
@@ -98,6 +107,7 @@ type runLocalVars struct {
 	envName       string
 	envOverrides  map[string]string
 	watch         bool
+	useTaskRole   bool
 	portOverrides portOverrides
 	proxy         bool
 	proxyNetwork  net.IPNet
@@ -108,6 +118,7 @@ type runLocalOpts struct {
 
 	sel                 deploySelector
 	ecsClient           ecsClient
+	ecsExecutor         ecsCommandExecutor
 	ssm                 secretGetter
 	secretsManager      secretGetter
 	sessProvider        sessionProvider
@@ -132,6 +143,9 @@ type runLocalOpts struct {
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
+
+	captureStdout func() (io.Reader, error)
+	releaseStdout func()
 }
 
 func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
@@ -183,6 +197,7 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		// so use the default sess and *hope* they have permissions.
 		o.ecsClient = ecs.New(o.envManagerSess)
 		o.ssm = ssm.New(o.envManagerSess)
+		o.ecsExecutor = awsecs.New(o.envManagerSess)
 		o.secretsManager = secretsmanager.New(defaultSessEnvRegion)
 
 		resources, err := cloudformation.New(o.sess, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(o.targetApp, o.targetEnv.Region)
@@ -254,6 +269,32 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 	o.debounceTime = 5 * time.Second
 	o.newRecursiveWatcher = func() (recursiveWatcher, error) {
 		return file.NewRecursiveWatcher(0)
+	}
+
+	// Capture stdout by replacing it with a piped writer and returning an attached io.Reader.
+	// Functions are concurrency safe and idempotent.
+	var mu sync.Mutex
+	var savedWriter, savedStdout *os.File
+	savedStdout = os.Stdout
+	o.captureStdout = func() (io.Reader, error) {
+		if savedWriter != nil {
+			savedWriter.Close()
+		}
+		pipeReader, pipeWriter, err := os.Pipe()
+		if err != nil {
+			return nil, err
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		savedWriter = pipeWriter
+		os.Stdout = savedWriter
+		return (io.Reader)(pipeReader), nil
+	}
+	o.releaseStdout = func() {
+		mu.Lock()
+		defer mu.Unlock()
+		os.Stdout = savedStdout
+		savedWriter.Close()
 	}
 	return o, nil
 }
@@ -436,6 +477,25 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 		return orchestrator.Task{}, fmt.Errorf("get env vars: %w", err)
 	}
 
+	if o.useTaskRole {
+		taskRoleCredsVars, err := o.taskRoleCredentials(ctx)
+		if err != nil {
+			return orchestrator.Task{}, fmt.Errorf("retrieve task role credentials: %w", err)
+		}
+
+		// overwrite environment variables
+		for ctr := range envVars {
+			for k, v := range taskRoleCredsVars {
+				envVars[ctr][k] = envVarValue{
+					Value:  v,
+					Secret: true,
+				}
+			}
+		}
+	}
+
+	containerDeps := o.getContainerDependencies(td)
+
 	task := orchestrator.Task{
 		Containers: make(map[string]orchestrator.ContainerDefinition, len(td.ContainerDefinitions)),
 	}
@@ -451,10 +511,12 @@ func (o *runLocalOpts) getTask(ctx context.Context) (orchestrator.Task, error) {
 	for _, ctr := range td.ContainerDefinitions {
 		name := aws.StringValue(ctr.Name)
 		def := orchestrator.ContainerDefinition{
-			ImageURI: aws.StringValue(ctr.Image),
-			EnvVars:  envVars[name].EnvVars(),
-			Secrets:  envVars[name].Secrets(),
-			Ports:    make(map[string]string, len(ctr.PortMappings)),
+			ImageURI:    aws.StringValue(ctr.Image),
+			EnvVars:     envVars[name].EnvVars(),
+			Secrets:     envVars[name].Secrets(),
+			Ports:       make(map[string]string, len(ctr.PortMappings)),
+			IsEssential: containerDeps[name].isEssential,
+			DependsOn:   containerDeps[name].dependsOn,
 		}
 
 		for _, port := range ctr.PortMappings {
@@ -512,6 +574,17 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 		}
 
 		ctr.ImageURI = uri
+		task.Containers[name] = ctr
+	}
+
+	containerDeps := manifest.ContainerDependencies(mft.Manifest())
+	for name, dep := range containerDeps {
+		ctr, ok := task.Containers[name]
+		if !ok {
+			return orchestrator.Task{}, fmt.Errorf("missing container: %q is listed as a dependency, which doesn't exist in the task", name)
+		}
+		ctr.IsEssential = dep.IsEssential
+		ctr.DependsOn = dep.DependsOn
 		task.Containers[name] = ctr
 	}
 
@@ -610,6 +683,146 @@ func sessionEnvVars(ctx context.Context, sess *session.Session) (map[string]stri
 		env["AWS_REGION"] = aws.StringValue(sess.Config.Region)
 	}
 	return env, nil
+}
+
+func (o *runLocalOpts) taskRoleCredentials(ctx context.Context) (map[string]string, error) {
+	// assumeRoleMethod tries to directly call sts:AssumeRole for TaskRole using default session
+	// calls sts:AssumeRole through aws-sdk-go here https://github.com/aws/aws-sdk-go/blob/ac58203a9054cc9d901429bdd94edfc0a7a1de46/aws/credentials/stscreds/assume_role_provider.go#L352
+	assumeRoleMethod := func() (map[string]string, error) {
+		taskDef, err := o.ecsClient.TaskDefinition(o.appName, o.envName, o.wkldName)
+		if err != nil {
+			return nil, err
+		}
+
+		taskRoleSess, err := o.sessProvider.FromRole(aws.StringValue(taskDef.TaskRoleArn), o.targetEnv.Region)
+		if err != nil {
+			return nil, err
+		}
+
+		return sessionEnvVars(ctx, taskRoleSess)
+	}
+
+	// ecsExecMethod tries to use ECS Exec to retrive credentials from running container
+	ecsExecMethod := func() (map[string]string, error) {
+		svcDesc, err := o.ecsClient.DescribeService(o.appName, o.envName, o.wkldName)
+		if err != nil {
+			return nil, fmt.Errorf("describe ECS service for %s in environment %s: %w", o.wkldName, o.envName, err)
+		}
+
+		stdoutReader, err := o.captureStdout()
+		if err != nil {
+			return nil, err
+		}
+		defer o.releaseStdout()
+
+		// try exec on each container within the service
+		var wg sync.WaitGroup
+		containerErr := make(chan error)
+		for _, task := range svcDesc.Tasks {
+			taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
+			if err != nil {
+				return nil, err
+			}
+
+			for _, container := range task.Containers {
+				wg.Add(1)
+				containerName := aws.StringValue(container.Name)
+				go func() {
+					defer wg.Done()
+					err := o.ecsExecutor.ExecuteCommand(awsecs.ExecuteCommandInput{
+						Cluster:   svcDesc.ClusterName,
+						Command:   fmt.Sprintf("/bin/sh -c %q\n", curlContainerCredentialsCmd),
+						Task:      taskID,
+						Container: containerName,
+					})
+					if err != nil {
+						containerErr <- fmt.Errorf("container %s in task %s: %w", containerName, taskID, err)
+					}
+				}()
+			}
+		}
+
+		// wait for containers to finish and reset stdout
+		containersFinished := make(chan struct{})
+		go func() {
+			wg.Wait()
+			o.releaseStdout()
+			close(containersFinished)
+		}()
+
+		type containerCredentialsOutput struct {
+			AccessKeyId     string
+			SecretAccessKey string
+			Token           string
+		}
+
+		// parse stdout to try and find credentials
+		credsResult := make(chan map[string]string)
+		parseErr := make(chan error)
+		go func() {
+			select {
+			case <-containersFinished:
+				buf, err := io.ReadAll(stdoutReader)
+				if err != nil {
+					parseErr <- err
+					return
+				}
+				lines := bytes.Split(buf, []byte("\n"))
+				var creds containerCredentialsOutput
+				for _, line := range lines {
+					err := json.Unmarshal(line, &creds)
+					if err != nil {
+						continue
+					}
+					credsResult <- map[string]string{
+						"AWS_ACCESS_KEY_ID":     creds.AccessKeyId,
+						"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
+						"AWS_SESSION_TOKEN":     creds.Token,
+					}
+					return
+				}
+				parseErr <- errors.New("all containers failed to retrieve credentials")
+			case <-ctx.Done():
+				return
+			}
+		}()
+
+		var containerErrs []error
+		for {
+			select {
+			case creds := <-credsResult:
+				return creds, nil
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case err := <-parseErr:
+				return nil, errors.Join(append([]error{err}, containerErrs...)...)
+			case err := <-containerErr:
+				containerErrs = append(containerErrs, err)
+			}
+		}
+	}
+
+	credentialsChain := []func() (map[string]string, error){
+		assumeRoleMethod,
+		ecsExecMethod,
+	}
+
+	credentialsChainWrappedErrs := []string{
+		"assume role",
+		"ecs exec",
+	}
+
+	// return TaskRole credentials from first successful method
+	var errs []error
+	for errIndex, method := range credentialsChain {
+		vars, err := method()
+		if err == nil {
+			return vars, nil
+		}
+		errs = append(errs, fmt.Errorf("%s: %w", credentialsChainWrappedErrs[errIndex], err))
+	}
+
+	return nil, &errTaskRoleRetrievalFailed{errs}
 }
 
 type containerEnv map[string]envVarValue
@@ -802,6 +1015,26 @@ func (o *runLocalOpts) getSecret(ctx context.Context, valueFrom string) (string,
 	return getter.GetSecretValue(ctx, valueFrom)
 }
 
+type containerDependency struct {
+	isEssential bool
+	dependsOn   map[string]string
+}
+
+func (o *runLocalOpts) getContainerDependencies(taskDef *awsecs.TaskDefinition) map[string]containerDependency {
+	dependencies := make(map[string]containerDependency, len(taskDef.ContainerDefinitions))
+	for _, ctr := range taskDef.ContainerDefinitions {
+		dep := containerDependency{
+			isEssential: aws.BoolValue(ctr.Essential),
+			dependsOn:   make(map[string]string),
+		}
+		for _, containerDep := range ctr.DependsOn {
+			dep.dependsOn[aws.StringValue(containerDep.ContainerName)] = strings.ToLower(aws.StringValue(containerDep.Condition))
+		}
+		dependencies[aws.StringValue(ctr.Name)] = dep
+	}
+	return dependencies
+}
+
 type hostDiscoverer struct {
 	ecs  ecsClient
 	app  string
@@ -961,6 +1194,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
+	cmd.Flags().BoolVar(&vars.useTaskRole, useTaskRoleFlag, true, useTaskRoleFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)

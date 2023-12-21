@@ -497,6 +497,10 @@ func TestScheduledJob_Parameters(t *testing.T) {
 			ParameterValue: aws.String(""),
 		},
 		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String("cron(0 0 * * ? *)"),
 		},
@@ -590,6 +594,7 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "phonetool",
+    "ArtifactKeyARN": "",
     "ContainerImage": "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "EnvFileARN": "",
     "EnvName": "test",

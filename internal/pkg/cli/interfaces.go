@@ -472,7 +472,6 @@ type statusDescriber interface {
 
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
-	PublicCIDRBlocks() ([]string, error)
 	Manifest() ([]byte, error)
 	ValidateCFServiceDomainAliases() error
 }
@@ -709,9 +708,11 @@ type dockerEngineRunner interface {
 	Run(context.Context, *dockerengine.RunOptions) error
 	IsContainerRunning(context.Context, string) (bool, error)
 	Stop(context.Context, string) error
-	Rm(string) error
 	Build(context.Context, *dockerengine.BuildArguments, io.Writer) error
 	Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error
+	ContainerExitCode(ctx context.Context, containerName string) (int, error)
+	IsContainerHealthy(ctx context.Context, containerName string) (bool, error)
+	Rm(context.Context, string) error
 }
 
 type workloadStackGenerator interface {

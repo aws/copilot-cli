@@ -5255,21 +5255,6 @@ func (mr *MockenvDescriberMockRecorder) Manifest() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockenvDescriber)(nil).Manifest))
 }
 
-// PublicCIDRBlocks mocks base method.
-func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublicCIDRBlocks")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PublicCIDRBlocks indicates an expected call of PublicCIDRBlocks.
-func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
-}
-
 // ValidateCFServiceDomainAliases mocks base method.
 func (m *MockenvDescriber) ValidateCFServiceDomainAliases() error {
 	m.ctrl.T.Helper()
@@ -7708,6 +7693,21 @@ func (mr *MockdockerEngineRunnerMockRecorder) CheckDockerEngineRunning() *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineRunner)(nil).CheckDockerEngineRunning))
 }
 
+// ContainerExitCode mocks base method.
+func (m *MockdockerEngineRunner) ContainerExitCode(ctx context.Context, containerName string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerExitCode", ctx, containerName)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContainerExitCode indicates an expected call of ContainerExitCode.
+func (mr *MockdockerEngineRunnerMockRecorder) ContainerExitCode(ctx, containerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExitCode", reflect.TypeOf((*MockdockerEngineRunner)(nil).ContainerExitCode), ctx, containerName)
+}
+
 // Exec mocks base method.
 func (m *MockdockerEngineRunner) Exec(ctx context.Context, container string, out io.Writer, cmd string, args ...string) error {
 	m.ctrl.T.Helper()
@@ -7727,6 +7727,21 @@ func (mr *MockdockerEngineRunnerMockRecorder) Exec(ctx, container, out, cmd inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockdockerEngineRunner)(nil).Exec), varargs...)
 }
 
+// IsContainerHealthy mocks base method.
+func (m *MockdockerEngineRunner) IsContainerHealthy(ctx context.Context, containerName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsContainerHealthy", ctx, containerName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsContainerHealthy indicates an expected call of IsContainerHealthy.
+func (mr *MockdockerEngineRunnerMockRecorder) IsContainerHealthy(ctx, containerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsContainerHealthy", reflect.TypeOf((*MockdockerEngineRunner)(nil).IsContainerHealthy), ctx, containerName)
+}
+
 // IsContainerRunning mocks base method.
 func (m *MockdockerEngineRunner) IsContainerRunning(arg0 context.Context, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -7743,17 +7758,17 @@ func (mr *MockdockerEngineRunnerMockRecorder) IsContainerRunning(arg0, arg1 inte
 }
 
 // Rm mocks base method.
-func (m *MockdockerEngineRunner) Rm(arg0 string) error {
+func (m *MockdockerEngineRunner) Rm(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Rm", arg0)
+	ret := m.ctrl.Call(m, "Rm", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Rm indicates an expected call of Rm.
-func (mr *MockdockerEngineRunnerMockRecorder) Rm(arg0 interface{}) *gomock.Call {
+func (mr *MockdockerEngineRunnerMockRecorder) Rm(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rm", reflect.TypeOf((*MockdockerEngineRunner)(nil).Rm), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rm", reflect.TypeOf((*MockdockerEngineRunner)(nil).Rm), arg0, arg1)
 }
 
 // Run mocks base method.

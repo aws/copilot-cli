@@ -163,3 +163,27 @@ func (e *errPipelineDependsOnEnv) RecommendActions() string {
 or run %s to delete the pipeline before running %s to delete the environment`,
 		e.pipeline, e.env, color.HighlightCode(fmt.Sprintf("copilot pipeline delete -n %s", e.pipeline)), color.HighlightCode(fmt.Sprintf("copilot env delete -n %s", e.env)))
 }
+
+type errTaskRoleRetrievalFailed struct {
+	chainErrs []error
+}
+
+func (e *errTaskRoleRetrievalFailed) Error() string {
+	return errors.Join(e.chainErrs...).Error()
+}
+
+func (e *errTaskRoleRetrievalFailed) RecommendActions() string {
+	return fmt.Sprintf(`TaskRole retrieval failed. If your containers don't require the TaskRole for local testing, you can use %s to disable this feature.
+If you require the TaskRole, you can manually add permissions for your account to assume TaskRole by adding the following YAML override to your service:
+%s
+For more information on YAML overrides see %s`,
+		color.HighlightCode(`copilot run local --use-task-role=false`),
+		color.HighlightCodeBlock(`- op: add
+  path: /Resources/TaskRole/Properties/AssumeRolePolicyDocument/Statement/-
+  value:
+    Effect: Allow
+    Principal:
+      AWS: "arn:aws:iam::[app-account-ID]:root"
+    Action: 'sts:AssumeRole'`),
+		color.Emphasize("https://aws.github.io/copilot-cli/docs/developing/overrides/yamlpatch/"))
+}

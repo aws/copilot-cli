@@ -17,16 +17,12 @@ describe("DNS Validated Certificate Handler", () => {
   const testEnvName = "test";
   const testDomainName = "example.com";
   const testAliases = `{"frontend": ["v1.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
-  const testAliases2 = `{"frontend": ["v2.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
   const testUpdatedAliases = `{"frontend": ["v2.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
   const testAccessDNS =
     "examp-publi-gsedbvf8t12c-852245110.us-west-1.elb.amazonaws.com.";
   const testLBHostedZone = "Z1H1FL5HABSF5";
   const testHostedZoneId = "Z3P5QSUBK4POTI";
   const testRootDNSRole = "mockRole";
-  const mockRootHostedZoneId = "Z00ABC"
-  const mockAppHostedZoneID = "Z00DEF"
-  const mockEnvHostedZoneID = "Z00GHI"
 
   beforeEach(() => {
     handler.withDefaultResponseURL(ResponseURL);
@@ -240,68 +236,6 @@ describe("DNS Validated Certificate Handler", () => {
               ],
             },
             HostedZoneId: testHostedZoneId,
-          })
-        );
-        expect(request.isDone()).toBe(true);
-      });
-  });
-
-  test("Create success with out listhostedzones api call", () => {
-    const changeResourceRecordSetsFake = sinon.fake.resolves({
-      ChangeInfo: {
-        Id: "bogus",
-      },
-    });
-
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-
-    const request = nock(ResponseURL)
-      .put("/", (body) => {
-        return body.Status === "SUCCESS";
-      })
-      .reply(200);
-    return LambdaTester(handler.handler)
-      .event({
-        RequestType: "Create",
-        ResourceProperties: {
-          AppName: testAppName,
-          EnvName: testEnvName,
-          DomainName: testDomainName,
-          Aliases: testAliases2,
-          Region: "us-east-1",
-          PublicAccessDNS: testAccessDNS,
-          PublicAccessHostedZone: testLBHostedZone,
-          AppDNSRole: testRootDNSRole,
-          RootHostedZoneId: mockRootHostedZoneId,
-          AppHostedZoneId:mockAppHostedZoneID,
-          EnvHostedZoneId: mockEnvHostedZoneID,
-        },
-      })
-      .expectResolve(() => {
-        sinon.assert.calledWith(
-          changeResourceRecordSetsFake,
-          sinon.match({
-            ChangeBatch: {
-              Changes: [
-                {
-                  Action: "UPSERT",
-                  ResourceRecordSet: {
-                    Name: `v2.${testEnvName}.${testAppName}.${testDomainName}`,
-                    Type: "A",
-                    AliasTarget: {
-                      HostedZoneId: testLBHostedZone,
-                      DNSName: testAccessDNS,
-                      EvaluateTargetHealth: true,
-                    },
-                  },
-                },
-              ],
-            },
-            HostedZoneId: mockEnvHostedZoneID,
           })
         );
         expect(request.isDone()).toBe(true);

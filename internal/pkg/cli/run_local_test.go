@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -201,8 +203,10 @@ func TestRunLocalOpts_Ask(t *testing.T) {
 
 type runLocalExecuteMocks struct {
 	ecsClient      *mocks.MockecsClient
+	ecsExecutor    *mocks.MockecsCommandExecutor
 	store          *mocks.Mockstore
 	sessCreds      credentials.Provider
+	sessProvider   *mocks.MocksessionProvider
 	interpolator   *mocks.Mockinterpolator
 	ws             *mocks.MockwsWlDirReader
 	mockMft        *mockWorkloadMft
@@ -268,6 +272,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 	}
 
 	taskDef := &awsecs.TaskDefinition{
+		TaskRoleArn: aws.String("mock-arn"),
 		ContainerDefinitions: []*sdkecs.ContainerDefinition{
 			{
 				Name: aws.String("foo"),
@@ -292,9 +297,17 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 						HostPort: aws.Int64(9999),
 					},
 				},
+				Essential: aws.Bool(true),
+				DependsOn: []*sdkecs.ContainerDependency{
+					{
+						Condition:     aws.String("START"),
+						ContainerName: aws.String("bar"),
+					},
+				},
 			},
 			{
-				Name: aws.String("bar"),
+				Name:      aws.String("bar"),
+				Essential: aws.Bool(true),
 				Environment: []*sdkecs.KeyValuePair{
 					{
 						Name:  aws.String("BAR_VAR"),
@@ -320,6 +333,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		},
 	}
 	alteredTaskDef := &awsecs.TaskDefinition{
+		TaskRoleArn: aws.String("mock-arn"),
 		ContainerDefinitions: []*sdkecs.ContainerDefinition{
 			{
 				Name: aws.String("foo"),
@@ -388,6 +402,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"80":  "8080",
 					"999": "9999",
 				},
+				IsEssential: true,
+				DependsOn: map[string]string{
+					"bar": "start",
+				},
 			},
 			"bar": {
 				ImageURI: "image2",
@@ -404,6 +422,8 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					"777":   "7777",
 					"10000": "10000",
 				},
+				IsEssential: true,
+				DependsOn:   map[string]string{},
 			},
 		},
 	}
@@ -415,6 +435,52 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			"AWS_SESSION_TOKEN":     "myEnvToken",
 		},
 	}
+	expectedTaskWithRegion := orchestrator.Task{
+		Containers: map[string]orchestrator.ContainerDefinition{
+			"foo": {
+				ImageURI: "image1",
+				EnvVars: map[string]string{
+					"FOO_VAR": "foo-value",
+				},
+				Secrets: map[string]string{
+					"SHARED_SECRET":         "secretvalue",
+					"AWS_ACCESS_KEY_ID":     "myID",
+					"AWS_SECRET_ACCESS_KEY": "mySecret",
+					"AWS_SESSION_TOKEN":     "myToken",
+					"AWS_DEFAULT_REGION":    testRegion,
+					"AWS_REGION":            testRegion,
+				},
+				Ports: map[string]string{
+					"80":  "8080",
+					"999": "9999",
+				},
+				IsEssential: true,
+				DependsOn: map[string]string{
+					"bar": "start",
+				},
+			},
+			"bar": {
+				ImageURI: "image2",
+				EnvVars: map[string]string{
+					"BAR_VAR": "bar-value",
+				},
+				Secrets: map[string]string{
+					"SHARED_SECRET":         "secretvalue",
+					"AWS_ACCESS_KEY_ID":     "myID",
+					"AWS_SECRET_ACCESS_KEY": "mySecret",
+					"AWS_SESSION_TOKEN":     "myToken",
+					"AWS_DEFAULT_REGION":    testRegion,
+					"AWS_REGION":            testRegion,
+				},
+				Ports: map[string]string{
+					"777":   "7777",
+					"10000": "10000",
+				},
+				IsEssential: true,
+				DependsOn:   map[string]string{},
+			},
+		},
+	}
 
 	testCases := map[string]struct {
 		inputAppName       string
@@ -423,7 +489,9 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 		inputEnvOverrides  map[string]string
 		inputPortOverrides []string
 		inputWatch         bool
+		inputTaskRole      bool
 		inputProxy         bool
+		inputReader        io.Reader
 		buildImagesError   error
 
 		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
@@ -452,6 +520,41 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 			},
 			wantedError: errors.New(`get task: get env vars: parse env overrides: "bad:OVERRIDE" targets invalid container`),
+		},
+		"error retrieving task role credentials": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputTaskRole: true,
+			inputReader:   strings.NewReader("some error"),
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.sessProvider.EXPECT().FromRole("mock-arn", testRegion).Return(nil, errors.New("some error"))
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName"),
+							Containers: []*sdkecs.Container{
+								{
+									RuntimeId:  aws.String("runtime-id"),
+									LastStatus: aws.String("RUNNING"),
+									ManagedAgents: []*sdkecs.ManagedAgent{
+										{
+											Name:       aws.String("ExecuteCommandAgent"),
+											LastStatus: aws.String("RUNNING"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+				m.ecsExecutor.EXPECT().ExecuteCommand(gomock.Any()).Return(nil)
+			},
+			wantedError: errors.New(`get task: retrieve task role credentials: assume role: some error
+ecs exec: all containers failed to retrieve credentials`),
 		},
 		"error reading workload manifest": {
 			inputAppName:  testAppName,
@@ -729,6 +832,87 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				}
 			},
 		},
+		"success, one run task call, task role assume role method": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputTaskRole: true,
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				taskRoleSess := &session.Session{
+					Config: &aws.Config{
+						Credentials: credentials.NewStaticCredentials("myID", "mySecret", "myToken"),
+						Region:      aws.String(testRegion),
+					},
+				}
+				m.sessProvider.EXPECT().FromRole("mock-arn", testRegion).Return(taskRoleSess, nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					errCh <- errors.New("some error")
+					return errCh
+				}
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
+					require.Equal(t, expectedTaskWithRegion, task)
+				}
+				m.orchestrator.StopFn = func() {
+					require.Len(t, errCh, 0)
+					close(errCh)
+				}
+			},
+		},
+		"success, one run task call, task role ecs exec method": {
+			inputAppName:  testAppName,
+			inputWkldName: testWkldName,
+			inputEnvName:  testEnvName,
+			inputTaskRole: true,
+			inputReader:   strings.NewReader(`{"AccessKeyId":"myID","SecretAccessKey":"mySecret","Token":"myToken"}`),
+			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
+				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
+				m.sessProvider.EXPECT().FromRole("mock-arn", testRegion).Return(nil, errors.New("some error"))
+				m.ecsClient.EXPECT().DescribeService(testAppName, testEnvName, testWkldName).Return(&ecs.ServiceDesc{
+					Tasks: []*awsecs.Task{
+						{
+							TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/clusterName/taskName"),
+							Containers: []*sdkecs.Container{
+								{
+									RuntimeId:  aws.String("runtime-id"),
+									LastStatus: aws.String("RUNNING"),
+									ManagedAgents: []*sdkecs.ManagedAgent{
+										{
+											Name:       aws.String("ExecuteCommandAgent"),
+											LastStatus: aws.String("RUNNING"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+				m.ecsExecutor.EXPECT().ExecuteCommand(gomock.Any()).Return(nil)
+				m.ws.EXPECT().ReadWorkloadManifest(testWkldName).Return([]byte(""), nil)
+				m.interpolator.EXPECT().Interpolate("").Return("", nil)
+
+				errCh := make(chan error, 1)
+				m.orchestrator.StartFn = func() <-chan error {
+					errCh <- errors.New("some error")
+					return errCh
+				}
+				m.orchestrator.RunTaskFn = func(task orchestrator.Task, opts ...orchestrator.RunTaskOption) {
+					require.Equal(t, expectedTask, task)
+				}
+				m.orchestrator.StopFn = func() {
+					require.Len(t, errCh, 0)
+					close(errCh)
+				}
+			},
+		},
 		"handles ctrl-c, waits to get all errors": {
 			inputAppName:  testAppName,
 			inputWkldName: testWkldName,
@@ -942,9 +1126,11 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 			m := &runLocalExecuteMocks{
 				ecsClient:      mocks.NewMockecsClient(ctrl),
+				ecsExecutor:    mocks.NewMockecsCommandExecutor(ctrl),
 				ssm:            mocks.NewMocksecretGetter(ctrl),
 				secretsManager: mocks.NewMocksecretGetter(ctrl),
 				store:          mocks.NewMockstore(ctrl),
+				sessProvider:   mocks.NewMocksessionProvider(ctrl),
 				interpolator:   mocks.NewMockinterpolator(ctrl),
 				ws:             mocks.NewMockwsWlDirReader(ctrl),
 				mockRunner:     mocks.NewMockexecRunner(ctrl),
@@ -964,6 +1150,7 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 					envName:      tc.inputEnvName,
 					envOverrides: tc.inputEnvOverrides,
 					watch:        tc.inputWatch,
+					useTaskRole:  tc.inputTaskRole,
 					portOverrides: portOverrides{
 						{
 							host:      "777",
@@ -990,9 +1177,11 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				},
 				ws:             m.ws,
 				ecsClient:      m.ecsClient,
+				ecsExecutor:    m.ecsExecutor,
 				ssm:            m.ssm,
 				secretsManager: m.secretsManager,
 				store:          m.store,
+				sessProvider:   m.sessProvider,
 				sess: &session.Session{
 					Config: &aws.Config{
 						Credentials: credentials.NewStaticCredentials("myID", "mySecret", "myToken"),
@@ -1016,6 +1205,10 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 				newRecursiveWatcher: func() (recursiveWatcher, error) {
 					return m.watcher, nil
 				},
+				captureStdout: func() (io.Reader, error) {
+					return tc.inputReader, nil
+				},
+				releaseStdout: func() {},
 			}
 			// WHEN
 			err := opts.Execute()

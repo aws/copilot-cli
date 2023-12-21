@@ -2014,11 +2014,6 @@ type validateDependenciesOpts struct {
 	logging           Logging
 }
 
-type containerDependency struct {
-	dependsOn   DependsOn
-	isEssential bool
-}
-
 type validateTargetContainerOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
@@ -2097,30 +2092,17 @@ func validateTargetContainer(opts validateTargetContainerOpts) error {
 }
 
 func validateContainerDeps(opts validateDependenciesOpts) error {
-	containerDependencies := make(map[string]containerDependency)
-	containerDependencies[opts.mainContainerName] = containerDependency{
-		dependsOn:   opts.imageConfig.DependsOn,
-		isEssential: true,
-	}
-	if !opts.logging.IsEmpty() {
-		containerDependencies[FirelensContainerName] = containerDependency{}
-	}
-	for name, config := range opts.sidecarConfig {
-		containerDependencies[name] = containerDependency{
-			dependsOn:   config.DependsOn,
-			isEssential: config.Essential == nil || aws.BoolValue(config.Essential),
-		}
-	}
+	containerDependencies := containerDependencies(opts.mainContainerName, opts.imageConfig, opts.logging, opts.sidecarConfig)
 	if err := validateDepsForEssentialContainers(containerDependencies); err != nil {
 		return err
 	}
 	return validateNoCircularDependencies(containerDependencies)
 }
 
-func validateDepsForEssentialContainers(deps map[string]containerDependency) error {
+func validateDepsForEssentialContainers(deps map[string]ContainerDependency) error {
 	for name, containerDep := range deps {
-		for dep, status := range containerDep.dependsOn {
-			if !deps[dep].isEssential {
+		for dep, status := range containerDep.DependsOn {
+			if !deps[dep].IsEssential {
 				continue
 			}
 			if err := validateEssentialContainerDependency(dep, strings.ToUpper(status)); err != nil {
@@ -2244,6 +2226,7 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 	if err != nil {
 		return err
 	}
+
 	port, err := strconv.ParseUint(aws.StringValue(nlbReceiverPort), 10, 16)
 	if err != nil {
 		return err
@@ -2260,6 +2243,11 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 		targetProtocol = strings.ToUpper(aws.StringValue(nlbProtocol))
 	}
 
+	// Handle TLS termination of container exposed port protocol
+	if targetProtocol == TLS {
+		targetProtocol = TCP
+	}
+
 	// Prefer `nlb.target_container`, then existing exposed port mapping, then fallback on name of main container
 	targetContainer := mainContainerName
 	if existingContainerNameAndProtocol, ok := portExposedTo[targetPort]; ok {
@@ -2274,6 +2262,7 @@ func validateAndPopulateNLBListenerPorts(listener NetworkLoadBalancerListener, p
 
 func validateAndPopulateExposedPortMapping(portExposedTo map[uint16]containerNameAndProtocol, targetPort uint16, targetProtocol string, targetContainer string) error {
 	exposedContainerAndProtocol, alreadyExposed := portExposedTo[targetPort]
+	targetProtocol = strings.ToUpper(targetProtocol)
 
 	// Port is not associated with container and protocol, populate map
 	if !alreadyExposed {
@@ -2313,7 +2302,7 @@ func validateEssentialContainerDependency(name, status string) error {
 	return fmt.Errorf("essential container %s can only have status %s", name, english.WordSeries([]string{dependsOnStart, dependsOnHealthy}, "or"))
 }
 
-func validateNoCircularDependencies(deps map[string]containerDependency) error {
+func validateNoCircularDependencies(deps map[string]ContainerDependency) error {
 	dependencies, err := buildDependencyGraph(deps)
 	if err != nil {
 		return err
@@ -2330,10 +2319,10 @@ func validateNoCircularDependencies(deps map[string]containerDependency) error {
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph[string], error) {
+func buildDependencyGraph(deps map[string]ContainerDependency) (*graph.Graph[string], error) {
 	dependencyGraph := graph.New[string]()
 	for name, containerDep := range deps {
-		for dep := range containerDep.dependsOn {
+		for dep := range containerDep.DependsOn {
 			if _, ok := deps[dep]; !ok {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}

@@ -95,7 +95,10 @@ func convertSidecars(s map[string]*manifest.SidecarConfig, exposedPorts map[stri
 	sort.Strings(keys)
 	for _, name := range keys {
 		config := s[name]
-		imageURI := rc.PushedImages[name].URI()
+		var imageURI string
+		if image, ok := rc.PushedImages[name]; ok {
+			imageURI = image.URI()
+		}
 		if uri, hasLocation := config.ImageURI(); hasLocation {
 			imageURI = uri
 		}
@@ -688,18 +691,8 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		return networkLoadBalancerConfig{}, fmt.Errorf(`convert "nlb.alias" to string slice: %w`, err)
 	}
 
-	// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
-	var udpListenerExists bool
-	for _, listener := range listeners {
-		if strings.EqualFold(listener.Protocol, manifest.UDP) {
-			udpListenerExists = true
-		}
-	}
-
 	config := networkLoadBalancerConfig{
 		settings: &template.NetworkLoadBalancer{
-			PublicSubnetCIDRs:   s.publicSubnetCIDRBlocks,
-			UDPListenerExists:   udpListenerExists,
 			Listener:            listeners,
 			Aliases:             aliases,
 			MainContainerPort:   s.manifest.MainContainerPort(),
@@ -1366,14 +1359,4 @@ func (in uploadableCRs) convert() []uploadable {
 		out[i] = cr
 	}
 	return out
-}
-
-func convertHostedZones(app deploy.AppInformation) *template.HostedZones {
-	if app.Domain == "" {
-		return nil
-	}
-	return &template.HostedZones{
-		RootDomainHostedZoneId: app.RootDomainHostedZoneId,
-		AppDomainHostedZoneId:  app.AppDomainHostedZoneId,
-	}
 }

@@ -864,3 +864,15 @@ func (cfg PublishConfig) publishedTopics() []Topic {
 	}
 	return pubs
 }
+
+// ContainerDependencies returns a map of ContainerDependency objects from workload manifest.
+func ContainerDependencies(unmarshaledManifest interface{}) map[string]ContainerDependency {
+	type containerDependency interface {
+		ContainerDependencies() map[string]ContainerDependency
+	}
+	mf, ok := unmarshaledManifest.(containerDependency)
+	if ok {
+		return mf.ContainerDependencies()
+	}
+	return nil
+}

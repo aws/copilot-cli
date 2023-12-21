@@ -2,6 +2,7 @@
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "my-app",
+    "ArtifactKeyARN": "",
     "ContainerImage": "mockImageURL:latest",
     "ContainerPort": "5000",
     "DNSDelegated": "false",
