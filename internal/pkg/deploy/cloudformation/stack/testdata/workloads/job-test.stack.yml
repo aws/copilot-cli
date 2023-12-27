@@ -287,7 +287,8 @@ Resources:
                   - 'kms:Decrypt'
                 Resource:
                   - !Ref ArtifactKeyARN
-              - Effect: 'Allow'
+              - Sid: DecryptTaggedKMSKey
+                Effect: 'Allow'
                 Action:
                   - 'kms:Decrypt'
                 Resource:

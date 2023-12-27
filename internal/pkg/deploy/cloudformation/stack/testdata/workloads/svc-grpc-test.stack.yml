@@ -155,7 +155,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   - 'kms:Decrypt'
                 Resource:
                   - !Ref ArtifactKeyARN
-              - Effect: 'Allow'
+              - Sid: DecryptTaggedKMSKey
+                Effect: 'Allow'
                 Action:
                   - 'kms:Decrypt'
                 Resource:
