@@ -17,7 +17,7 @@ List of all available properties for a Copilot pipeline manifest. To learn more 
             # connection_name: a-connection
     
         build:
-          image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+          image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
           # additional_policy: # Add additional permissions while building your container images and templates.
     
         stages: 
@@ -135,7 +135,7 @@ Optional. The output artifact format. Values can be either `CODEBUILD_CLONE_REF`
 Configuration for CodeBuild project.
 
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
-The URI that identifies the Docker image to use for this build project. As of now, `aws/codebuild/amazonlinux2-x86_64-standard:4.0` is used by default.
+The URI that identifies the Docker image to use for this build project. As of now, `aws/codebuild/amazonlinux2-x86_64-standard:5.0` is used by default.
 
 <span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>  
 Optional. The path to a buildspec file, relative to the project root, to use for this build project. By default, Copilot will generate one for you, located at `copilot/pipelines/[your pipeline name]/buildspec.yml`.

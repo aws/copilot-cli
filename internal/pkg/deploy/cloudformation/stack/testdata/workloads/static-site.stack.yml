@@ -144,7 +144,7 @@ Resources:
     Properties:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
       Timeout: 900
       MemorySize: 512
 
@@ -386,7 +386,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CustomDomainRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
 
   CustomDomainRole:
     Metadata:
@@ -448,7 +448,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CertificateValidatorRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
 
   CertificateValidatorRole:
     Metadata:

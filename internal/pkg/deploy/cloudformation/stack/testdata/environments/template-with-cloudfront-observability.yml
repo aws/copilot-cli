@@ -312,7 +312,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt "UniqueJSONValuesFunctionRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs18.x
   UniqueAliasesAction:
     Metadata:
       "aws:copilot:description": "An action to get unique custom aliases for services in your environment"
