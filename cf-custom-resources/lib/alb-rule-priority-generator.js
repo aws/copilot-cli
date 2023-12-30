@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const { ElasticLoadBalancingV2, DescribeRulesCommand} = require("@aws-sdk/client-elastic-load-balancing-v2");
 
 // minPriorityForRootRule is the min priority number for the root path "/".
 const minPriorityForRootRule = 48000;
@@ -134,21 +134,20 @@ const calculateNextRootRulePriority = async function (listenerArn) {
   return nextRulePriority;
 };
 
-const getListenerRules = async function (listenerArn) {
-  let elb = new aws.ELBv2();
-  // Grab all the rules for this listener
+const getListenerRules = async function (listenerArn, config) {
+  const client = new ElasticLoadBalancingV2(config);
   let marker;
   let rules = [];
-  do {
-    const rulesResponse = await elb
-      .describeRules({
-        ListenerArn: listenerArn,
-        Marker: marker,
-      })
-      .promise();
 
-    rules = rules.concat(rulesResponse.Rules);
-    marker = rulesResponse.NextMarker;
+  do {
+    const input = {
+      ListenerArn: listenerArn,
+      Marker: marker,
+    };
+    const response = await client
+    .send(new DescribeRulesCommand(input));
+    rules = rules.concat(response.Rules);
+    marker = response.NextMarker;
   } while (marker);
   return rules;
 };

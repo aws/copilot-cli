@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { Route53, waitUntilResourceRecordSetsChanged, ListHostedZonesByNameCommand, ChangeResourceRecordSetsCommand} = require("@aws-sdk/client-route-53");
 
 const changeRecordAction = {
   Upsert: "UPSERT",
@@ -13,7 +14,6 @@ const changeRecordAction = {
 let defaultResponseURL;
 let defaultLogGroup;
 let defaultLogStream;
-let waiter;
 
 let hostedZoneCache = new Map();
 
@@ -152,11 +152,10 @@ const writeARecord = async function (
   let hostedZoneId = hostedZoneCache.get(domain);
   if (!hostedZoneId) {
     const hostedZones = await route53
-      .listHostedZonesByName({
+    .send(new ListHostedZonesByNameCommand({
         DNSName: domain,
         MaxItems: "1",
-      })
-      .promise();
+      }));
 
     if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
       throw new Error(`Couldn't find any Hosted Zone with DNS name ${domain}.`);
@@ -174,7 +173,7 @@ const writeARecord = async function (
       accessDNS,
       accessHostedZone
     );
-    await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
+    await exports.waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
   } catch (err) {
     if (action === changeRecordAction.Delete && isRecordSetNotFoundErr(err)) {
       console.log(`${err.message}; Copilot is ignoring this record.`);
@@ -210,17 +209,13 @@ exports.handler = async function (event, context) {
     },
     OtherDomainZone: { regex: new RegExp(`.*`) },
   };
-  const envRoute53 = new aws.Route53();
-  const appRoute53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const envRoute53 = new Route53();
+  const appRoute53 = new Route53({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: props.AppDNSRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+      masterCredentials: fromEnv("AWS"),
     }),
   });
-  if (waiter) {
-    // Used by the test suite, since waiters aren't mockable yet
-    envRoute53.waitFor = appRoute53.waitFor = waiter;
-  }
   try {
     var aliases = await getAllAliases(props.Aliases);
     switch (event.RequestType) {
@@ -323,20 +318,19 @@ const getAliasType = function (aliasTypes, alias) {
   }
 };
 
-const waitForRecordChange = function (route53, changeId) {
-  return route53
-    .waitFor("resourceRecordSetsChanged", {
-      // Wait up to 5 minutes
-      $waiter: {
-        delay: 30,
-        maxAttempts: 10,
-      },
-      Id: changeId,
-    })
-    .promise();
+const waitForRecordChange = async function (route53, changeId) {
+  // wait Upto 5 minutes.
+  await waitUntilResourceRecordSetsChanged({
+    client: route53,
+    maxWaitTime: 300,
+    minDelay: 30,
+    maxDelay: 30,
+  },{
+    Id: changeId,
+  });
 };
 
-const updateRecords = function (
+const updateRecords = async function (
   route53,
   hostedZone,
   action,
@@ -344,27 +338,27 @@ const updateRecords = function (
   accessDNS,
   accessHostedZone
 ) {
-  return route53
-    .changeResourceRecordSets({
+  return await route53
+  .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
-        Changes: [
-          {
-            Action: action,
-            ResourceRecordSet: {
-              Name: alias,
-              Type: "A",
-              AliasTarget: {
-                HostedZoneId: accessHostedZone,
-                DNSName: accessDNS,
-                EvaluateTargetHealth: true,
-              },
+      Changes: [
+        {
+          Action: action,
+          ResourceRecordSet: {
+            Name: alias,
+            Type: "A",
+            AliasTarget: {
+              HostedZoneId: accessHostedZone,
+              DNSName: accessDNS,
+              EvaluateTargetHealth: true,
             },
           },
-        ],
-      },
-      HostedZoneId: hostedZone,
-    })
-    .promise();
+        },
+      ],
+    },
+    HostedZoneId: hostedZone,
+  },
+  ));
 };
 
 /**
@@ -372,20 +366,6 @@ const updateRecords = function (
  */
 exports.withDefaultResponseURL = function (url) {
   defaultResponseURL = url;
-};
-
-/**
- * @private
- */
-exports.withWaiter = function (w) {
-  waiter = w;
-};
-
-/**
- * @private
- */
-exports.reset = function () {
-  waiter = undefined;
 };
 
 /**
@@ -400,4 +380,11 @@ exports.withDefaultLogStream = function (logStream) {
  */
 exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
+};
+
+/**
+ * @private
+ */
+exports.waitForRecordChange = function (route53, changeId) {
+  return waitForRecordChange(route53, changeId);
 };

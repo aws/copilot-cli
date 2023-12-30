@@ -23,9 +23,24 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "aws-sdk": "^2.1354.0"
+    "@aws-sdk/client-acm": "^3.481.0",
+    "@aws-sdk/client-apprunner": "^3.481.0",
+    "@aws-sdk/client-cloudformation": "^3.481.0",
+    "@aws-sdk/client-ecs": "^3.481.0",
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.481.0",
+    "@aws-sdk/client-resource-groups-tagging-api": "^3.481.0",
+    "@aws-sdk/client-route-53": "^3.481.0",
+    "@aws-sdk/client-s3": "^3.481.0",
+    "@aws-sdk/client-sfn": "^3.481.0",
+    "@aws-sdk/core": "^3.481.0",
+    "@aws-sdk/credential-providers": "^3.481.0",
+    "aws-sdk-client-mock": "^3.0.0",
+    "install": "^0.13.0",
+    "npm": "^10.2.5"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
     "ansi-regex": ">=5.0.1",
     "aws-sdk-mock": "^5.1.0",
     "axios": ">=1.6.0",

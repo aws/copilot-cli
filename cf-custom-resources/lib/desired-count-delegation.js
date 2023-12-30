@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const { ECS, DescribeServicesCommand } = require('@aws-sdk/client-ecs');
+const { ResourceGroupsTaggingAPI, GetResourcesCommand } = require('@aws-sdk/client-resource-groups-tagging-api');
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -85,26 +86,24 @@ const getRunningTaskCount = async function (
   env,
   svc
 ) {
-  var resourcegroupstaggingapi = new aws.ResourceGroupsTaggingAPI();
-  const rgResp = await resourcegroupstaggingapi
-    .getResources({
-      ResourceTypeFilters: ["ecs:service"],
-      TagFilters: [
-        {
-          Key: "copilot-application",
-          Values: [app],
-        },
-        {
-          Key: "copilot-environment",
-          Values: [env],
-        },
-        {
-          Key: "copilot-service",
-          Values: [svc],
-        },
-      ],
-    })
-    .promise();
+  var resourcegroupstaggingapi = new ResourceGroupsTaggingAPI();
+  const rgResp = await resourcegroupstaggingapi.send(new GetResourcesCommand({
+    ResourceTypeFilters: ["ecs:service"],
+    TagFilters: [
+      {
+        Key: "copilot-application",
+        Values: [app],
+      },
+      {
+        Key: "copilot-environment",
+        Values: [env],
+      },
+      {
+        Key: "copilot-service",
+        Values: [svc],
+      },
+    ],
+  }));
 
   const resources = rgResp.ResourceTagMappingList;
   if (resources.length !== 1) {
@@ -112,13 +111,11 @@ const getRunningTaskCount = async function (
   }
   const serviceARN = resources[0].ResourceARN;
 
-  var ecs = new aws.ECS();
-  const resp = await ecs
-    .describeServices({
-      cluster: cluster,
-      services: [serviceARN],
-    })
-    .promise();
+  var ecs = new ECS();
+  const resp = await ecs.send(new DescribeServicesCommand({
+    cluster: cluster,
+    services: [serviceARN],
+  }));
   if (resp.services.length !== 1) {
     return defaultDesiredCount;
   }

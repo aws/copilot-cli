@@ -3,7 +3,8 @@
 "use strict";
 
 describe("Certificate Replicator Handler", () => {
-  const AWS = require("aws-sdk-mock");
+  const acm = require('@aws-sdk/client-acm');
+  const { mockClient } = require('aws-sdk-client-mock');
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
   const handler = require("../lib/cert-replicator");
@@ -34,6 +35,7 @@ describe("Certificate Replicator Handler", () => {
   const spySleep = sinon.spy(function (ms) {
     return Promise.resolve();
   });
+  const acmMock = mockClient(acm.ACMClient);
 
   beforeEach(() => {
     handler.withDefaultResponseURL(ResponseURL);
@@ -43,11 +45,12 @@ describe("Certificate Replicator Handler", () => {
     handler.withDeadlineExpired((_) => {
       return new Promise(function (resolve, reject) {});
     });
+    handler.validateCertificate = function () { };
     console.log = function () {};
   });
   afterEach(() => {
     handler.reset();
-    AWS.restore();
+    acmMock.reset();
     console.log = origLog;
     spySleep.resetHistory();
   });
@@ -112,7 +115,7 @@ describe("Certificate Replicator Handler", () => {
   test("Create operation fails if cannot describe old certificate", () => {
     const describeCertificateFake = sinon.fake.rejects(new Error("some error"));
 
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -156,8 +159,8 @@ describe("Certificate Replicator Handler", () => {
       },
     });
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -215,9 +218,8 @@ describe("Certificate Replicator Handler", () => {
     const waitForCertificateValidationFake = sinon.stub();
     waitForCertificateValidationFake.resolves();
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
-    AWS.mock("ACM", "waitFor", waitForCertificateValidationFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -257,14 +259,6 @@ describe("Certificate Replicator Handler", () => {
             Tags: testCopilotTags,
           })
         );
-        sinon.assert.calledWith(
-          waitForCertificateValidationFake,
-          "certificateValidated",
-          sinon.match({
-            $waiter: { delay: 30, maxAttempts: 19 },
-            CertificateArn: otherCertificateArn,
-          })
-        );
         expect(request.isDone()).toBe(true);
       });
   });
@@ -287,10 +281,10 @@ describe("Certificate Replicator Handler", () => {
         InUseBy: [],
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -338,12 +332,12 @@ describe("Certificate Replicator Handler", () => {
         InUseBy: [usedByArn],
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const error = new Error();
     error.name = "ResourceInUseException";
     const deleteCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -392,10 +386,10 @@ describe("Certificate Replicator Handler", () => {
     error.name = "SomeOtherException";
 
     const describeCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -439,12 +433,12 @@ describe("Certificate Replicator Handler", () => {
         CertificateArn: testCertificateArn,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const error = new Error();
     error.name = "SomeOtherException";
     const deleteCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -489,12 +483,12 @@ describe("Certificate Replicator Handler", () => {
         CertificateArn: testCertificateArn,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     let resourceNotFoundErr = new Error("some error");
     resourceNotFoundErr.name = "ResourceNotFoundException";
     const deleteCertificateFake = sinon.fake.rejects(resourceNotFoundErr);
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {

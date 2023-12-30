@@ -6,7 +6,7 @@
 
 "use strict";
 
-const aws = require("aws-sdk");
+const { ACM, waitUntilCertificateValidated, DescribeCertificateCommand, RequestCertificateCommand, DeleteCertificateCommand } = require("@aws-sdk/client-acm");
 
 const defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,18 +99,14 @@ const replicateCertificate = async function (
   envRegionAcm,
   targetRegionAcm
 ) {
-  const { Certificate } = await envRegionAcm
-    .describeCertificate({
-      CertificateArn: certArn,
-    })
-    .promise();
+  const {Certificate} = await envRegionAcm
+    .send(new DescribeCertificateCommand({CertificateArn: certArn}));
   const domainName = Certificate.DomainName;
   const sans = Certificate.SubjectAlternativeNames;
 
   const crypto = require("crypto");
-  return targetRegionAcm
-    .requestCertificate({
-      DomainName: domainName,
+  return await targetRegionAcm.send(new RequestCertificateCommand({
+        DomainName: domainName,
       SubjectAlternativeNames: sans,
       IdempotencyToken: crypto
         .createHash("sha256")
@@ -129,7 +125,7 @@ const replicateCertificate = async function (
         },
       ],
     })
-    .promise();
+    );
 };
 
 /**
@@ -145,10 +141,7 @@ const deleteCertificate = async function (arn, acm) {
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
-        .describeCertificate({
-          CertificateArn: arn,
-        })
-        .promise();
+        .send(new DescribeCertificateCommand({CertificateArn: arn}));
 
       inUseByResources = Certificate.InUseBy || [];
       if (inUseByResources.length === 0) {
@@ -163,11 +156,7 @@ const deleteCertificate = async function (arn, acm) {
       );
     }
 
-    await acm
-      .deleteCertificate({
-        CertificateArn: arn,
-      })
-      .promise();
+    await acm.send(new DeleteCertificateCommand({CertificateArn: arn}));
   } catch (err) {
     if (err.name !== "ResourceNotFoundException") {
       throw err;
@@ -176,16 +165,15 @@ const deleteCertificate = async function (arn, acm) {
 };
 
 const validateCertificate = async function (certificateARN, acm) {
-  await acm
-    .waitFor("certificateValidated", {
-      // Wait up to 9 minutes and 30 seconds
-      $waiter: {
-        delay: 30,
-        maxAttempts: 19,
-      },
-      CertificateArn: certificateARN,
-    })
-    .promise();
+  // Wait up to 9 minutes and 30 seconds
+  await waitUntilCertificateValidated({
+    client:acm,
+    maxWaitTime: 570,
+    minDelay: 30,
+    maxDelay: 30,
+  },{
+    CertificateArn: certificateARN
+  });
 };
 
 /**
@@ -202,8 +190,8 @@ exports.certificateReplicateHandler = async function (event, context) {
   ];
   let handler = async function () {
     // Configure clients.
-    const envRegionAcm = new aws.ACM({ region: envRegion });
-    const targetRegionAcm = new aws.ACM({ region: targetRegion });
+    const envRegionAcm = new ACM({ region: envRegion });
+    const targetRegionAcm = new ACM({ region: targetRegion });
     switch (event.RequestType) {
       case "Create":
       case "Update":
@@ -216,7 +204,7 @@ exports.certificateReplicateHandler = async function (event, context) {
           targetRegionAcm
         );
         responseData.Arn = physicalResourceId = response.CertificateArn;
-        await validateCertificate(response.CertificateArn, targetRegionAcm);
+        await exports.validateCertificate(response.CertificateArn, targetRegionAcm);
         break;
       case "Delete":
         // If the resource didn't create correctly, the physical resource ID won't be the
@@ -305,3 +293,11 @@ exports.withDefaultLogGroup = function (logGroup) {
 exports.withDeadlineExpired = function (d) {
   exports.deadlineExpired = d;
 };
+
+/**
+ * @private
+ */
+exports.validateCertificate = function(certificateARN, acm) {
+  return validateCertificate(certificateARN, acm);
+};
+
