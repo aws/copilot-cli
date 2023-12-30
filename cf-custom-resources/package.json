@@ -32,6 +32,7 @@
     "@aws-sdk/client-route-53": "^3.481.0",
     "@aws-sdk/client-s3": "^3.481.0",
     "@aws-sdk/client-sfn": "^3.481.0",
+    "@aws-sdk/client-sqs": "^3.484.0",
     "@aws-sdk/core": "^3.481.0",
     "@aws-sdk/credential-providers": "^3.481.0",
     "aws-sdk-client-mock": "^3.0.0",
