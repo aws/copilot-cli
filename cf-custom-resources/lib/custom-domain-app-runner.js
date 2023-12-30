@@ -6,7 +6,9 @@
 
 "use strict";
 
-const AWS = require('aws-sdk');
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { AppRunner } = require("@aws-sdk/client-apprunner");
+const { Route53,waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
@@ -88,13 +90,13 @@ exports.handler = async function (event, context) {
     const physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
     let handler = async function () {
         // Configure clients.
-        appRoute53Client = new AWS.Route53({
-            credentials: new AWS.ChainableTemporaryCredentials({
+        appRoute53Client = new Route53({
+            credentials: fromTemporaryCredentials({
                 params: { RoleArn: appDNSRole, },
-                masterCredentials: new AWS.EnvironmentCredentials("AWS"),
-            }),
+                masterCredentials: fromEnv("AWS"),
+            })
         });
-        appRunnerClient = new AWS.AppRunner();
+        appRunnerClient = new AppRunner();
         appHostedZoneID = await domainHostedZoneID(appDNSName);
         switch (event.RequestType) {
             case "Create":
@@ -136,7 +138,7 @@ async function domainHostedZoneID(domainName) {
     const data = await appRoute53Client.listHostedZonesByName({
         DNSName: domainName,
         MaxItems: "1",
-    }).promise();
+    });
 
     if (!data.HostedZones || data.HostedZones.length === 0) {
         throw new Error(`couldn't find any Hosted Zone with DNS name ${domainName}`);
@@ -157,7 +159,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
         data = await appRunnerClient.associateCustomDomain({
             DomainName: customDomainName,
             ServiceArn: serviceARN,
-        }).promise();
+        });
     } catch (err) {
         const isDomainAlreadyAssociated = err.message.includes(`${customDomainName} is already associated with`);
         if (!isDomainAlreadyAssociated) {
@@ -169,7 +171,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
         // If domain is already associated, data would be undefined.
         data = await appRunnerClient.describeCustomDomains({
             ServiceArn: serviceARN,
-        }).promise();
+        });
     }
 
     return Promise.all([
@@ -188,7 +190,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
 async function getDomainInfo(serviceARN, domainName) {
     let describeCustomDomainsInput = {ServiceArn: serviceARN,};
     while (true) {
-        const resp = await appRunnerClient.describeCustomDomains(describeCustomDomainsInput).promise();
+        const resp = await appRunnerClient.describeCustomDomains(describeCustomDomainsInput);
 
         for (const d of resp.CustomDomains) {
             if (d.DomainName === domainName) {
@@ -281,7 +283,7 @@ async function removeCustomDomain(serviceARN, customDomainName) {
         data = await appRunnerClient.disassociateCustomDomain({
             DomainName: customDomainName,
             ServiceArn: serviceARN,
-        }).promise();
+        });
     } catch (err) {
         if (err.message.includes(`No custom domain ${customDomainName} found for the provided service`)) {
             return;
@@ -380,7 +382,7 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
 
     let data;
     try {
-        data = await appRoute53Client.changeResourceRecordSets(params).promise();
+        data = await appRoute53Client.changeResourceRecordSets(params);
     } catch (err) {
         let recordSetNotFoundErrMessageRegex = /Tried to delete resource record set \[name='.*', type='CNAME'] but it was not found/;
         if (action === "DELETE" && err.message.search(recordSetNotFoundErrMessageRegex) !== -1) {
@@ -389,17 +391,22 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
         throw new Error(`update record ${recordName}: ` + err.message);
     }
 
-    await appRoute53Client.waitFor('resourceRecordSetsChanged', {
-         // Wait up to 5 minutes
-         $waiter: {
-             delay: 30,
-             maxAttempts: 10,
-         },
-         Id: data.ChangeInfo.Id,
-     }).promise().catch((err) => {
-         throw new Error(`update record ${recordName}: wait for record sets change for ${recordName}: ` + err.message);
-     });
+    await exports.waitForRecordSetChange(appRoute53Client,data.ChangeInfo.Id).catch((err) => {
+        throw new Error(`update record ${recordName}: wait for record sets change for ${recordName}: ` + err.message);
+    });
 }
+
+const waitForRecordSetChange = async function (route53, changeId) {
+    // wait upto 5 minutes.
+    await waitUntilResourceRecordSetsChanged({
+      client: route53,
+      maxWaitTime: 300,
+      minDelay: 30,
+      maxDelay: 30,
+    },{
+      Id: changeId,
+    });
+  };
 
 function NotAssociatedError(message = "") {
     this.message = message;
@@ -417,4 +424,7 @@ exports.reset = function () {
 };
 exports.withDeadlineExpired = function (d) {
     exports.deadlineExpired = d;
+};
+exports.waitForRecordSetChange = function (route53, changeId) {
+    return waitForRecordSetChange(route53, changeId);
 };
