@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-"use strict";;
+"use strict";
 const { ECS,DescribeServicesCommand } = require("@aws-sdk/client-ecs");
 const { SQS,GetQueueUrlCommand, GetQueueAttributesCommand} = require("@aws-sdk/client-sqs");
 

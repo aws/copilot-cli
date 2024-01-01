@@ -344,7 +344,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     // API call mocks.
     const mockListHostedZonesByName = sinon.stub();
     const mockChangeResourceRecordSets = sinon.stub();
-    const mockWaitForRecordsChange = sinon.stub();
     const mockAppHostedZoneID = "mockAppHostedZoneID";
     const mockRootHostedZoneID = "mockRootHostedZoneID";
     beforeEach(() => {
@@ -373,14 +372,12 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         .resolves({
           ChangeInfo: { Id: "mockID" },
         });
-      mockWaitForRecordsChange.withArgs("resourceRecordSetsChanged", sinon.match.has("Id", "mockID")).resolves();
     });
 
     afterEach(() => {
       // Reset mocks call count.
       mockListHostedZonesByName.reset();
       mockChangeResourceRecordSets.reset();
-      mockWaitForRecordsChange.reset();
     });
 
     test("error removing A-record for an alias into hosted zone", () => {
@@ -486,7 +483,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
       r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
       r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
       const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange');
-      waitForRecordChangeFake.resolves();
+      waitForRecordChangeFake.withArgs(sinon.match.has("Id", "mockID")).resolves();
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {
