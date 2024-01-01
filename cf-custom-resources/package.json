@@ -34,17 +34,13 @@
     "@aws-sdk/client-sfn": "^3.481.0",
     "@aws-sdk/client-sqs": "^3.484.0",
     "@aws-sdk/core": "^3.481.0",
-    "@aws-sdk/credential-providers": "^3.481.0",
-    "aws-sdk-client-mock": "^3.0.0",
-    "install": "^0.13.0",
-    "npm": "^10.2.5"
+    "@aws-sdk/credential-providers": "^3.481.0"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.16.0",
-    "@typescript-eslint/parser": "^6.16.0",
     "ansi-regex": ">=5.0.1",
     "aws-sdk-mock": "^5.1.0",
     "axios": ">=1.6.0",
+    "aws-sdk-client-mock": "^3.0.0",
     "babel-minify": "^0.5.1",
     "eslint": "^7.16.0",
     "eslint-config-standard": "^16.0.2",
