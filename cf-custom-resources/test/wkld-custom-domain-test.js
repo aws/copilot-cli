@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
 const sinon = require("sinon");
 const nock = require("nock");
 let origLog = console.log;
-
-const { attemptsValidationOptionsReady } = require("../lib/wkld-custom-domain");
 
 describe("DNS Certificate Validation And Custom Domains for NLB", () => {
   // Mock requests.
@@ -32,6 +29,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
   }
 
   let handler, reset, withDeadlineExpired;
+  let imported, r53Mock,acmMock,rgtMock, r53, acm, rgt;
   beforeEach(() => {
     // Prevent logging.
     console.log = function () {};
@@ -40,8 +38,14 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     // A description of the issue can be found here: https://github.com/dwyl/aws-sdk-mock/issues/206.
     // This workaround follows the comment here: https://github.com/dwyl/aws-sdk-mock/issues/206#issuecomment-640418772.
     jest.resetModules();
-    AWS.setSDKInstance(require("aws-sdk"));
-    const imported = require("../lib/wkld-custom-domain");
+    imported = require("../lib/wkld-custom-domain");
+    r53 = require("@aws-sdk/client-route-53");
+    acm = require("@aws-sdk/client-acm");
+    rgt = require("@aws-sdk/client-resource-groups-tagging-api");
+    const { mockClient } = require("aws-sdk-client-mock");
+    r53Mock = mockClient(r53.Route53Client);
+    acmMock = mockClient(acm.ACMClient);
+    rgtMock = mockClient(rgt.ResourceGroupsTaggingAPIClient);  
     handler = imported.handler;
     reset = imported.reset;
     withDeadlineExpired = imported.withDeadlineExpired;
@@ -53,13 +57,16 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     withDeadlineExpired((_) => {
       return new Promise(function (resolve, reject) {});
     });
+    imported.waitForRecordChange = async function () {};
   });
 
   afterEach(() => {
     // Restore logger
     console.log = origLog;
-    AWS.restore();
-    reset();
+    r53Mock.reset();
+    acmMock.reset();
+    rgtMock.reset();
+    imported.reset();
   });
 
   describe("During CREATE with alias", () => {
@@ -84,7 +91,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     const mockListHostedZonesByName = sinon.stub();
     const mockListResourceRecordSets = sinon.stub();
     const mockChangeResourceRecordSets = sinon.stub();
-    const mockWaitForRecordsChange = sinon.stub();
     const mockAppHostedZoneID = "mockAppHostedZoneID";
     const mockRootHostedZoneID = "mockRootHostedZoneID";
 
@@ -110,7 +116,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           },
         ],
       });
-      mockWaitForRecordsChange.resolves();
     });
 
     afterEach(() => {
@@ -118,7 +123,6 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
       mockListHostedZonesByName.reset();
       mockListResourceRecordSets.reset();
       mockChangeResourceRecordSets.reset();
-      mockWaitForRecordsChange.reset();
     });
 
     test("unsupported action fails", () => {
@@ -160,8 +164,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           },
         ],
       });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);  
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -181,7 +185,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         ],
       });
       mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -193,8 +197,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
 
     test("error validating aliases", () => {
       const mockListResourceRecordSets = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -216,8 +220,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           },
         ],
       });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
 
       let request = mockFailedRequest(
         /^Alias dash-test.mockDomain.com is already in use by other-lb-DNS. This could be another load balancer of a different service. \(Log: .*\)$/
@@ -238,9 +242,9 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         .rejects(new Error("some error"));
       mockChangeResourceRecordSets.resolves({ ChangeInfo: { Id: "mockID" } });
 
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -255,11 +259,11 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("fail to wait for resource record sets change to be finished", () => {
-      const mockWaitFor = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitFor);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordSetChangeFake.rejects(new Error("some error"));
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -269,20 +273,18 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 call for each alias that is not env-level; there are 2 such aliases.
           sinon.assert.callCount(mockListResourceRecordSets, 3); // 1 call for each alias; 3 aliases in total.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call for each alias; 3 aliases in total.
-          sinon.assert.callCount(mockWaitFor, 3); // 1 call for each alias; 3 aliases in total.
+          sinon.assert.callCount(waitForRecordSetChangeFake, 3); // 1 call for each alias; 3 aliases in total.
         });
     });
 
     test("lambda time out", () => {
-      withDeadlineExpired((_) => {
+      imported.withDeadlineExpired((_) => {
         return new Promise(function (_, reject) {
           reject(new Error("lambda time out error"));
         });
       });
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", sinon.fake.resolves());
-      AWS.mock("ACM", "waitFor", sinon.fake.resolves());
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
       let request = mockFailedRequest(/^lambda time out error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -293,10 +295,12 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("successful operation", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordSetChangeFake.resolves();
 
       // let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       let request = nock(mockResponseURL)
@@ -312,7 +316,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 call for each alias that is not env-level; there are 2 such aliases.
           sinon.assert.callCount(mockListResourceRecordSets, 3); // 1 call for each alias; 3 aliases in total.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call for each alias; 3 aliases in total.
-          sinon.assert.callCount(mockWaitForRecordsChange, 3); // 1 call for each alias; 3 aliases in total.
+          sinon.assert.callCount(waitForRecordSetChangeFake, 3); // 1 call for each alias; 3 aliases in total.
           sinon.assert.alwaysCalledWithMatch(mockChangeResourceRecordSets, sinon.match.hasNested("ChangeBatch.Changes[0].Action", "UPSERT"));
         });
     });
@@ -385,8 +389,8 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
         .withArgs(sinon.match.hasNested("ChangeBatch.Changes[0].ResourceRecordSet.Name", "a.mockDomain.com"))
         .rejects(new Error("some error"));
       mockChangeResourceRecordSets.resolves({ ChangeInfo: { Id: "mockID" } });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
       let request = mockFailedRequest(/^delete record a.mockDomain.com: some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -399,10 +403,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("error waiting for resource record sets change to be finished", () => {
-      const mockWaitForRecordsChange = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordChangeFake.rejects(new Error("some error"));
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -411,7 +415,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 call for each non-environment-level alias; there are 2 such aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call for each alias; there are 3 aliases.
-          sinon.assert.callCount(mockWaitForRecordsChange, 3); // 1 call for each alias; there are 3 aliases.
+          sinon.assert.callCount(waitForRecordChangeFake, 3); // 1 call for each alias; there are 3 aliases.
         });
     });
 
@@ -419,9 +423,9 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
       const mockChangeResourceRecordSets = sinon.fake.rejects(
         new Error("Tried to delete resource record set [name='A.mockDomain.com', type='A'] but it was not found")
       );
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange');
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {
@@ -434,7 +438,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 call for each non-environment-level alias; there are 2 such aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call for each alias; there are 3 aliases.
-          sinon.assert.callCount(mockWaitForRecordsChange, 0); // Exited early when changeResourceRecordSets returns the not found error.
+          sinon.assert.callCount(waitForRecordChangeFake, 0); // Exited early when changeResourceRecordSets returns the not found error.
         });
     });
 
@@ -442,9 +446,9 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
       const mockChangeResourceRecordSets = sinon.fake.rejects(
         new Error("Tried to delete resource record set [name='A.mockDomain.com', type='A'] but but the values provided do not match the current values")
       );
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange');
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {
@@ -457,19 +461,18 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 call for each non-environment-level alias; there are 2 such aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call for each alias; there are 3 aliases.
-          sinon.assert.callCount(mockWaitForRecordsChange, 0); // Exited early when changeResourceRecordSets returns the not found error.
+          sinon.assert.callCount(waitForRecordChangeFake, 0); // Exited early when changeResourceRecordSets returns the not found error.
         });
     });
 
     test("lambda time out", () => {
-      withDeadlineExpired((_) => {
+      imported.withDeadlineExpired((_) => {
         return new Promise(function (_, reject) {
           reject(new Error("lambda time out error"));
         });
       });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
       let request = mockFailedRequest(/^lambda time out error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -480,9 +483,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("successful operation", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordChangeFake.resolves();
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {
@@ -496,7 +500,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 call for each alias that is not env-level; there are 2 such aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call for each alias; 3 aliases in total.
-          sinon.assert.callCount(mockWaitForRecordsChange, 3); // 1 call for each alias; 3 aliases in total.
+          sinon.assert.callCount(waitForRecordChangeFake, 3); // 1 call for each alias; 3 aliases in total.
           sinon.assert.alwaysCalledWithMatch(mockChangeResourceRecordSets, sinon.match.hasNested("ChangeBatch.Changes[0].Action", "DELETE"));
         });
     });
@@ -574,9 +578,9 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("do nothing if the new aliases are exactly the same as the old one", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange').resolves();
 
       mockRequest.ResourceProperties.Aliases = ["a.mockDomain.com", "b.mockDomain.com", "b.mockDomain.com"];
       mockRequest.OldResourceProperties.Aliases = ["b.mockDomain.com", "a.mockDomain.com", "a.mockDomain.com"];
@@ -594,15 +598,15 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           sinon.assert.callCount(mockListResourceRecordSets, 0);
           sinon.assert.callCount(mockListHostedZonesByName, 0);
           sinon.assert.callCount(mockChangeResourceRecordSets, 0);
-          sinon.assert.callCount(mockWaitForRecordsChange, 0);
+          sinon.assert.callCount(waitForRecordChangeFake, 0);
         });
     });
 
     test("update if the new aliases are exactly the same as the old ones but hosted zone and dns change", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets); // Calls to upsert the A-records.
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange); // Calls to wait for the changes.
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets); // Calls to validate aliases.
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets); // Calls to upsert the A-records.
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange').resolves(); // Calls to wait for the changes.
 
       mockRequest.ResourceProperties.Aliases = ["a.mockDomain.com"];
       mockRequest.OldResourceProperties.Aliases = ["a.mockDomain.com"];
@@ -625,7 +629,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 1); 
           sinon.assert.callCount(mockChangeResourceRecordSets, 1); 
-          sinon.assert.callCount(mockWaitForRecordsChange, 1);
+          sinon.assert.callCount(waitForRecordChangeFake, 1);
 
           // The following calls are made to add aliases.
           sinon.assert.callCount(mockListResourceRecordSets, 1); // 1 call to each alias to validate its ownership; there is 1 alias.
@@ -638,10 +642,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("update if the aliases, hosted zone, and dns change", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets); // Calls to upsert the A-records.
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange); // Calls to wait for the changes.
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets); // Calls to validate aliases.
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets); // Calls to upsert the A-records.
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange').resolves(); // Calls to wait for the changes.
 
       mockRequest.ResourceProperties.Aliases = ["a.mockDomain.com"];
       mockRequest.OldResourceProperties.Aliases = ["b.mockDomain.com"];
@@ -664,7 +668,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 1); 
           sinon.assert.callCount(mockChangeResourceRecordSets, 2); 
-          sinon.assert.callCount(mockWaitForRecordsChange, 2);
+          sinon.assert.callCount(waitForRecordChangeFake, 2);
 
           // The following calls are made to add aliases.
           sinon.assert.callCount(mockListResourceRecordSets, 1); // 1 call to each alias to validate its ownership; there is 1 alias.
@@ -684,10 +688,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("new aliases that only add additional aliases to the old aliases, without deletion", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets); // Calls to upsert the A-records.
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange); // Calls to wait for the changes.
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets); // Calls to validate aliases.
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets); // Calls to upsert the A-records.
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange').resolves(); // Calls to wait for the changes.
 
       mockRequest.ResourceProperties.Aliases = ["a.mockDomain.com", "b.mockApp.mockDomain.com", "c.mockEnv.mockApp.mockDomain.com"];
       mockRequest.OldResourceProperties.Aliases = ["a.mockDomain.com"];
@@ -704,15 +708,15 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 calls to each non-env-level aliases; there are 2 such aliases.
           sinon.assert.callCount(mockListResourceRecordSets, 3); // 1 call to each alias to validate its ownership; there are 3 aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call to each alias to upsert its A-record; there are 3 aliases.
-          sinon.assert.callCount(mockWaitForRecordsChange, 3); // 1 call to each alias after upserting A-record; there are 3 aliases.
+          sinon.assert.callCount(waitForRecordChangeFake, 3); // 1 call to each alias after upserting A-record; there are 3 aliases.
         });
     });
 
     test("new aliases that only delete some aliases from the old aliases, without addition", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets); // Calls to upsert the A-records.
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange); // Calls to wait for the changes.
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets); // Calls to validate aliases.
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets); // Calls to upsert the A-records.
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange').resolves(); // Calls to wait for the changes.
 
       mockRequest.ResourceProperties.Aliases = ["a.mockDomain.com"];
       mockRequest.OldResourceProperties.Aliases = ["a.mockDomain.com", "b.mockApp.mockDomain.com", "c.mockEnv.mockApp.mockDomain.com"];
@@ -728,7 +732,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 calls to each non-env-level aliases; there are 2 such aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 1 call to upsert the alias, 2 calls to remove unused aliases.
-          sinon.assert.callCount(mockWaitForRecordsChange, 3); // 1 call following each `ChangeResourceRecordSets`.
+          sinon.assert.callCount(waitForRecordChangeFake, 3); // 1 call following each `ChangeResourceRecordSets`.
 
           // The following calls are made to add aliases.
           // Although the aliases already exist (in `OldResourceProperties`), we repeat these operations anyway just to be sure.
@@ -754,10 +758,10 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
     });
 
     test("new aliases that both add to and remove from the aliases", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets); // Calls to validate aliases.
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets); // Calls to upsert the A-records.
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange); // Calls to wait for the changes.
+      r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets); // Calls to validate aliases.
+      r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets); // Calls to upsert the A-records.
+      const waitForRecordChangeFake = sinon.stub(imported, 'waitForRecordChange').resolves(); // Calls to wait for the changes.
 
       mockRequest.ResourceProperties.Aliases = ["has-always-been.mockApp.mockDomain.com", "new.mockEnv.mockApp.mockDomain.com"];
       mockRequest.OldResourceProperties.Aliases = ["has-always-been.mockApp.mockDomain.com", "unused.mockDomain.com"];
@@ -773,7 +777,7 @@ describe("DNS Certificate Validation And Custom Domains for NLB", () => {
           expect(request.isDone()).toBe(true);
           sinon.assert.callCount(mockListHostedZonesByName, 2); // 1 calls to each non-env-level aliases; there are 2 such aliases.
           sinon.assert.callCount(mockChangeResourceRecordSets, 3); // 2 call to upsert the alias, 1 calls to remove unused aliases.
-          sinon.assert.callCount(mockWaitForRecordsChange, 3); // 1 call following each `ChangeResourceRecordSets`.
+          sinon.assert.callCount(waitForRecordChangeFake, 3); // 1 call following each `ChangeResourceRecordSets`.
 
           // The following calls are made to add aliases.
           sinon.assert.callCount(mockListResourceRecordSets, 2); // 1 call to each alias to validate its ownership; there are 2 alias.

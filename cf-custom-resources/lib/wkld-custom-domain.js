@@ -1,7 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-const AWS = require("aws-sdk");
+"use strict";
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { ACM } = require("@aws-sdk/client-acm");
+const { ResourceGroupsTaggingAPI } = require("@aws-sdk/client-resource-groups-tagging-api");
+const { Route53, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
@@ -16,10 +20,10 @@ const appRoute53Context = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.Route53({
-        credentials: new AWS.ChainableTemporaryCredentials({
+      client = new Route53({
+        credentials: fromTemporaryCredentials({
           params: { RoleArn: rootDNSRole },
-          masterCredentials: new AWS.EnvironmentCredentials("AWS"),
+          masterCredentials: fromEnv("AWS"),
         }),
       });
     }
@@ -31,7 +35,7 @@ const envRoute53Context = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.Route53();
+      client = new Route53();
     }
     return client;
   };
@@ -41,7 +45,7 @@ const acmContext = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.ACM();
+      client = new ACM();
     }
     return client;
   };
@@ -51,7 +55,7 @@ const resourceGroupsTaggingAPIContext = () => {
   let client;
   return () => {
     if (!client) {
-      client = new AWS.ResourceGroupsTaggingAPI();
+      client = new ResourceGroupsTaggingAPI();
     }
     return client;
   };
@@ -238,7 +242,6 @@ async function validateAliases(aliases, publicAccessDNS, oldPublicAccessDNS) {
         StartRecordName: alias,
         StartRecordType: "A",
       })
-      .promise()
       .then(({ ResourceRecordSets: recordSet }) => {
         if (!targetRecordExists(alias, recordSet)) {
           return;
@@ -311,19 +314,8 @@ async function activateAlias(alias, publicAccessDNS, publicAccessHostedZone) {
         Changes: changes,
       },
       HostedZoneId: hostedZoneID,
-    })
-    .promise();
-
-  await route53Client
-    .waitFor("resourceRecordSetsChanged", {
-      // Wait up to 5 minutes
-      $waiter: {
-        delay: DELAY_RECORD_SETS_CHANGE_IN_S,
-        maxAttempts: ATTEMPTS_RECORD_SETS_CHANGE,
-      },
-      Id: ChangeInfo.Id,
-    })
-    .promise();
+    });
+  await exports.waitForRecordChange(route53Client,ChangeInfo.Id);
 }
 
 /**
@@ -377,7 +369,7 @@ async function deactivateAlias(alias, publicAccessDNS, publicAccessHostedZoneID)
   };
   let changeInfo;
   try {
-    ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput).promise());
+    ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput));
   } catch (e) {
     let recordSetNotFoundErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but it was not found.*");
     if (recordSetNotFoundErrMessageRegex.test(e.message)) {
@@ -395,18 +387,20 @@ async function deactivateAlias(alias, publicAccessDNS, publicAccessHostedZoneID)
     }
     throw new Error(`delete record ${alias}: ` + e.message);
   }
-
-  await route53Client
-    .waitFor("resourceRecordSetsChanged", {
-      // Wait up to 5 minutes
-      $waiter: {
-        delay: DELAY_RECORD_SETS_CHANGE_IN_S,
-        maxAttempts: ATTEMPTS_RECORD_SETS_CHANGE,
-      },
-      Id: changeInfo.Id,
-    })
-    .promise();
+  await exports.waitForRecordChange(route53Client,changeInfo.Id);
 }
+
+const waitForRecordChange = async function (route53, changeId) {
+  // wait upto 5 minutes.
+  await waitUntilResourceRecordSetsChanged({
+    client: route53,
+    maxWaitTime: ATTEMPTS_RECORD_SETS_CHANGE * DELAY_RECORD_SETS_CHANGE_IN_S,
+    minDelay: DELAY_RECORD_SETS_CHANGE_IN_S,
+    maxDelay: DELAY_RECORD_SETS_CHANGE_IN_S,
+    },{
+    Id: changeId,
+  });
+};
 
 /**
  * Validate if the exact record exits in the set of records.
@@ -427,8 +421,7 @@ async function hostedZoneIDByName(domain) {
     .listHostedZonesByName({
       DNSName: domain,
       MaxItems: "1",
-    })
-    .promise();
+    });
   if (!HostedZones || HostedZones.length === 0) {
     throw new Error(`Couldn't find any Hosted Zone with DNS name ${domainName}.`);
   }
@@ -501,3 +494,6 @@ exports.withDeadlineExpired = function (d) {
   exports.deadlineExpired = d;
 };
 exports.attemptsValidationOptionsReady = ATTEMPTS_VALIDATION_OPTIONS_READY;
+exports.waitForRecordChange = function (route53, changeId) {
+  return waitForRecordChange(route53, changeId);
+}

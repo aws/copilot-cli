@@ -5,7 +5,6 @@
 /* jshint esversion: 8 */
 
 "use strict";
-
 const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
 const { ACM, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
 const { Route53, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
