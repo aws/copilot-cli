@@ -99,7 +99,7 @@ const replicateCertificate = async function (
   envRegionAcm,
   targetRegionAcm
 ) {
-  const {Certificate} = await envRegionAcm
+  const { Certificate } = await envRegionAcm
     .send(new DescribeCertificateCommand({
       CertificateArn: certArn,
     }));
@@ -161,8 +161,9 @@ const deleteCertificate = async function (arn, acm) {
       );
     }
 
-    await acm.send(new DeleteCertificateCommand({
-      CertificateArn: arn,
+    await acm
+      .send(new DeleteCertificateCommand({
+        CertificateArn: arn,
     }));
   } catch (err) {
     if (err.name !== "ResourceNotFoundException") {

@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
-
 const { ECS, DescribeServicesCommand } = require('@aws-sdk/client-ecs');
 const { ResourceGroupsTaggingAPI, GetResourcesCommand } = require('@aws-sdk/client-resource-groups-tagging-api');
 
@@ -87,22 +86,23 @@ const getRunningTaskCount = async function (
   svc
 ) {
   var resourcegroupstaggingapi = new ResourceGroupsTaggingAPI();
-  const rgResp = await resourcegroupstaggingapi.send(new GetResourcesCommand({
-    ResourceTypeFilters: ["ecs:service"],
-    TagFilters: [
-      {
-        Key: "copilot-application",
-        Values: [app],
-      },
-      {
-        Key: "copilot-environment",
-        Values: [env],
-      },
-      {
-        Key: "copilot-service",
-        Values: [svc],
-      },
-    ],
+  const rgResp = await resourcegroupstaggingapi
+    .send(new GetResourcesCommand({
+      ResourceTypeFilters: ["ecs:service"],
+      TagFilters: [
+        {
+          Key: "copilot-application",
+          Values: [app],
+        },
+        {
+          Key: "copilot-environment",
+          Values: [env],
+        },
+        {
+          Key: "copilot-service",
+          Values: [svc],
+        },
+      ],
   }));
 
   const resources = rgResp.ResourceTagMappingList;
