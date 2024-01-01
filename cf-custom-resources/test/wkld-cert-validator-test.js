@@ -412,9 +412,9 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
       const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
-      waitForRecordSetChangeFake.resolves();
+      waitForRecordSetChangeFake.withArgs(sinon.match.any,"mockChangeID").resolves();
       const waitForCertificateValidationFake = sinon.stub(imported, 'waitForCertificateValidation');
-      waitForCertificateValidationFake.rejects(new Error("some error"));
+      waitForCertificateValidationFake.withArgs("mockCertArn",sinon.match.any).rejects(new Error("some error"));
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)

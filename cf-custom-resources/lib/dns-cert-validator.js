@@ -6,8 +6,9 @@
 
 "use strict";
 const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
-const { ACM, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
-const { Route53, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
+const { ACM, RequestCertificateCommand, DescribeCertificateCommand, ListCertificatesCommand, 
+  DeleteCertificateCommand, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
+const { Route53, ListHostedZonesByNameCommand, ChangeResourceRecordSetsCommand, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 
 const defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -125,7 +126,7 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   return acm
-    .requestCertificate({
+    .send(new RequestCertificateCommand({
       DomainName: certDomain,
       SubjectAlternativeNames: sansToUse,
       IdempotencyToken: crypto
@@ -143,8 +144,8 @@ const requestCertificate = async function (
           Key: "copilot-environment",
           Value: envName,
         },
-      ],
-    });
+      ],   
+    }));       
 };
 
 /**
@@ -165,9 +166,9 @@ const waitForValidationOptionsToBeReady = async function(
   const expectedValidationOptionsNum = sansToUse.length;
   for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: certificateARN,
-        });
+        }));
     options = Certificate.DomainValidationOptions || [];
     let readyRecordsNum = 0;
     for (const option of options) {
@@ -290,7 +291,7 @@ const deleteHostedZoneRecords = async function (
   let isNewCertFound = false;
   while (!isNewCertFound) {
     const listCertResp = await acm
-      .listCertificates(listCertificatesInput);
+      .send(new ListCertificatesCommand(listCertificatesInput));
     for (const certSummary of listCertResp.CertificateSummaryList || []) {
       if (
         certSummary.DomainName !== defaultDomain ||
@@ -302,9 +303,9 @@ const deleteHostedZoneRecords = async function (
       // There exists another certificate created by Copilot which has the updated alias fields as SANs.
       // We don't want to delete any validation records associated with the new certificate.
       const { Certificate } = await acm
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: certSummary.CertificateArn,
-        });
+        }));
       newCertOptions = Certificate.DomainValidationOptions || [];
       isNewCertFound = true;
       break;
@@ -360,10 +361,10 @@ const validateDomain = async function ({
 }) {
   if (!hostedZoneId) {
     const hostedZones = await route53
-      .listHostedZonesByName({
+      .send(new ListHostedZonesByNameCommand({
         DNSName: domainName,
         MaxItems: "1",
-      });
+      }));
     if (!hostedZones.HostedZones || hostedZones.HostedZones.length === 0) {
       throw new Error(
         `Couldn't find any Hosted Zone with DNS name ${domainName}.`
@@ -413,9 +414,9 @@ const deleteCertificate = async function (
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: arn,
-        });
+        }));
 
       inUseByResources = Certificate.InUseBy || [];
       options = Certificate.DomainValidationOptions || [];
@@ -451,26 +452,14 @@ const deleteCertificate = async function (
     );
 
     await acm
-      .deleteCertificate({
+      .send(new DeleteCertificateCommand({
         CertificateArn: arn,
-      });
+      }));
   } catch (err) {
     if (err.name !== "ResourceNotFoundException") {
       throw err;
     }
   }
-};
-
-const waitForCertificateValidation = async function (certificateARN, acm) {
-  // Wait up to 9 minutes and 30 seconds
-  await waitUntilCertificateValidated({
-    client:acm,
-    maxWaitTime: 570,
-    minDelay: 30,
-    maxDelay: 30,
-  },{
-    CertificateArn: certificateARN
-  });
 };
 
 const waitForRecordChange = async function (route53, changeId) {
@@ -485,6 +474,18 @@ const waitForRecordChange = async function (route53, changeId) {
   });
 };
 
+const waitForCertificateValidation = async function (certificateARN, acm) {
+  // Wait up to 9 minutes and 30 seconds
+  await waitUntilCertificateValidated({
+    client:acm,
+    maxWaitTime: 570,
+    minDelay: 30,
+    maxDelay: 30,
+  },{
+    CertificateArn: certificateARN
+  });
+};
+
 const updateRecords = function (
   route53,
   hostedZone,
@@ -494,7 +495,7 @@ const updateRecords = function (
   recordValue
 ) {
   return route53
-    .changeResourceRecordSets({
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
         Changes: [
           {
@@ -513,7 +514,7 @@ const updateRecords = function (
         ],
       },
       HostedZoneId: hostedZone,
-    });
+    }));
 };
 
 // getAllAliases gets all aliases out from a string. For example:
@@ -673,7 +674,6 @@ exports.certificateRequestHandler = async function (event, context) {
 exports.withDefaultResponseURL = function (url) {
   defaultResponseURL = url;
 };
-
 
 /**
  * @private
