@@ -7,8 +7,8 @@
 "use strict";
 
 const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
-const { AppRunner } = require("@aws-sdk/client-apprunner");
-const { Route53,waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
+const { AppRunner, AssociateCustomDomainCommand, DescribeCustomDomainsCommand, DisassociateCustomDomainCommand } = require("@aws-sdk/client-apprunner");
+const { Route53, ListHostedZonesByNameCommand, ChangeResourceRecordSetsCommand, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const DOMAIN_STATUS_ACTIVE = "active";
@@ -85,6 +85,7 @@ function report (
 }
 
 exports.handler = async function (event, context) {
+    console.log(`Received event: ${JSON.stringify(event)}`);
     const props = event.ResourceProperties;
     const [serviceARN, appDNSRole, customDomain, appDNSName] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain, props.AppDNSName, ];
     const physicalResourceID = `/associate-domain-app-runner/${customDomain}`;
@@ -94,10 +95,11 @@ exports.handler = async function (event, context) {
             credentials: fromTemporaryCredentials({
                 params: { RoleArn: appDNSRole, },
                 masterCredentials: fromEnv("AWS"),
-            })
+            }),
         });
         appRunnerClient = new AppRunner();
         appHostedZoneID = await domainHostedZoneID(appDNSName);
+        console.log(`Received request type ${event.RequestType}`);
         switch (event.RequestType) {
             case "Create":
             case "Update":
@@ -135,10 +137,10 @@ exports.deadlineExpired = function () {
  * @param {string} domainName
  */
 async function domainHostedZoneID(domainName) {
-    const data = await appRoute53Client.listHostedZonesByName({
+    const data = await appRoute53Client.send(new ListHostedZonesByNameCommand({
         DNSName: domainName,
         MaxItems: "1",
-    });
+    }));
 
     if (!data.HostedZones || data.HostedZones.length === 0) {
         throw new Error(`couldn't find any Hosted Zone with DNS name ${domainName}`);
@@ -156,10 +158,10 @@ async function domainHostedZoneID(domainName) {
 async function addCustomDomain(serviceARN, customDomainName) {
     let data;
     try {
-        data = await appRunnerClient.associateCustomDomain({
+        data = await appRunnerClient.send(new AssociateCustomDomainCommand({
             DomainName: customDomainName,
             ServiceArn: serviceARN,
-        });
+        }));
     } catch (err) {
         const isDomainAlreadyAssociated = err.message.includes(`${customDomainName} is already associated with`);
         if (!isDomainAlreadyAssociated) {
@@ -169,9 +171,9 @@ async function addCustomDomain(serviceARN, customDomainName) {
 
     if (!data) {
         // If domain is already associated, data would be undefined.
-        data = await appRunnerClient.describeCustomDomains({
+        data = await appRunnerClient.send(new DescribeCustomDomainsCommand({
             ServiceArn: serviceARN,
-        });
+        }));
     }
 
     return Promise.all([
@@ -190,7 +192,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
 async function getDomainInfo(serviceARN, domainName) {
     let describeCustomDomainsInput = {ServiceArn: serviceARN,};
     while (true) {
-        const resp = await appRunnerClient.describeCustomDomains(describeCustomDomainsInput);
+        const resp = await appRunnerClient.send(new DescribeCustomDomainsCommand(describeCustomDomainsInput));
 
         for (const d of resp.CustomDomains) {
             if (d.DomainName === domainName) {
@@ -280,10 +282,10 @@ function domainValidationRecordReady(domain) {
 async function removeCustomDomain(serviceARN, customDomainName) {
     let data;
     try {
-        data = await appRunnerClient.disassociateCustomDomain({
+        data = await appRunnerClient.send(new DisassociateCustomDomainCommand({
             DomainName: customDomainName,
             ServiceArn: serviceARN,
-        });
+        }));
     } catch (err) {
         if (err.message.includes(`No custom domain ${customDomainName} found for the provided service`)) {
             return;
@@ -382,7 +384,7 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
 
     let data;
     try {
-        data = await appRoute53Client.changeResourceRecordSets(params);
+        data = await appRoute53Client.send(new ChangeResourceRecordSetsCommand(params));
     } catch (err) {
         let recordSetNotFoundErrMessageRegex = /Tried to delete resource record set \[name='.*', type='CNAME'] but it was not found/;
         if (action === "DELETE" && err.message.search(recordSetNotFoundErrMessageRegex) !== -1) {

@@ -1117,10 +1117,15 @@ describe("Custom Domain for App Runner Service", () => {
             appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
             r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
             const waitForRecordSetChangeFake = sinon.stub(customDomainAppRunner, 'waitForRecordSetChange');
-            waitForRecordSetChangeFake.rejects(new Error("some error"));
+            // Resolve when changeId is mockValidationRecordID
             waitForRecordSetChangeFake
-            .withArgs(sinon.match.has('Id', 'mockDomainID'))
-            .rejects(new Error("some error")); // Rejects for the call that update the domain record.
+            .withArgs(sinon.match.any, "mockValidationRecordID")
+            .resolves();
+
+            // Reject when changeId is mockDomainID
+            waitForRecordSetChangeFake
+            .withArgs(sinon.match.any, "mockDomainID")
+            .rejects(new Error("some error"));
 
             waitForRecordSetChangeFake
                 .withArgs(sinon.match.has('Id', 'mockValidationRecordID'))
