@@ -112,9 +112,10 @@ const getRunningTaskCount = async function (
   const serviceARN = resources[0].ResourceARN;
 
   var ecs = new ECS();
-  const resp = await ecs.send(new DescribeServicesCommand({
-    cluster: cluster,
-    services: [serviceARN],
+  const resp = await ecs
+    .send(new DescribeServicesCommand({
+      cluster: cluster,
+      services: [serviceARN],
   }));
   if (resp.services.length !== 1) {
     return defaultDesiredCount;

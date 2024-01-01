@@ -134,20 +134,20 @@ const calculateNextRootRulePriority = async function (listenerArn) {
   return nextRulePriority;
 };
 
-const getListenerRules = async function (listenerArn, config) {
-  const client = new ElasticLoadBalancingV2(config);
+const getListenerRules = async function (listenerArn) {
+  let elb = new ElasticLoadBalancingV2();
+  // Grab all the rules for this listener
   let marker;
   let rules = [];
-
   do {
-    const input = {
-      ListenerArn: listenerArn,
-      Marker: marker,
-    };
-    const response = await client
-    .send(new DescribeRulesCommand(input));
-    rules = rules.concat(response.Rules);
-    marker = response.NextMarker;
+    const rulesResponse = await elb
+      .send(new DescribeRulesCommand({
+        ListenerArn: listenerArn,
+        Marker: marker,
+      }));
+
+    rules = rules.concat(rulesResponse.Rules);
+    marker = rulesResponse.NextMarker;
   } while (marker);
   return rules;
 };

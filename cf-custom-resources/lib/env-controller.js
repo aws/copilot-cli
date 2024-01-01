@@ -159,12 +159,13 @@ const controlEnv = async function (
     }
 
     try {
-      await cfn.send(new UpdateStackCommand({
-        StackName: stackName,
-        Parameters: envParams,
-        UsePreviousTemplate: true,
-        RoleARN: exportedValues["CFNExecutionRoleARN"],
-        Capabilities: updatedEnvStack.Capabilities,
+      await cfn
+        .send(new UpdateStackCommand({
+          StackName: stackName,
+          Parameters: envParams,
+          UsePreviousTemplate: true,
+          RoleARN: exportedValues["CFNExecutionRoleARN"],
+          Capabilities: updatedEnvStack.Capabilities,
       }));
     } catch (err) {
       if (

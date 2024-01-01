@@ -100,8 +100,9 @@ const createSubdomainInRoot = async function (
     }),
   });
 
-  const hostedZones = await route53.send(new ListHostedZonesByNameCommand({ 
-    DNSName: domainName 
+  const hostedZones = await route53
+    .send(new ListHostedZonesByNameCommand({ 
+      DNSName: domainName 
   }));
 
   if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
@@ -165,8 +166,9 @@ const deleteSubdomainInRoot = async function (
     }),
   });
 
-  const hostedZones = await route53.send(new ListHostedZonesByNameCommand({
-    DNSName: domainName,
+  const hostedZones = await route53
+    .send(new ListHostedZonesByNameCommand({
+      DNSName: domainName,
   }));
 
   if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
@@ -183,11 +185,12 @@ const deleteSubdomainInRoot = async function (
 
   // Find the recordsets for this subdomain, and then remove it
   // from the hosted zone.
-  const recordSets = await route53.send(new ListResourceRecordSetsCommand({
-    HostedZoneId: hostedZoneId,
-    MaxItems: "1",
-    StartRecordName: subDomain,
-    StartRecordType: "NS",
+  const recordSets = await route53
+    .send(new ListResourceRecordSetsCommand({
+      HostedZoneId: hostedZoneId,
+      MaxItems: "1",
+      StartRecordName: subDomain,
+      StartRecordType: "NS",
   }));
 
   // If the records have already been deleted, return early.
@@ -206,18 +209,19 @@ const deleteSubdomainInRoot = async function (
   }
   console.log(`Deleting recordset ${subDomainRecordSet.Name}`);
 
-  const changeBatch = await route53.send(new ChangeResourceRecordSetsCommand({
-    ChangeBatch: {
-      Changes: [
-        recordChangeAction(
-          "DELETE",
-          subDomain,
-          "NS",
-          subDomainRecordSet.ResourceRecords
-        ),
-      ],
-    },
-    HostedZoneId: hostedZoneId,
+  const changeBatch = await route53
+    .send(new ChangeResourceRecordSetsCommand({
+      ChangeBatch: {
+        Changes: [
+          recordChangeAction(
+            "DELETE",
+            subDomain,
+            "NS",
+            subDomainRecordSet.ResourceRecords
+          ),
+        ],
+      },
+      HostedZoneId: hostedZoneId,
   }));
 
   await exports.waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);

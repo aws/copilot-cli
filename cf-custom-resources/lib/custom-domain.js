@@ -330,7 +330,7 @@ const waitForRecordChange = async function (route53, changeId) {
   });
 };
 
-const updateRecords = async function (
+const updateRecords = function (
   route53,
   hostedZone,
   action,
@@ -338,26 +338,26 @@ const updateRecords = async function (
   accessDNS,
   accessHostedZone
 ) {
-  return await route53
-  .send(new ChangeResourceRecordSetsCommand({
+  return route53
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
-      Changes: [
-        {
-          Action: action,
-          ResourceRecordSet: {
-            Name: alias,
-            Type: "A",
-            AliasTarget: {
-              HostedZoneId: accessHostedZone,
-              DNSName: accessDNS,
-              EvaluateTargetHealth: true,
+        Changes: [
+          {
+            Action: action,
+            ResourceRecordSet: {
+              Name: alias,
+              Type: "A",
+              AliasTarget: {
+                HostedZoneId: accessHostedZone,
+                DNSName: accessDNS,
+                EvaluateTargetHealth: true,
+              },
             },
           },
-        },
-      ],
+        ],
+      },
+      HostedZoneId: hostedZone,
     },
-    HostedZoneId: hostedZone,
-  },
   ));
 };
 

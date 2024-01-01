@@ -5,7 +5,8 @@
 const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
 const { ACM } = require("@aws-sdk/client-acm");
 const { ResourceGroupsTaggingAPI } = require("@aws-sdk/client-resource-groups-tagging-api");
-const { Route53, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
+const { Route53, ListHostedZonesByNameCommand, ChangeResourceRecordSetsCommand, ListResourceRecordSetsCommand,
+waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
 const DELAY_RECORD_SETS_CHANGE_IN_S = 30;
@@ -236,12 +237,12 @@ async function validateAliases(aliases, publicAccessDNS, oldPublicAccessDNS) {
   for (let alias of aliases) {
     let { hostedZoneID, route53Client } = await domainResources(alias);
     const promise = route53Client
-      .listResourceRecordSets({
+      .send(new ListResourceRecordSetsCommand({
         HostedZoneId: hostedZoneID,
         MaxItems: "1",
         StartRecordName: alias,
         StartRecordType: "A",
-      })
+      }))
       .then(({ ResourceRecordSets: recordSet }) => {
         if (!targetRecordExists(alias, recordSet)) {
           return;
@@ -308,13 +309,13 @@ async function activateAlias(alias, publicAccessDNS, publicAccessHostedZone) {
 
   let { hostedZoneID, route53Client } = await domainResources(alias);
   let { ChangeInfo } = await route53Client
-    .changeResourceRecordSets({
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
         Comment: `Upsert A-record for alias ${alias}`,
         Changes: changes,
       },
       HostedZoneId: hostedZoneID,
-    });
+    }));
   await exports.waitForRecordChange(route53Client,ChangeInfo.Id);
 }
 
@@ -369,7 +370,7 @@ async function deactivateAlias(alias, publicAccessDNS, publicAccessHostedZoneID)
   };
   let changeInfo;
   try {
-    ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput));
+    ({ ChangeInfo: changeInfo } = await route53Client.send(new ChangeResourceRecordSetsCommand(changeResourceRecordSetsInput)));
   } catch (e) {
     let recordSetNotFoundErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but it was not found.*");
     if (recordSetNotFoundErrMessageRegex.test(e.message)) {
@@ -418,10 +419,10 @@ function targetRecordExists(targetDomainName, recordSet) {
 async function hostedZoneIDByName(domain) {
   const { HostedZones } = await clients.app
     .route53()
-    .listHostedZonesByName({
-      DNSName: domain,
-      MaxItems: "1",
-    });
+    .send(new ListHostedZonesByNameCommand({
+        DNSName: domain,
+        MaxItems: "1",
+    }));
   if (!HostedZones || HostedZones.length === 0) {
     throw new Error(`Couldn't find any Hosted Zone with DNS name ${domainName}.`);
   }

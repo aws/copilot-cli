@@ -100,13 +100,16 @@ const replicateCertificate = async function (
   targetRegionAcm
 ) {
   const {Certificate} = await envRegionAcm
-    .send(new DescribeCertificateCommand({CertificateArn: certArn}));
+    .send(new DescribeCertificateCommand({
+      CertificateArn: certArn,
+    }));
   const domainName = Certificate.DomainName;
   const sans = Certificate.SubjectAlternativeNames;
 
   const crypto = require("crypto");
-  return await targetRegionAcm.send(new RequestCertificateCommand({
-        DomainName: domainName,
+  return await targetRegionAcm
+    .send(new RequestCertificateCommand({
+      DomainName: domainName,
       SubjectAlternativeNames: sans,
       IdempotencyToken: crypto
         .createHash("sha256")
@@ -141,7 +144,9 @@ const deleteCertificate = async function (arn, acm) {
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
-        .send(new DescribeCertificateCommand({CertificateArn: arn}));
+        .send(new DescribeCertificateCommand({
+          CertificateArn: arn,
+        }));
 
       inUseByResources = Certificate.InUseBy || [];
       if (inUseByResources.length === 0) {
@@ -156,7 +161,9 @@ const deleteCertificate = async function (arn, acm) {
       );
     }
 
-    await acm.send(new DeleteCertificateCommand({CertificateArn: arn}));
+    await acm.send(new DeleteCertificateCommand({
+      CertificateArn: arn,
+    }));
   } catch (err) {
     if (err.name !== "ResourceNotFoundException") {
       throw err;
