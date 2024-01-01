@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
-const { ACM, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
-const { ResourceGroupsTaggingAPI } = require("@aws-sdk/client-resource-groups-tagging-api");
-const { Route53, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
+const { ACM, DescribeCertificateCommand, DeleteCertificateCommand, RequestCertificateCommand, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
+const { ResourceGroupsTaggingAPI, GetResourcesCommand } = require("@aws-sdk/client-resource-groups-tagging-api");
+const { Route53, ListResourceRecordSetsCommand, ChangeResourceRecordSetsCommand, ListHostedZonesByNameCommand, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 const CRYPTO = require("crypto");
 const ATTEMPTS_VALIDATION_OPTIONS_READY = 10;
 const ATTEMPTS_RECORD_SETS_CHANGE = 10;
@@ -252,9 +252,9 @@ async function deleteCertificate(certARN) {
     try {
       ({ Certificate: certificate } = await clients
         .acm()
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: certARN,
-        }));
+        })));
     } catch (err) {
       if (err.name === "ResourceNotFoundException") {
         return;
@@ -274,7 +274,7 @@ async function deleteCertificate(certARN) {
 
   await clients
     .acm()
-    .deleteCertificate({ CertificateArn: certARN })
+    .send(new DeleteCertificateCommand({ CertificateArn: certARN }))
     .catch((err) => {
       if (err.name !== "ResourceNotFoundException") {
         throw err;
@@ -295,12 +295,12 @@ async function validateAliases(aliases, loadBalancerDNS) {
   for (let alias of aliases) {
     let { hostedZoneID, route53Client } = await domainResources(alias);
     const promise = route53Client
-      .listResourceRecordSets({
+      .send(new ListResourceRecordSetsCommand({
         HostedZoneId: hostedZoneID,
         MaxItems: "1",
         StartRecordName: alias,
         StartRecordType: "A",
-      })
+      }))
       .then(({ ResourceRecordSets: recordSet }) => {
         if (!targetRecordExists(alias, recordSet)) {
           return;
@@ -334,7 +334,7 @@ async function validateAliases(aliases, loadBalancerDNS) {
 async function requestCertificate({ aliases, idempotencyToken }) {
   const { CertificateArn } = await clients
     .acm()
-    .requestCertificate({
+    .send(new RequestCertificateCommand({
       DomainName: certificateDomain,
       IdempotencyToken: idempotencyToken,
       SubjectAlternativeNames: aliases.size === 0 ? null : [...aliases],
@@ -353,7 +353,7 @@ async function requestCertificate({ aliases, idempotencyToken }) {
         },
       ],
       ValidationMethod: "DNS",
-    });
+    }));
   return CertificateArn;
 }
 
@@ -372,9 +372,9 @@ async function waitForValidationOptionsToBeReady(certificateARN, aliases) {
     let readyCount = 0;
     const { Certificate } = await clients
       .acm()
-      .describeCertificate({
+      .send(new DescribeCertificateCommand({
         CertificateArn: certificateARN,
-      });
+      }));
     const options = Certificate.DomainValidationOptions || [];
     options.forEach((option) => {
       if (option.ResourceRecord && (aliases.has(option.DomainName) || option.DomainName.toLowerCase() === certificateDomain.toLowerCase())) {
@@ -406,7 +406,7 @@ async function validate(certificateARN, validationOptions) {
     promises.push(validateOption(option));
   }
   await Promise.all(promises);
-  await exports.waitForCertificateValidation(certificateARN,clients.acm());
+  await exports.waitForCertificateValidation(certificateARN, clients.acm());
 }
 
 const waitForCertificateValidation = async function (certificateARN, acm) {
@@ -458,13 +458,14 @@ async function validateOption(option) {
 
   let { hostedZoneID, route53Client } = await domainResources(option.DomainName);
   let { ChangeInfo } = await route53Client
-    .changeResourceRecordSets({
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
         Comment: `Validate the certificate for the alias ${option.DomainName}`,
         Changes: changes,
       },
       HostedZoneId: hostedZoneID,
-    });
+    }));
+
   await exports.waitForRecordChange(route53Client,ChangeInfo.Id);
 }
 
@@ -558,7 +559,7 @@ async function devalidateOption(option) {
   };
   let changeInfo;
   try {
-    ({ ChangeInfo: changeInfo } = await route53Client.changeResourceRecordSets(changeResourceRecordSetsInput));
+    ({ ChangeInfo: changeInfo } = await route53Client.send(new ChangeResourceRecordSetsCommand(changeResourceRecordSetsInput)));
   } catch (e) {
     let recordSetNotFoundErrMessageRegex = new RegExp(".*Tried to delete resource record set.*but it was not found.*");
     if (recordSetNotFoundErrMessageRegex.test(e.message)) {
@@ -576,7 +577,7 @@ async function devalidateOption(option) {
 async function serviceCertificates() {
   let { ResourceTagMappingList } = await clients
     .resourceGroupsTaggingAPI()
-    .getResources({
+    .send(new GetResourcesCommand({
       TagFilters: [
         {
           Key: "copilot-application",
@@ -591,17 +592,17 @@ async function serviceCertificates() {
           Values: [serviceName],
         },
       ],
-      ResourceTypeFilters: ["acm:certificate"],
-    });
+      ResourceTypeFilters: ["acm:certificate"], 
+    }));
 
   let certificates = [];
   let promises = [];
   for (const { ResourceARN: arn } of ResourceTagMappingList) {
     let promise = clients
       .acm()
-      .describeCertificate({
+      .send(new DescribeCertificateCommand({
         CertificateArn: arn,
-      })
+      }))
       .then(({ Certificate }) => {
         certificates.push(Certificate);
       });
@@ -665,11 +666,11 @@ async function inUseByOtherServices(loadBalancerDNS, domainName, route53Client) 
     throw err;
   }
   const { ResourceRecordSets: recordSet } = await route53Client
-    .listResourceRecordSets({
+    .send(new ListResourceRecordSetsCommand({
       HostedZoneId: hostedZoneID,
       MaxItems: "1",
       StartRecordName: domainName,
-    });
+    }));
   if (!targetRecordExists(domainName, recordSet)) {
     return false; // If there is no record using this domain, it is not in use.
   }
@@ -717,10 +718,10 @@ function targetRecordExists(targetDomainName, recordSet) {
 async function hostedZoneIDByName(domain) {
   const { HostedZones } = await clients.app
     .route53()
-    .listHostedZonesByName({
+    .send(new ListHostedZonesByNameCommand({
       DNSName: domain,
       MaxItems: "1",
-    });
+    }));
   if (!HostedZones || HostedZones.length === 0) {
     throw new Error(`Couldn't find any Hosted Zone with DNS name ${domainName}.`);
   }
@@ -793,7 +794,6 @@ exports.withDeadlineExpired = function (d) {
   exports.deadlineExpired = d;
 };
 exports.attemptsValidationOptionsReady = ATTEMPTS_VALIDATION_OPTIONS_READY;
-
 exports.waitForCertificateValidation = function (certificateARN, acm) {
   return waitForCertificateValidation(certificateARN, acm);
 }
