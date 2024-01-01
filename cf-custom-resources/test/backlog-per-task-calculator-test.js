@@ -14,7 +14,11 @@ describe("BacklogPerTask metric calculator", () => {
   let ecsMock, sqsMock;
 
   beforeAll(() => {
-    jest.spyOn(global.Date, 'now').mockImplementation(() => new Date('2021-09-02').valueOf());
+    jest
+    .spyOn(global.Date, 'now')
+    .mockImplementation(() =>
+      new Date('2021-09-02').valueOf(), // maps to 1630540800000.
+    );
     ecsMock = mockClient(ECSClient);
     sqsMock = mockClient(SQSClient);
   });
@@ -33,7 +37,7 @@ describe("BacklogPerTask metric calculator", () => {
 
   afterAll(() => {
     console = origConsole;
-    jest.restoreAllMocks();
+    jest.spyOn(global.Date, 'now').mockClear();
     ecsMock.restore();
     sqsMock.restore();
   });
@@ -45,7 +49,8 @@ describe("BacklogPerTask metric calculator", () => {
     ecsMock.on(DescribeServicesCommand).rejects("some message");
 
     // WHEN
-    const tester = lambdaTester(calculatorLambda.handler).event({});
+    const tester = lambdaTester(calculatorLambda.handler)
+      .event({});
 
     // THEN
     await tester.expectResolve(() => {
@@ -68,11 +73,19 @@ describe("BacklogPerTask metric calculator", () => {
     console.log = sinon.stub();
 
     ecsMock.on(DescribeServicesCommand).resolves({
-      services: [{ runningCount: 0 }],
+      services: [
+        {
+          runningCount: 0,
+        },
+      ],
     });
-    sqsMock.on(GetQueueUrlCommand).resolves({ QueueUrl: "url" });
+    sqsMock.on(GetQueueUrlCommand).resolves({
+      QueueUrl: "url",
+    });
     sqsMock.on(GetQueueAttributesCommand).resolves({
-      Attributes: { ApproximateNumberOfMessages: 100 },
+      Attributes: {
+        ApproximateNumberOfMessages: 100,
+      },
     });
 
     // WHEN
@@ -99,10 +112,15 @@ describe("BacklogPerTask metric calculator", () => {
 
   test("should write the backlog per task for each queue", async () => {
     // GIVEN
-    process.env.NAMESPACE = "app-env-service";
-    process.env.CLUSTER_NAME = "cluster";
-    process.env.SERVICE_NAME = "service";
-    process.env.QUEUE_NAMES = "queue1,queue2";
+    process.env = {
+      ...process.env,
+      NAMESPACE: "app-env-service",
+      CLUSTER_NAME: "cluster",
+      SERVICE_NAME: "service",
+      QUEUE_NAMES: "queue1,queue2",
+    }
+    console.error = sinon.stub();
+    console.log = sinon.stub();
 
     ecsMock.on(DescribeServicesCommand).resolves({
       services: [
@@ -129,7 +147,8 @@ describe("BacklogPerTask metric calculator", () => {
       });
 
     // WHEN
-    const tester = lambdaTester(calculatorLambda.handler).event({});
+    const tester = lambdaTester(calculatorLambda.handler)
+      .event({});
 
     // THEN
     await tester.expectResolve(() => {
