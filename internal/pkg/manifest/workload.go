@@ -176,28 +176,22 @@ func (i *ImageLocationOrBuild) BuildConfig(rootDirectory string) *DockerBuildArg
 	}
 }
 
-// dockerfilePath returns the relative path of a dockerfile.
-// Prefer a specific dockerfile, then a dockerfile in the context directory.
+// dockerfilePath returns the relative path of a Dockerfile.
+// Prefer a specific Dockerfile, then a Dockerfile in the context directory.
 func (i *ImageLocationOrBuild) dockerfilePath() string {
-	df := i.dockerfile()
-	ctx := i.context()
-
-	if df != "" {
+	if df := i.dockerfile(); df != "" {
 		return df
 	}
-	return filepath.Join(ctx, defaultDockerfileName)
+	return filepath.Join(i.context(), defaultDockerfileName)
 }
 
 // dockerfileContext returns the relative context of an image.
 // Prefer a specific context, then the dockerfile directory.
 func (i *ImageLocationOrBuild) contextPath() string {
-	df := i.dockerfile()
-	ctx := i.context()
-
-	if ctx != "" {
+	if ctx := i.context(); ctx != "" {
 		return ctx
 	}
-	return filepath.Dir(df)
+	return filepath.Dir(i.dockerfile())
 }
 
 // dockerfile returns the path to the workload's Dockerfile. If no dockerfile is specified,
