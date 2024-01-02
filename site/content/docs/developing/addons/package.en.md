@@ -20,7 +20,7 @@ For example, to deploy a javascript Lambda function alongside a copilot service,
               Timeout: 900
               MemorySize: 512
               Role: !GetAtt "ExampleFunctionRole.Arn"
-              Runtime: nodejs18.x
+              Runtime: nodejs20.x
         ```
     
     === "lambdas/example/index.js"
@@ -82,7 +82,7 @@ This architecture could be useful if you have a service that needs to minimize l
         Timeout: 60
         MemorySize: 512
         Role: !GetAtt "recordProcessorRole.Arn"
-        Runtime: nodejs18.x
+        Runtime: nodejs20.x
 
     recordProcessorRole:
       Type: AWS::IAM::Role

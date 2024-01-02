@@ -63,7 +63,7 @@ BucketCleanerFunction:
     Timeout: 900
     MemorySize: 512
     Role: !GetAtt 'ELBAccessLogsBucketCleanerRole.Arn'
-    Runtime: nodejs18.x
+    Runtime: nodejs20.x
 
 ELBAccessLogsBucketCleanerRole:
   Metadata:

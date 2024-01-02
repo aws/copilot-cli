@@ -166,7 +166,7 @@ Resources:
     Properties:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
       Timeout: 900
       MemorySize: 512
       {{- with $cr := index .CustomResources "TriggerStateMachineFunction" }}
@@ -430,7 +430,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CustomDomainRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
 
   CustomDomainRole:
     Metadata:
@@ -501,7 +501,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CertificateValidatorRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
 
   CertificateValidatorRole:
     Metadata:

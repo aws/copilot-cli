@@ -361,7 +361,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
   DynamicDesiredCountFunctionRole:
     Metadata:
       'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
@@ -455,7 +455,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt BacklogPerTaskCalculatorRole.Arn
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           CLUSTER_NAME:
@@ -1187,7 +1187,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs18.x
+      Runtime: nodejs20.x
   EnvControllerRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update your environment stack"
