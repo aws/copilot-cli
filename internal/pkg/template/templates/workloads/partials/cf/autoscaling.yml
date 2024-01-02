@@ -400,7 +400,11 @@ AutoScalingPolicyALBAverageResponseTime:
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerFullName
             {{- end}}
           - Name: TargetGroup
+            {{- if $.ImportedALB}}
+            Value: !GetAtt TargetGroupForImportedALB.TargetGroupFullName
+            {{- else}}
             Value: !GetAtt TargetGroup.TargetGroupFullName
+            {{- end}}
         MetricName: TargetResponseTime
         Namespace: AWS/ApplicationELB
         Statistic: Average
