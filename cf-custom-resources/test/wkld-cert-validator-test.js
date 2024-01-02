@@ -30,7 +30,7 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       .reply(200);
   }
 
-  let handler, reset, withDeadlineExpired;
+  let handler, reset, withDeadlineExpired, waitForCertificateValidation, waitForRecordChange;
   let imported, r53Mock,acmMock,rgtMock, r53Client, acmClient, rgtClient;
   beforeEach(() => {
     // Prevent logging.
