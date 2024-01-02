@@ -23,7 +23,7 @@ var (
 	// Taken from docker/compose.
 	// Environment variable names consist solely of uppercase letters, digits, and underscore,
 	// and do not begin with a digit. （https://pubs.opengroup.org/onlinepubs/007904875/basedefs/xbd_chap08.html）
-	interpolatorEnvVarRegExp = regexp.MustCompile(`\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
+	interpolatorEnvVarRegExp = regexp.MustCompile(`(\\?)\${([_a-zA-Z][_a-zA-Z0-9]*)}`)
 )
 
 // Interpolator substitutes variables in a manifest.
@@ -106,7 +106,14 @@ func (i *Interpolator) interpolatePart(s string) (string, error) {
 	replaced := s
 	for _, match := range matches {
 		// https://pkg.go.dev/regexp#Regexp.FindAllStringSubmatch
-		key := match[1]
+		key := match[2]
+
+		if match[1] == "\\" {
+			// variable is escaped (e.g. \${foo}) -> no substitution is desired, let's just remove the leading backslash
+			replaced = strings.ReplaceAll(replaced, fmt.Sprintf("\\${%s}", key), fmt.Sprintf("${%s}", key))
+			continue
+		}
+
 		currSegment := fmt.Sprintf("${%s}", key)
 		predefinedVal, isPredefined := i.predefinedEnvVars[key]
 		osVal, isEnvVarSet := os.LookupEnv(key)
