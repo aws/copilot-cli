@@ -166,6 +166,11 @@ func (i Image) GetLocation() string {
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
+// Prefer the following hierarchy:
+// 1. Specific dockerfile, specific context
+// 2. Specific dockerfile, context = dockerfile dir
+// 3. "Dockerfile" located in context dir
+// 4. "Dockerfile" located in ws root.
 func (i *ImageLocationOrBuild) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	return &DockerBuildArgs{
 		Dockerfile: aws.String(filepath.Join(rootDirectory, i.dockerfilePath())),

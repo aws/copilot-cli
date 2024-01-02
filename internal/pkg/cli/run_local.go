@@ -606,20 +606,17 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 }
 
 func (o *runLocalOpts) filterDockerExcludes() {
-	filter := func(excludes []string, match func(string) bool) []string {
-		result := []string{}
-		for _, exclude := range excludes {
-			if !match(exclude) {
-				result = append(result, exclude)
-			}
+	wsPath := o.ws.Path()
+	result := []string{}
+
+	// filter out excludes to the copilot directory, we always want to watch these files
+	for _, exclude := range o.dockerExcludes {
+		if !strings.HasPrefix(filepath.ToSlash(exclude), filepath.ToSlash(filepath.Join(wsPath, workspace.CopilotDirName))) {
+			result = append(result, exclude)
 		}
-		return result
 	}
 
-	wsPath := o.ws.Path()
-	o.dockerExcludes = filter(o.dockerExcludes, func(s string) bool {
-		return strings.HasPrefix(s, filepath.ToSlash(filepath.Join(wsPath, workspace.CopilotDirName)))
-	})
+	o.dockerExcludes = result
 }
 
 func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
