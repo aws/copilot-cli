@@ -12,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      nodejs: 16
+      nodejs: 20
     commands:
       - "cd $HOME/.goenv && git pull --ff-only && cd -"
       - "goenv install 1.21.1"
