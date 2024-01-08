@@ -3,7 +3,8 @@
 "use strict";
 
 describe("Bucket Cleaner", () => {
-  const AWS = require("aws-sdk-mock");
+  const s3 = require("@aws-sdk/client-s3");
+  const {mockClient} = require("aws-sdk-client-mock");
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
   const bucketCleanerHandler = require("../lib/bucket-cleaner");
@@ -16,15 +17,16 @@ describe("Bucket Cleaner", () => {
 
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf6h23c3943";
   const testBucketName = "myBucket"
+  const s3Mock = mockClient(s3.S3Client);
 
   beforeEach(() => {
     bucketCleanerHandler.withDefaultResponseURL(ResponseURL);
     bucketCleanerHandler.withDefaultLogGroup(LogGroup);
     bucketCleanerHandler.withDefaultLogStream(LogStream);
     console.log = function () { };
+    s3Mock.reset();
   });
   afterEach(() => {
-    AWS.restore();
     console.log = origLog;
   });
 
@@ -53,7 +55,7 @@ describe("Bucket Cleaner", () => {
 
   test("Create event is a no-op", () => {
     const headBucketFake = sinon.fake.resolves({});
-    AWS.mock("S3", "headBucket", headBucketFake);
+    s3Mock.on(s3.HeadBucketCommand).callsFake(headBucketFake);
 
     const requestType = "Create";
     const request = nock(ResponseURL)
@@ -78,7 +80,7 @@ describe("Bucket Cleaner", () => {
 
   test("Update event is a no-op", () => {
     const headBucketFake = sinon.fake.resolves({});
-    AWS.mock("S3", "headBucket", headBucketFake);
+    s3Mock.on(s3.HeadBucketCommand).callsFake(headBucketFake);
 
     const requestType = "Update";
     const request = nock(ResponseURL)
@@ -106,9 +108,9 @@ describe("Bucket Cleaner", () => {
     notFoundError.name = "ResourceNotFoundException";
 
     const headBucketFake = sinon.fake.rejects(notFoundError);
-    AWS.mock("S3", "headBucket", headBucketFake);
+    s3Mock.on(s3.HeadBucketCommand).callsFake(headBucketFake);
     const listObjectVersionsFake = sinon.fake.resolves({});
-    AWS.mock("S3", "listObjectVersions", listObjectVersionsFake);
+    s3Mock.on(s3.ListObjectVersionsCommand).callsFake(listObjectVersionsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -142,14 +144,14 @@ describe("Bucket Cleaner", () => {
 
   test("Return early when the bucket is empty", () => {
     const headBucketFake = sinon.fake.resolves({});
-    AWS.mock("S3", "headBucket", headBucketFake);
+    s3Mock.on(s3.HeadBucketCommand).callsFake(headBucketFake);
     const listObjectVersionsFake = sinon.fake.resolves({
       Versions: [],
       DeleteMarkers: []
     });
-    AWS.mock("S3", "listObjectVersions", listObjectVersionsFake);
+    s3Mock.on(s3.ListObjectVersionsCommand).callsFake(listObjectVersionsFake);
     const deleteObjectsFake = sinon.fake.resolves({});
-    AWS.mock("S3", "deleteBucket", deleteObjectsFake);
+    s3Mock.on(s3.DeleteObjectsCommand).callsFake(deleteObjectsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -189,7 +191,7 @@ describe("Bucket Cleaner", () => {
 
   test("Delete all objects with pagination", () => {
     const headBucketFake = sinon.fake.resolves({});
-    AWS.mock("S3", "headBucket", headBucketFake);
+    s3Mock.on(s3.HeadBucketCommand).callsFake(headBucketFake);
 
     const listObjectVersionsFake = sinon.stub();
     listObjectVersionsFake.onFirstCall().resolves({
@@ -227,12 +229,12 @@ describe("Bucket Cleaner", () => {
         },
       ]
     });
-    AWS.mock("S3", "listObjectVersions", listObjectVersionsFake);
+   s3Mock.on(s3.ListObjectVersionsCommand).callsFake(listObjectVersionsFake);
 
     const deleteObjectsFake = sinon.fake.resolves({
       Errors: []
     });
-    AWS.mock("S3", "deleteObjects", deleteObjectsFake);
+    s3Mock.on(s3.DeleteObjectsCommand).callsFake(deleteObjectsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -321,7 +323,7 @@ describe("Bucket Cleaner", () => {
 
   test("Aggregate the delete error", () => {
     const headBucketFake = sinon.fake.resolves({});
-    AWS.mock("S3", "headBucket", headBucketFake);
+    s3Mock.on(s3.HeadBucketCommand).callsFake(headBucketFake);
 
     const listObjectVersionsFake = sinon.fake.resolves({
       Versions: [
@@ -341,7 +343,7 @@ describe("Bucket Cleaner", () => {
         },
       ]
     });
-    AWS.mock("S3", "listObjectVersions", listObjectVersionsFake);
+   s3Mock.on(s3.ListObjectVersionsCommand).callsFake(listObjectVersionsFake);
 
     const deleteObjectsFake = sinon.fake.resolves({
       Errors: [
@@ -355,7 +357,7 @@ describe("Bucket Cleaner", () => {
         }
       ]
     });
-    AWS.mock("S3", "deleteObjects", deleteObjectsFake);
+    s3Mock.on(s3.DeleteObjectsCommand).callsFake(deleteObjectsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {

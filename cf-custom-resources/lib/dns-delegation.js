@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const { Route53, ListHostedZonesByNameCommand, ListResourceRecordSetsCommand, ChangeResourceRecordSetsCommand, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -92,18 +93,17 @@ const createSubdomainInRoot = async function (
   nameServers,
   rootDnsRole
 ) {
-  const route53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const route53 = new Route53({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+      masterCredentials: fromEnv("AWS"),
     }),
   });
 
   const hostedZones = await route53
-    .listHostedZonesByName({
-      DNSName: domainName,
-    })
-    .promise();
+    .send(new ListHostedZonesByNameCommand({ 
+      DNSName: domainName 
+  }));
 
   if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
     throw new Error(
@@ -118,7 +118,7 @@ const createSubdomainInRoot = async function (
   const hostedZoneId = domainHostedZone.Id.split("/").pop();
 
   const changeBatch = await route53
-    .changeResourceRecordSets({
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
         Changes: [
           recordChangeAction(
@@ -134,14 +134,13 @@ const createSubdomainInRoot = async function (
         ],
       },
       HostedZoneId: hostedZoneId,
-    })
-    .promise();
+  }));
 
   console.log(
     `Created recordset in hostedzone ${hostedZoneId} for ${subDomain}`
   );
 
-  await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
+  await exports.waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
 };
 
 /**
@@ -160,18 +159,17 @@ const deleteSubdomainInRoot = async function (
   subDomain,
   rootDnsRole
 ) {
-  const route53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const route53 = new Route53({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+      masterCredentials: fromEnv("AWS"),
     }),
   });
 
   const hostedZones = await route53
-    .listHostedZonesByName({
+    .send(new ListHostedZonesByNameCommand({
       DNSName: domainName,
-    })
-    .promise();
+  }));
 
   if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
     throw new Error(
@@ -188,13 +186,12 @@ const deleteSubdomainInRoot = async function (
   // Find the recordsets for this subdomain, and then remove it
   // from the hosted zone.
   const recordSets = await route53
-    .listResourceRecordSets({
+    .send(new ListResourceRecordSetsCommand({
       HostedZoneId: hostedZoneId,
       MaxItems: "1",
       StartRecordName: subDomain,
       StartRecordType: "NS",
-    })
-    .promise();
+  }));
 
   // If the records have already been deleted, return early.
   if (!recordSets.ResourceRecordSets || recordSets.ResourceRecordSets == 0) {
@@ -213,7 +210,7 @@ const deleteSubdomainInRoot = async function (
   console.log(`Deleting recordset ${subDomainRecordSet.Name}`);
 
   const changeBatch = await route53
-    .changeResourceRecordSets({
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
         Changes: [
           recordChangeAction(
@@ -225,10 +222,9 @@ const deleteSubdomainInRoot = async function (
         ],
       },
       HostedZoneId: hostedZoneId,
-    })
-    .promise();
+  }));
 
-  await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
+  await exports.waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
   return subDomain;
 };
 
@@ -249,17 +245,16 @@ const recordChangeAction = function (
   };
 };
 
-const waitForRecordSetChange = function (route53, changeId) {
-  return route53
-    .waitFor("resourceRecordSetsChanged", {
-      // Wait up to 5 minutes
-      $waiter: {
-        delay: 30,
-        maxAttempts: 10,
-      },
-      Id: changeId,
-    })
-    .promise();
+const waitForRecordSetChange = async function (route53, changeId) {
+  // wait upto 5 minutes.
+  await waitUntilResourceRecordSetsChanged({
+    client: route53,
+    maxWaitTime: 300,
+    minDelay: 30,
+    maxDelay: 30,
+  },{
+    Id: changeId,
+  });
 };
 
 exports.domainDelegationHandler = async function (event, context) {
@@ -326,4 +321,11 @@ exports.withDefaultLogStream = function (logStream) {
  */
 exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
+};
+
+/**
+ * @private
+ */
+exports.waitForRecordSetChange = function (route53, changeId) {
+  return waitForRecordSetChange(route53, changeId);
 };

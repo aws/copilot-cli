@@ -26,7 +26,7 @@ DynamicDesiredCountFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
-    Runtime: nodejs16.x
+    Runtime: nodejs20.x
 
 DynamicDesiredCountFunctionRole:
   Metadata:
@@ -182,7 +182,7 @@ BacklogPerTaskCalculatorFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt BacklogPerTaskCalculatorRole.Arn
-    Runtime: nodejs16.x
+    Runtime: nodejs20.x
     Environment:
       Variables:
         CLUSTER_NAME:
