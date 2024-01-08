@@ -28,6 +28,7 @@
   "devDependencies": {
     "ansi-regex": ">=5.0.1",
     "aws-sdk-mock": "^5.1.0",
+    "axios": ">=1.6.0",
     "babel-minify": "^0.5.1",
     "eslint": "^7.16.0",
     "eslint-config-standard": "^16.0.2",
