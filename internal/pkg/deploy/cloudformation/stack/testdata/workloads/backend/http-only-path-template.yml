@@ -352,7 +352,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt "RulePriorityFunctionRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   RulePriorityFunctionRole:
     Metadata:
       "aws:copilot:description": "An IAM Role to describe load balancer rules for assigning a priority"
@@ -456,7 +456,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "EnvControllerRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   EnvControllerRole:
     Metadata:
       "aws:copilot:description": "An IAM role to update your environment stack"

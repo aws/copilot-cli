@@ -5,8 +5,10 @@
 /* jshint esversion: 8 */
 
 "use strict";
-
-const aws = require("aws-sdk");
+const { fromEnv, fromTemporaryCredentials } = require("@aws-sdk/credential-providers");
+const { ACM, RequestCertificateCommand, DescribeCertificateCommand, ListCertificatesCommand, 
+  DeleteCertificateCommand, waitUntilCertificateValidated } = require("@aws-sdk/client-acm");
+const { Route53, ListHostedZonesByNameCommand, ChangeResourceRecordSetsCommand, waitUntilResourceRecordSetsChanged } = require("@aws-sdk/client-route-53");
 
 const defaultSleep = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -16,7 +18,6 @@ const defaultSleep = function (ms) {
 let defaultResponseURL;
 let defaultLogGroup;
 let defaultLogStream;
-let waiter;
 let sleep = defaultSleep;
 let random = Math.random;
 let maxAttempts = 10;
@@ -125,7 +126,7 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   return acm
-    .requestCertificate({
+    .send(new RequestCertificateCommand({
       DomainName: certDomain,
       SubjectAlternativeNames: sansToUse,
       IdempotencyToken: crypto
@@ -143,9 +144,8 @@ const requestCertificate = async function (
           Key: "copilot-environment",
           Value: envName,
         },
-      ],
-    })
-    .promise();
+      ],   
+    }));       
 };
 
 /**
@@ -166,10 +166,9 @@ const waitForValidationOptionsToBeReady = async function(
   const expectedValidationOptionsNum = sansToUse.length;
   for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: certificateARN,
-        })
-        .promise();
+        }));
     options = Certificate.DomainValidationOptions || [];
     let readyRecordsNum = 0;
     for (const option of options) {
@@ -223,17 +222,7 @@ const validateCertificate = async function(
       appRoute53,
       envHostedZoneId
   );
-
-  await acm
-    .waitFor("certificateValidated", {
-      // Wait up to 9 minutes and 30 seconds
-      $waiter: {
-        delay: 30,
-        maxAttempts: 19,
-      },
-      CertificateArn: certificateARN,
-    })
-    .promise();
+  await exports.waitForCertificateValidation(certificateARN,acm);
 };
 
 const updateHostedZoneRecords = async function (
@@ -302,8 +291,7 @@ const deleteHostedZoneRecords = async function (
   let isNewCertFound = false;
   while (!isNewCertFound) {
     const listCertResp = await acm
-      .listCertificates(listCertificatesInput)
-      .promise();
+      .send(new ListCertificatesCommand(listCertificatesInput));
     for (const certSummary of listCertResp.CertificateSummaryList || []) {
       if (
         certSummary.DomainName !== defaultDomain ||
@@ -315,10 +303,9 @@ const deleteHostedZoneRecords = async function (
       // There exists another certificate created by Copilot which has the updated alias fields as SANs.
       // We don't want to delete any validation records associated with the new certificate.
       const { Certificate } = await acm
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: certSummary.CertificateArn,
-        })
-        .promise();
+        }));
       newCertOptions = Certificate.DomainValidationOptions || [];
       isNewCertFound = true;
       break;
@@ -374,11 +361,10 @@ const validateDomain = async function ({
 }) {
   if (!hostedZoneId) {
     const hostedZones = await route53
-      .listHostedZonesByName({
+      .send(new ListHostedZonesByNameCommand({
         DNSName: domainName,
         MaxItems: "1",
-      })
-      .promise();
+      }));
     if (!hostedZones.HostedZones || hostedZones.HostedZones.length === 0) {
       throw new Error(
         `Couldn't find any Hosted Zone with DNS name ${domainName}.`
@@ -397,7 +383,7 @@ const validateDomain = async function ({
     record.Type,
     record.Value
   );
-  await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
+  await exports.waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
 };
 
 /**
@@ -428,10 +414,9 @@ const deleteCertificate = async function (
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
-        .describeCertificate({
+        .send(new DescribeCertificateCommand({
           CertificateArn: arn,
-        })
-        .promise();
+        }));
 
       inUseByResources = Certificate.InUseBy || [];
       options = Certificate.DomainValidationOptions || [];
@@ -467,10 +452,9 @@ const deleteCertificate = async function (
     );
 
     await acm
-      .deleteCertificate({
+      .send(new DeleteCertificateCommand({
         CertificateArn: arn,
-      })
-      .promise();
+      }));
   } catch (err) {
     if (err.name !== "ResourceNotFoundException") {
       throw err;
@@ -478,17 +462,28 @@ const deleteCertificate = async function (
   }
 };
 
-const waitForRecordChange = function (route53, changeId) {
-  return route53
-    .waitFor("resourceRecordSetsChanged", {
-      // Wait up to 5 minutes
-      $waiter: {
-        delay: 30,
-        maxAttempts: 10,
-      },
-      Id: changeId,
-    })
-    .promise();
+const waitForRecordChange = async function (route53, changeId) {
+  // wait upto 5 minutes.
+  await waitUntilResourceRecordSetsChanged({
+    client: route53,
+    maxWaitTime: 300,
+    minDelay: 30,
+    maxDelay: 30,
+    },{
+    Id: changeId,
+  });
+};
+
+const waitForCertificateValidation = async function (certificateARN, acm) {
+  // Wait up to 9 minutes and 30 seconds
+  await waitUntilCertificateValidated({
+    client:acm,
+    maxWaitTime: 570,
+    minDelay: 30,
+    maxDelay: 30,
+  },{
+    CertificateArn: certificateARN
+  });
 };
 
 const updateRecords = function (
@@ -500,7 +495,7 @@ const updateRecords = function (
   recordValue
 ) {
   return route53
-    .changeResourceRecordSets({
+    .send(new ChangeResourceRecordSetsCommand({
       ChangeBatch: {
         Changes: [
           {
@@ -519,8 +514,7 @@ const updateRecords = function (
         ],
       },
       HostedZoneId: hostedZone,
-    })
-    .promise();
+    }));
 };
 
 // getAllAliases gets all aliases out from a string. For example:
@@ -560,20 +554,16 @@ const getDomainType = function (alias) {
 };
 
 const clients = function (region, rootDnsRole) {
-  const acm = new aws.ACM({
+  const acm = new ACM({
     region,
   });
-  const envRoute53 = new aws.Route53();
-  const appRoute53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
+  const envRoute53 = new Route53();
+  const appRoute53 = new Route53({
+    credentials: fromTemporaryCredentials({
       params: { RoleArn: rootDnsRole, },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+      masterCredentials: fromEnv("AWS"),
     }),
   });
-  if (waiter) {
-    // Used by the test suite, since waiters aren't mockable yet
-    envRoute53.waitFor = appRoute53.waitFor = acm.waitFor = waiter;
-  }
   return [acm, envRoute53, appRoute53, ];
 };
 
@@ -688,13 +678,6 @@ exports.withDefaultResponseURL = function (url) {
 /**
  * @private
  */
-exports.withWaiter = function (w) {
-  waiter = w;
-};
-
-/**
- * @private
- */
 exports.withSleep = function (s) {
   sleep = s;
 };
@@ -705,7 +688,6 @@ exports.withSleep = function (s) {
 exports.reset = function () {
   sleep = defaultSleep;
   random = Math.random;
-  waiter = undefined;
   maxAttempts = 10;
 };
 
@@ -736,3 +718,17 @@ exports.withDefaultLogStream = function (logStream) {
 exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
 };
+
+/**
+ * @private
+ */
+exports.waitForCertificateValidation = function (certificateARN, acm) {
+  return waitForCertificateValidation(certificateARN, acm);
+}
+
+/**
+ * @private
+ */
+exports.waitForRecordChange = function (route53, changeId) {
+  return waitForRecordChange(route53, changeId);
+}

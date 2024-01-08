@@ -200,7 +200,7 @@ stages:
 !!! warning
     ステージ内の `post_deployments` フィールドと `test_commands` フィールドは相互に排他的です。
 
-デプロイ前、デプロイ後、およびテストコマンドは、[aws/codebuild/amazonlinux2-x86_64-standard:4.0](https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-env-ref-available.html) イメージを使用して CodeBuild プロジェクトを生成するため、Amazon Linux 2 のほとんどのコマンド (`make` を含む) を使用できます。
+デプロイ前、デプロイ後、およびテストコマンドは、[aws/codebuild/amazonlinux2-x86_64-standard:5.0](https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-env-ref-available.html) イメージを使用して CodeBuild プロジェクトを生成するため、Amazon Linux 2 のほとんどのコマンド (`make` を含む) を使用できます。
 
 テストの実行を Docker コンテナの中で実行するように設定していますか？Copilot では CodeBuild プロジェクトの Docker サポートを利用できますので、`docker build` コマンドも同様に利用可能です。
 
