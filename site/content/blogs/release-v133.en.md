@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.33: run local `--use-task-role`, and run local `depends_on` support
+title: 'AWS Copilot v1.33: run local `--use-task-role`, and run local `depends_on` support'
 twitter_title: 'AWS Copilot v1.33'
 image: ''
 image_alt: ''
