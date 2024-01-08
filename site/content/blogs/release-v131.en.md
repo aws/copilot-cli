@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# 'AWS Copilot v1.31: NLB enhancements, better task failure logs, `copilot deploy` enhancements
+# AWS Copilot v1.31: NLB enhancements, better task failure logs, `copilot deploy` enhancements
 
 Posted On: October 5, 2023
 

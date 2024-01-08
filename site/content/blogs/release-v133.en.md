@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# 'AWS Copilot v1.33: run local `--use-task-role`, and run local `depends_on` support
+# AWS Copilot v1.33: run local `--use-task-role`, and run local `depends_on` support
 
 Posted On: January 8, 2024
 
