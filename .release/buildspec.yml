@@ -6,8 +6,6 @@ env:
 
 phases:
   install:
-    runtime-versions:
-      nodejs: 20
     commands:
       - "cd $HOME/.goenv && git pull --ff-only && cd -"
       - "goenv install 1.21.1" # Check if a version is available: https://github.com/syndbg/goenv/tree/master/plugins/go-build/share/go-build
