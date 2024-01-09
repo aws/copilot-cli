@@ -34,3 +34,23 @@ Copilot v1.33 brings big enhancements to help you develop more flexibly and effi
 ## Use ECS Task Role for `copilot run local`
 
 ## Container dependencies support for `copilot run local`
+
+`copilot run local` now respects the [depends_on](../docs/manifest/lb-web-service.md#image-depends-on) specified in the service manifest.
+
+For Example:
+
+```
+image:
+  build: ./Dockerfile
+  depends_on:
+    nginx: start
+
+nginx:
+  image:
+    build: ./web/Dockerfile
+    essential: true
+    depends_on:
+      startup: success
+```
+
+This means that your main container will start only after nginx sidecar container has started and nginx will start only after startup container is completed successfully.
