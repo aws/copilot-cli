@@ -483,16 +483,17 @@ func TestRunLocalOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inputAppName       string
-		inputEnvName       string
-		inputWkldName      string
-		inputEnvOverrides  map[string]string
-		inputPortOverrides []string
-		inputWatch         bool
-		inputTaskRole      bool
-		inputProxy         bool
-		inputReader        io.Reader
-		buildImagesError   error
+		inputAppName        string
+		inputEnvName        string
+		inputWkldName       string
+		inputEnvOverrides   map[string]string
+		inputPortOverrides  []string
+		inputDockerExcludes []string
+		inputWatch          bool
+		inputTaskRole       bool
+		inputProxy          bool
+		inputReader         io.Reader
+		buildImagesError    error
 
 		setupMocks     func(t *testing.T, m *runLocalExecuteMocks)
 		wantedWkldName string
@@ -948,11 +949,12 @@ ecs exec: all containers failed to retrieve credentials`),
 				}
 			},
 		},
-		"watch flag receives hidden file update, doesn't restart": {
-			inputAppName:  testAppName,
-			inputWkldName: testWkldName,
-			inputEnvName:  testEnvName,
-			inputWatch:    true,
+		"watch flag receives hidden file and ignored file update, doesn't restart": {
+			inputAppName:        testAppName,
+			inputWkldName:       testWkldName,
+			inputEnvName:        testEnvName,
+			inputWatch:          true,
+			inputDockerExcludes: []string{"ignoredDir/*"},
 			setupMocks: func(t *testing.T, m *runLocalExecuteMocks) {
 				m.ecsClient.EXPECT().TaskDefinition(testAppName, testEnvName, testWkldName).Return(taskDef, nil)
 				m.ssm.EXPECT().GetSecretValue(gomock.Any(), "mysecret").Return("secretvalue", nil)
@@ -960,21 +962,25 @@ ecs exec: all containers failed to retrieve credentials`),
 				m.interpolator.EXPECT().Interpolate("").Return("", nil)
 				m.ws.EXPECT().Path().Return("")
 
-				eventCh := make(chan fsnotify.Event, 1)
+				eventCh := make(chan fsnotify.Event, 2)
 				m.watcher.EventsFn = func() <-chan fsnotify.Event {
 					eventCh <- fsnotify.Event{
 						Name: ".hiddensubdir/mockFilename",
 						Op:   fsnotify.Write,
 					}
+					eventCh <- fsnotify.Event{
+						Name: "ignoredDir/mockFilename",
+						Op:   fsnotify.Write,
+					}
 					return eventCh
 				}
 
-				watcherErrCh := make(chan error, 1)
+				watcherErrCh := make(chan error, 2)
 				m.watcher.ErrorsFn = func() <-chan error {
 					return watcherErrCh
 				}
 
-				errCh := make(chan error, 1)
+				errCh := make(chan error, 2)
 				m.orchestrator.StartFn = func() <-chan error {
 					return errCh
 				}
@@ -1192,16 +1198,17 @@ ecs exec: all containers failed to retrieve credentials`),
 						Credentials: credentials.NewStaticCredentials("myEnvID", "myEnvSecret", "myEnvToken"),
 					},
 				},
-				cmd:          m.mockRunner,
-				dockerEngine: m.dockerEngine,
-				repository:   m.repository,
-				targetEnv:    &mockEnv,
-				targetApp:    &mockApp,
-				prog:         m.prog,
-				orchestrator: m.orchestrator,
-				hostFinder:   m.hostFinder,
-				envChecker:   m.envChecker,
-				debounceTime: 0, // disable debounce during testing
+				cmd:            m.mockRunner,
+				dockerEngine:   m.dockerEngine,
+				repository:     m.repository,
+				targetEnv:      &mockEnv,
+				targetApp:      &mockApp,
+				prog:           m.prog,
+				orchestrator:   m.orchestrator,
+				hostFinder:     m.hostFinder,
+				envChecker:     m.envChecker,
+				debounceTime:   0, // disable debounce during testing
+				dockerExcludes: tc.inputDockerExcludes,
 				newRecursiveWatcher: func() (recursiveWatcher, error) {
 					return m.watcher, nil
 				},
@@ -1968,6 +1975,48 @@ func TestRunLocal_HostDiscovery(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantHosts, hosts)
 			}
+		})
+	}
+}
+
+type runLocalFilterDockerExcludesMocks struct {
+	ws *mocks.MockwsWlDirReader
+}
+
+func TestRunLocal_FilterDockerExcludes(t *testing.T) {
+	tests := map[string]struct {
+		setupMocks func(t *testing.T, m *runLocalFilterDockerExcludesMocks)
+
+		inputDockerExcludes  []string
+		wantedDockerExcludes []string
+	}{
+		"filter out all copilot directories": {
+			setupMocks: func(t *testing.T, m *runLocalFilterDockerExcludesMocks) {
+				m.ws.EXPECT().Path().Return("/ws")
+			},
+			inputDockerExcludes:  []string{"/ws/copilot/*", "/ws/ignoredfile.go", "/ws/copilot/environments/*"},
+			wantedDockerExcludes: []string{"/ws/ignoredfile.go"},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &runLocalFilterDockerExcludesMocks{
+				ws: mocks.NewMockwsWlDirReader(ctrl),
+			}
+			tc.setupMocks(t, m)
+			opts := runLocalOpts{
+				dockerExcludes: tc.inputDockerExcludes,
+				ws:             m.ws,
+			}
+
+			// WHEN
+			opts.filterDockerExcludes()
+
+			// THEN
+			require.Equal(t, opts.dockerExcludes, tc.wantedDockerExcludes)
 		})
 	}
 }
