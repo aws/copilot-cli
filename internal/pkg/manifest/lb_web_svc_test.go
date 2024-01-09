@@ -2969,3 +2969,82 @@ func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadBalancedWebService_Dockerfile(t *testing.T) {
+	testCases := map[string]struct {
+		input                  *LoadBalancedWebService
+		expectedDockerfilePath string
+	}{
+		"specific dockerfile from buildargs": {
+			input: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("path/to/Dockerfile"),
+										},
+										BuildString: aws.String("other/path/to/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDockerfilePath: "path/to/Dockerfile",
+		},
+		"specific dockerfile from buildstring": {
+			input: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("path/to/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDockerfilePath: "path/to/Dockerfile",
+		},
+		"dockerfile from context": {
+			input: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Context: aws.String("path/to"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDockerfilePath: "path/to/Dockerfile",
+		},
+	}
+
+	for name, tc := range testCases {
+		svc := tc.input
+
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			dockerfilePath := svc.Dockerfile()
+
+			// THEN
+			require.Equal(t, tc.expectedDockerfilePath, dockerfilePath)
+		})
+	}
+}

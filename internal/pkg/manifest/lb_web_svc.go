@@ -182,6 +182,11 @@ func (s *LoadBalancedWebService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *LoadBalancedWebService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Port returns the exposed port in the manifest.
 // A LoadBalancedWebService always has a port exposed therefore the boolean is always true.
 func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {

@@ -755,3 +755,7 @@ type stackConfiguration interface {
 type secretGetter interface {
 	GetSecretValue(context.Context, string) (string, error)
 }
+
+type dockerWorkload interface {
+	Dockerfile() string
+}
