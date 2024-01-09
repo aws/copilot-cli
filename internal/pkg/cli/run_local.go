@@ -239,15 +239,14 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		return nil
 	}
 	o.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
-		var dfDir string
 		if dockerWkld, ok := mft.Manifest().(dockerWorkload); ok {
-			dfDir = filepath.Dir(dockerWkld.Dockerfile())
+			dfDir := filepath.Dir(dockerWkld.Dockerfile())
+			o.dockerExcludes, err = dockerfile.ReadDockerignore(afero.NewOsFs(), filepath.Join(ws.Path(), dfDir))
+			if err != nil {
+				return nil, err
+			}
+			o.filterDockerExcludes()
 		}
-		o.dockerExcludes, err = dockerfile.ReadDockerignore(afero.NewOsFs(), filepath.Join(ws.Path(), dfDir))
-		if err != nil {
-			return nil, err
-		}
-		o.filterDockerExcludes()
 
 		gitShortCommit := imageTagFromGit(o.cmd)
 		image := clideploy.ContainerImageIdentifier{
@@ -610,8 +609,9 @@ func (o *runLocalOpts) filterDockerExcludes() {
 	result := []string{}
 
 	// filter out excludes to the copilot directory, we always want to watch these files
+	copilotDirPath := filepath.ToSlash(filepath.Join(wsPath, workspace.CopilotDirName))
 	for _, exclude := range o.dockerExcludes {
-		if !strings.HasPrefix(filepath.ToSlash(exclude), filepath.ToSlash(filepath.Join(wsPath, workspace.CopilotDirName))) {
+		if !strings.HasPrefix(filepath.ToSlash(exclude), copilotDirPath) {
 			result = append(result, exclude)
 		}
 	}

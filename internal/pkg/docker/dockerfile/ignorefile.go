@@ -26,7 +26,7 @@ func ReadDockerignore(fs afero.Fs, contextDir string) ([]string, error) {
 
 	patterns, err := ignorefile.ReadAll(f)
 	if err != nil {
-		return nil, fmt.Errorf("error reading .dockerignore: %w", err)
+		return nil, fmt.Errorf("error reading .dockerignore at %q: %w", contextDir, err)
 	}
 
 	return patterns, nil
