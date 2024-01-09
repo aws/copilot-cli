@@ -35,9 +35,9 @@ Copilot v1.33 brings big enhancements to help you develop more flexibly and effi
 
 ## Container dependencies support for `copilot run local`
 
-`copilot run local` now respects the [depends_on](../docs/manifest/lb-web-service.md#image-depends-on) specified in the service manifest.
+`copilot run local` now respects the [`depends_on`](../docs/manifest/lb-web-service.md#image-depends-on) specified in the service manifest.
 
-For Example:
+For example:
 
 ```
 image:
@@ -51,6 +51,11 @@ nginx:
     essential: true
     depends_on:
       startup: success
+
+startup:
+  image:
+    build: ./front/Dockerfile
+    essential: false
 ```
 
 This means that your main container will start only after nginx sidecar container has started and nginx will start only after startup container is completed successfully.
