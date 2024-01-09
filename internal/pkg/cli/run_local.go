@@ -437,6 +437,11 @@ func (o *runLocalOpts) Execute() error {
 				o.orchestrator.Stop()
 				break
 			}
+
+			// If TaskRole is retrieved through ECS Exec, OS signals are no longer provided to the channel.
+			// We reset this channel connection through this call as a short term fix that allows
+			// the interrupt and terminate signal to stop tasks after the task has been restarted by --watch.
+			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 			o.orchestrator.RunTask(task)
 		}
 	}
@@ -588,8 +593,6 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 		task.Containers[name] = ctr
 	}
 
-	// TODO (Adi): Use this dependency order in orchestrator to start and stop containers.
-	// replace container dependencies with the local dependencies from manifest.
 	containerDeps := manifest.ContainerDependencies(mft.Manifest())
 	for name, dep := range containerDeps {
 		ctr, ok := task.Containers[name]

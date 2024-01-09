@@ -1,40 +1,52 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
-const aws = require("aws-sdk-mock");
+const { mockClient } = require('aws-sdk-client-mock');
+const { ECSClient, DescribeServicesCommand } = require("@aws-sdk/client-ecs");
+const { SQSClient, GetQueueUrlCommand, GetQueueAttributesCommand } = require("@aws-sdk/client-sqs");
 const lambdaTester = require("lambda-tester").noVersionCheck();
 const sinon = require("sinon");
 const calculatorLambda = require("../lib/backlog-per-task-calculator");
 
-
 describe("BacklogPerTask metric calculator", () => {
   const origConsole = console;
   const origEnvVars = process.env;
+  let ecsMock, sqsMock;
 
   beforeAll(() => {
     jest
-      .spyOn(global.Date, 'now')
-      .mockImplementation(() =>
-        new Date('2021-09-02').valueOf(), // maps to 1630540800000.
-      );
+    .spyOn(global.Date, 'now')
+    .mockImplementation(() =>
+      new Date('2021-09-02').valueOf(), // maps to 1630540800000.
+    );
+    ecsMock = mockClient(ECSClient);
+    sqsMock = mockClient(SQSClient);
+  });
+
+  beforeEach(() => {
+    ecsMock.reset();
+    sqsMock.reset();
+    process.env = { ...origEnvVars };
+    console.error = sinon.stub();
+    console.log = sinon.stub();
   });
 
   afterEach(() => {
     process.env = origEnvVars;
-    aws.restore();
   });
 
   afterAll(() => {
     console = origConsole;
     jest.spyOn(global.Date, 'now').mockClear();
+    ecsMock.restore();
+    sqsMock.restore();
   });
 
   test("should write the error to console on unexpected failure", async () => {
     // GIVEN
     console.error = sinon.stub();
     console.log = sinon.stub()
-    aws.mock("ECS", "describeServices", sinon.fake.rejects("some message"));
-
+    ecsMock.on(DescribeServicesCommand).rejects("some message");
 
     // WHEN
     const tester = lambdaTester(calculatorLambda.handler)
@@ -60,26 +72,24 @@ describe("BacklogPerTask metric calculator", () => {
     console.error = sinon.stub();
     console.log = sinon.stub();
 
-    aws.mock("ECS", "describeServices", sinon.fake.resolves({
+    ecsMock.on(DescribeServicesCommand).resolves({
       services: [
         {
           runningCount: 0,
         },
       ],
-    }));
-    aws.mock("SQS", "getQueueUrl", sinon.fake.resolves({
+    });
+    sqsMock.on(GetQueueUrlCommand).resolves({
       QueueUrl: "url",
-    }));
-    aws.mock("SQS", "getQueueAttributes", sinon.fake.resolves({
+    });
+    sqsMock.on(GetQueueAttributesCommand).resolves({
       Attributes: {
         ApproximateNumberOfMessages: 100,
       },
-    }));
-
+    });
 
     // WHEN
-    const tester = lambdaTester(calculatorLambda.handler)
-      .event({});
+    const tester = lambdaTester(calculatorLambda.handler).event({});
 
     // THEN
     await tester.expectResolve(() => {
@@ -112,28 +122,29 @@ describe("BacklogPerTask metric calculator", () => {
     console.error = sinon.stub();
     console.log = sinon.stub();
 
-    aws.mock("ECS", "describeServices", sinon.fake.resolves({
+    ecsMock.on(DescribeServicesCommand).resolves({
       services: [
         {
           runningCount: 3,
         },
       ],
-    }));
-    aws.mock("SQS", "getQueueUrl", sinon.fake.resolves({
+    });
+
+    sqsMock.on(GetQueueUrlCommand).resolves({
       QueueUrl: "url",
-    }));
-    aws.mock("SQS", "getQueueAttributes", sinon.stub()
-      .onFirstCall().resolves({
+    });
+
+    sqsMock.on(GetQueueAttributesCommand, { QueueUrl: 'url' })
+      .resolvesOnce({
         Attributes: {
           ApproximateNumberOfMessages: 100,
         },
       })
-      .onSecondCall().resolves({
+      .resolvesOnce({
         Attributes: {
           ApproximateNumberOfMessages: 495,
         },
-      }));
-
+      });
 
     // WHEN
     const tester = lambdaTester(calculatorLambda.handler)
