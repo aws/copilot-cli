@@ -33,10 +33,8 @@ Copilot v1.33 brings big enhancements to help you develop more flexibly and effi
 
 ## Use ECS Task Role for `copilot run local`
 
-`copilot run local` now has a flag `--use-task-role` which is enabled by default. When enabled, Copilot will retrieve the IAM permissions from your deployed service and inject them into the containers created by `run local`.
+`copilot run local` now has a flag `--use-task-role`. When enabled, Copilot will retrieve the IAM permissions from your deployed service and inject them into the containers created by `run local`.
 This means that your containers will have the same permissions that they do on the cloud, enabling you to test more accurately.
-
-If you don't want to use the `TaskRole` permissions, or if Copilot fails to retrieve them, you can disable this feature by setting `--use-task-role=false`.
 
 ## Container dependencies support for `copilot run local`
 
