@@ -39,3 +39,28 @@ This means that your containers will have the same permissions that they do on t
 If you don't want to use the `TaskRole` permissions, or if Copilot fails to retrieve them, you can disable this feature by setting `--use-task-role=false`.
 
 ## Container dependencies support for `copilot run local`
+
+`copilot run local` now respects the [`depends_on`](../docs/manifest/lb-web-service.md#image-depends-on) specified in the service manifest.
+
+For example:
+
+```
+image:
+  build: ./Dockerfile
+  depends_on:
+    nginx: start
+
+nginx:
+  image:
+    build: ./web/Dockerfile
+    essential: true
+    depends_on:
+      startup: success
+
+startup:
+  image:
+    build: ./front/Dockerfile
+    essential: false
+```
+
+This means that your main container will start only after nginx sidecar container has started and nginx will start only after startup container is completed successfully.

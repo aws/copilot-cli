@@ -326,7 +326,7 @@ Format: [container]:KEY=VALUE. Omit container name to apply to all containers.`
 Example: --port-override 5000:80 binds localhost:5000 to the service's port 80.`
 	proxyFlagDescription        = `Optional. Proxy outbound requests to your environment's VPC.`
 	proxyNetworkFlagDescription = `Optional. Set the IP Network used by --proxy.`
-	watchFlagDescription        = `Optional. Watch changes to local files and restart containers when updated.`
+	watchFlagDescription        = `Optional. Watch changes to local files and restart containers when updated. Directories and files in the main .dockerignore file are ignored.`
 	useTaskRoleFlagDescription  = "Optional. Run containers with TaskRole credentials instead of session credentials."
 
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
