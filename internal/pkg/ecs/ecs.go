@@ -143,7 +143,7 @@ func (c Client) ServiceConnectServices(app, env, svc string) ([]*ecs.Service, er
 	if err != nil {
 		return nil, fmt.Errorf("get service: %w", err)
 	}
-	if len(s.Deployments) == 0 {
+	if len(s.Deployments) == 0 || s.Deployments[0].ServiceConnectConfiguration == nil {
 		return nil, nil
 	}
 
