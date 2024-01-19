@@ -54,7 +54,9 @@ Aurora Serverless Flags
       --initial-db string           The initial database to create in the cluster.
       --parameter-group string      Optional. The name of the parameter group to associate with the cluster.
       --serverless-version string   Optional. Aurora Serverless version.
-                                    Must be either "v1" or "v2" (default "v2").
+                                    For "environment" lifecycle, specify "v2".
+                                    For "workload" lifecycle, specify "v1"/"v2".
+                                     (default "v2")
 
 Optional Flags
       --add-ingress-from string   The workload that needs access to an
@@ -62,6 +64,15 @@ Optional Flags
                                   with "--name" and "--storage-type".
                                   Can be specified with "--engine".
 ```
+
+!!!attention "Considerations when using Aurora Serverless v1 storage"
+    #### Aurora Serverless v1 is planed to reach EOF as of 2024/12/31  
+    Aurora Serverless users have received the following emails:  
+    > "We are reaching out to let you know that as of December 31, 2024, Amazon Aurora will no longer support Serverless version 1 (v1). As per the Aurora Version Policy [1], we are providing 12 months notice to give you time to upgrade your database cluster(s). Aurora supports two versions of Serverless. We are only announcing the end of support for Serverless v1. Aurora Serverless v2 continues to be supported. We recommend that you proactively upgrade your databases running Amazon Aurora Serverless v1 to Amazon Aurora Serverless v2 at your convenience before December 31, 2024."
+
+    #### Aurora Serverless v1 is only supported for workload-level storage
+    If you want to create an Aurora Serverless v1 with "environment" lifecycle, please see [this example](https://github.com/aws/copilot-cli/discussions/5621).
+
 
 ## How can I use it? 
 Create an S3 bucket named "my-bucket" attached to the "frontend" service.
