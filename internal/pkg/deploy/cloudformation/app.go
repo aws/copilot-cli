@@ -456,9 +456,12 @@ func (cf CloudFormation) cleanUpRegionalResources(app *config.Application, regio
 	if err := s3.EmptyBucket(resources.S3Bucket); err != nil {
 		return err
 	}
+	ecrRepoName := func(app, workload string) string {
+		return fmt.Sprintf("%s/%s", app, workload)
+	}
 	ecr := cf.regionalECRClient(region)
-	for repo := range resources.RepositoryURLs {
-		if err := ecr.ClearRepository(repo); err != nil {
+	for svcName := range resources.RepositoryURLs {
+		if err := ecr.ClearRepository(ecrRepoName(app.Name, svcName)); err != nil {
 			return err
 		}
 	}
