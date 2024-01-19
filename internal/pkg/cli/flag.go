@@ -364,7 +364,9 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
 	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version.
-Must be either "v1" or "v2".`
+For "environment" lifecycle, specify "v2". 
+For "workload" lifecycle, specify "v1"/"v2".
+`
 	storageRDSEngineFlagDescription = `The database engine used in the cluster.
 Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
