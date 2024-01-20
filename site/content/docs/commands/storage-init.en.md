@@ -54,8 +54,8 @@ Aurora Serverless Flags
       --initial-db string           The initial database to create in the cluster.
       --parameter-group string      Optional. The name of the parameter group to associate with the cluster.
       --serverless-version string   Optional. Aurora Serverless version.
-                                    For "environment" lifecycle, specify "v2".
-                                    For "workload" lifecycle, specify "v1"/"v2".
+                                    With "environment" lifecycle, use "v2".
+                                    With "workload" lifecycle, use "v1" or "v2".
                                      (default "v2")
 
 Optional Flags
