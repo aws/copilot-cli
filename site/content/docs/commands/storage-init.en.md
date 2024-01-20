@@ -66,10 +66,6 @@ Optional Flags
 ```
 
 !!!attention "Considerations when using Aurora Serverless v1 storage"
-    #### Aurora Serverless v1 is planed to reach EOF as of 2024/12/31  
-    Aurora Serverless users have received the following emails:  
-    > "We are reaching out to let you know that as of December 31, 2024, Amazon Aurora will no longer support Serverless version 1 (v1). As per the Aurora Version Policy [1], we are providing 12 months notice to give you time to upgrade your database cluster(s). Aurora supports two versions of Serverless. We are only announcing the end of support for Serverless v1. Aurora Serverless v2 continues to be supported. We recommend that you proactively upgrade your databases running Amazon Aurora Serverless v1 to Amazon Aurora Serverless v2 at your convenience before December 31, 2024."
-
     #### Aurora Serverless v1 is only supported for workload-level storage
     If you want to create an Aurora Serverless v1 with "environment" lifecycle, please see [this example](https://github.com/aws/copilot-cli/discussions/5621).
 
