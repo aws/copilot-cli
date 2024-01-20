@@ -1343,7 +1343,7 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}, nil)
 				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
 				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
-				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool/phonetool-svc").Return(nil)
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
 				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
 				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
@@ -1432,7 +1432,7 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}, nil)
 				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
 				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
-				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool/phonetool-svc").Return(nil)
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
 				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
 				cfn.EXPECT().Describe(gomock.Any()).Times(0)
@@ -1583,7 +1583,7 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}, nil)
 				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
 				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
-				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool/phonetool-svc").Return(nil)
 				// Delete stackset instance
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("", errors.New("some error"))
 				appStackSet.EXPECT().WaitForOperation(gomock.Any(), gomock.Any()).Times(0)
@@ -1652,7 +1652,7 @@ func TestCloudFormation_RemoveEnvFromApp(t *testing.T) {
 				}, nil)
 				regionalCfn.EXPECT().Describe("some-stack").Return(mockValidAppResourceStack(), nil)
 				s3.EXPECT().EmptyBucket("tests3-bucket-us-west-2").Return(nil)
-				ecr.EXPECT().ClearRepository("phonetool-svc").Return(nil)
+				ecr.EXPECT().ClearRepository("phonetool/phonetool-svc").Return(nil)
 				appStackSet.EXPECT().DeleteInstance("phonetool-infrastructure", "1234", "us-west-2").Return("123", nil)
 				appStackSet.EXPECT().WaitForOperation("phonetool-infrastructure", "123").Return(nil)
 				cfn.EXPECT().Describe(stack.NameForAppStack("phonetool")).Return(&cloudformation.StackDescription{
