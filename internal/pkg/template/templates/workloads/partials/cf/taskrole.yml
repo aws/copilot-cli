@@ -46,11 +46,11 @@ TaskRole:
               Resource: "*"
       {{- end }}
       {{- if .Storage}}
-      {{- range $EFS := .Storage.EFSPerms}}
+      {{- range $i, $EFS := .Storage.EFSPerms}}
       {{- if not $EFS.FilesystemID.RequiresImport}}
-      - PolicyName: 'GrantEFSAccess{{$EFS.FilesystemID.Value}}'
+      - PolicyName: 'GrantEFSAccess{{$EFS.FilesystemID.Value}}-{{$i}}'
       {{- else}}
-      - PolicyName: !Join ['',[ 'GrantEFSAccess', !ImportValue {{$EFS.FilesystemID.Value}}]]
+      - PolicyName: !Join ['',[ 'GrantEFSAccess', !ImportValue {{$EFS.FilesystemID.Value}}, '-{{$i}}']]
       {{- end}}
         PolicyDocument: 
           Version: '2012-10-17'

@@ -319,7 +319,7 @@ Resources:
               - Effect: 'Allow'
                 Action: ["logs:CreateLogStream", "logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:PutLogEvents"]
                 Resource: "*"
-        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345']]
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345', '-0']]
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
