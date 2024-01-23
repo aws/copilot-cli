@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.33: run local `--use-task-role`, and run local `depends_on` のサポート'
+title: 'AWS Copilot v1.33: run local `--use-task-role` と run local `depends_on` のサポート'
 twitter_title: 'AWS Copilot v1.33'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.33: run local `--use-task-role`, and run local `depends_on` のサポート
+# AWS Copilot v1.33: run local `--use-task-role` と run local `depends_on` のサポート
 
 投稿日: 2024 年 1 月 8 日
 
@@ -16,7 +16,7 @@ AWS Copilot コアチームは Copilot v1.33 のリリースを発表します�
 私たちのパブリックな[コミュニティチャット](https://app.gitter.im/#/room/#aws_copilot-cli:gitter.im)は成長しており、オンラインでは 500 人以上、[GitHub](http://github.com/aws/copilot-cli/) では 3,100 以上のスターを獲得しています 🚀。
 AWS Copilot へご支援、ご支持いただいている皆様お一人お一人に感謝をいたします。
 
-Copilot v1.32 ではより柔軟で効率的な開発を支援する大きな機能強化が行われました:
+Copilot v1.33 ではより柔軟で効率的な開発を支援する大きな機能強化が行われました:
 
 - **run local `--use-task-role`**: `--use-task-role` フラグにより、ECS タスクロールを使用したローカルテスト体験が向上しました。詳細は、[こちらのセクションを](#use-ecs-task-role-for-copilot-run-local)をご参照ください。
 - **run local `depends_on` support**:  ローカルでのコンテナ実行時に Service Manifest 内の `depends_on` を考慮する様になりました。詳細は[こちらのセクションを](#container-dependencies-support-for-copilot-run-local)ご参照ください。

@@ -185,7 +185,7 @@ http セクションは Service と内部 Application Load Balancer の連携に
 このパスに対するリクエストが Service に転送されます。各 Load Balanced Web Service は、ユニークなパスでリッスンする必要があります。
 
 <span class="parent-field">http.</span><a id="http-alb" href="#http-alb" class="field">`alb`</a> <span class="type">String</span> <span class="version">Added in [v1.33.0](../../blogs/release-v133.ja.md#imported-albs)</span>  
-インポートする既存の内部 ALB の ARN または名前。リスナールールがリスナーに追加されます。Copilot は証明書の様な DNS 関連りソースを管理しません。
+インポートする既存の内部 ALB の ARN または名前。リスナールールがリスナーに追加されます。Copilot は証明書の様な DNS 関連リソースを管理しません。
 
 {% include 'http-healthcheck.ja.md' %}
 
