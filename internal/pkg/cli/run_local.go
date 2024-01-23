@@ -45,6 +45,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/docker/orchestrator"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -116,28 +117,29 @@ type runLocalVars struct {
 type runLocalOpts struct {
 	runLocalVars
 
-	sel                 deploySelector
-	ecsClient           ecsClient
-	ecsExecutor         ecsCommandExecutor
-	ssm                 secretGetter
-	secretsManager      secretGetter
-	sessProvider        sessionProvider
-	sess                *session.Session
-	envManagerSess      *session.Session
-	targetEnv           *config.Environment
-	targetApp           *config.Application
-	store               store
-	ws                  wsWlDirReader
-	cmd                 execRunner
-	dockerEngine        dockerEngineRunner
-	repository          repositoryService
-	prog                progress
-	orchestrator        containerOrchestrator
-	hostFinder          hostFinder
-	envChecker          versionCompatibilityChecker
-	debounceTime        time.Duration
-	newRecursiveWatcher func() (recursiveWatcher, error)
+	sel            deploySelector
+	ecsClient      ecsClient
+	ecsExecutor    ecsCommandExecutor
+	ssm            secretGetter
+	secretsManager secretGetter
+	sessProvider   sessionProvider
+	sess           *session.Session
+	envManagerSess *session.Session
+	targetEnv      *config.Environment
+	targetApp      *config.Application
+	store          store
+	ws             wsWlDirReader
+	cmd            execRunner
+	dockerEngine   dockerEngineRunner
+	repository     repositoryService
+	prog           progress
+	orchestrator   containerOrchestrator
+	hostFinder     hostFinder
+	envChecker     versionCompatibilityChecker
+	debounceTime   time.Duration
+	dockerExcludes []string
 
+	newRecursiveWatcher  func() (recursiveWatcher, error)
 	buildContainerImages func(mft manifest.DynamicWorkload) (map[string]string, error)
 	configureClients     func() error
 	labeledTermPrinter   func(fw syncbuffer.FileWriter, bufs []*syncbuffer.LabeledSyncBuffer, opts ...syncbuffer.LabeledTermPrinterOption) clideploy.LabeledTermPrinter
@@ -237,6 +239,15 @@ func newRunLocalOpts(vars runLocalVars) (*runLocalOpts, error) {
 		return nil
 	}
 	o.buildContainerImages = func(mft manifest.DynamicWorkload) (map[string]string, error) {
+		if dockerWkld, ok := mft.Manifest().(dockerWorkload); ok {
+			dfDir := filepath.Dir(dockerWkld.Dockerfile())
+			o.dockerExcludes, err = dockerfile.ReadDockerignore(afero.NewOsFs(), filepath.Join(ws.Path(), dfDir))
+			if err != nil {
+				return nil, err
+			}
+			o.filterDockerExcludes()
+		}
+
 		gitShortCommit := imageTagFromGit(o.cmd)
 		image := clideploy.ContainerImageIdentifier{
 			GitShortCommitTag: gitShortCommit,
@@ -426,6 +437,11 @@ func (o *runLocalOpts) Execute() error {
 				o.orchestrator.Stop()
 				break
 			}
+
+			// If TaskRole is retrieved through ECS Exec, OS signals are no longer provided to the channel.
+			// We reset this channel connection through this call as a short term fix that allows
+			// the interrupt and terminate signal to stop tasks after the task has been restarted by --watch.
+			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 			o.orchestrator.RunTask(task)
 		}
 	}
@@ -577,8 +593,6 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 		task.Containers[name] = ctr
 	}
 
-	// TODO (Adi): Use this dependency order in orchestrator to start and stop containers.
-	// replace container dependencies with the local dependencies from manifest.
 	containerDeps := manifest.ContainerDependencies(mft.Manifest())
 	for name, dep := range containerDeps {
 		ctr, ok := task.Containers[name]
@@ -591,6 +605,21 @@ func (o *runLocalOpts) prepareTask(ctx context.Context) (orchestrator.Task, erro
 	}
 
 	return task, nil
+}
+
+func (o *runLocalOpts) filterDockerExcludes() {
+	wsPath := o.ws.Path()
+	result := []string{}
+
+	// filter out excludes to the copilot directory, we always want to watch these files
+	copilotDirPath := filepath.ToSlash(filepath.Join(wsPath, workspace.CopilotDirName))
+	for _, exclude := range o.dockerExcludes {
+		if !strings.HasPrefix(filepath.ToSlash(exclude), copilotDirPath) {
+			result = append(result, exclude)
+		}
+	}
+
+	o.dockerExcludes = result
 }
 
 func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface{}, <-chan error, error) {
@@ -612,6 +641,7 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 	watcherErrors := watcher.Errors()
 
 	debounceTimer := time.NewTimer(o.debounceTime)
+	debounceTimerRunning := false
 	if !debounceTimer.Stop() {
 		// flush the timer in case stop is called after the timer finishes
 		<-debounceTimer.C
@@ -640,11 +670,12 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					break
 				}
 
-				// check if any subdirectories within copilot directory are hidden
-				isHidden := false
 				parent := workspacePath
 				suffix, _ := strings.CutPrefix(event.Name, parent+"/")
+
+				// check if any subdirectories within copilot directory are hidden
 				// fsnotify events are always of form /a/b/c, don't use filepath.Split as that's OS dependent
+				isHidden := false
 				for _, child := range strings.Split(suffix, "/") {
 					parent = filepath.Join(parent, child)
 					subdirHidden, err := file.IsHiddenFile(child)
@@ -656,11 +687,27 @@ func (o *runLocalOpts) watchLocalFiles(stopCh <-chan struct{}) (<-chan interface
 					}
 				}
 
-				// TODO(Aiden): implement dockerignore blacklist for update
-				if !isHidden {
+				// skip updates from files matching .dockerignore patterns
+				isExcluded := false
+				for _, pattern := range o.dockerExcludes {
+					matches, err := filepath.Match(pattern, suffix)
+					if err != nil {
+						break
+					}
+					if matches {
+						isExcluded = true
+					}
+				}
+
+				if !isHidden && !isExcluded {
+					if !debounceTimerRunning {
+						fmt.Println("Restarting task...")
+						debounceTimerRunning = true
+					}
 					debounceTimer.Reset(o.debounceTime)
 				}
 			case <-debounceTimer.C:
+				debounceTimerRunning = false
 				watchCh <- nil
 			}
 		}
@@ -1196,7 +1243,7 @@ func BuildRunLocalCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.watch, watchFlag, false, watchFlagDescription)
-	cmd.Flags().BoolVar(&vars.useTaskRole, useTaskRoleFlag, true, useTaskRoleFlagDescription)
+	cmd.Flags().BoolVar(&vars.useTaskRole, useTaskRoleFlag, false, useTaskRoleFlagDescription)
 	cmd.Flags().Var(&vars.portOverrides, portOverrideFlag, portOverridesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envOverrides, envVarOverrideFlag, nil, envVarOverrideFlagDescription)
 	cmd.Flags().BoolVar(&vars.proxy, proxyFlag, false, proxyFlagDescription)

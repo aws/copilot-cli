@@ -3,7 +3,9 @@
 "use strict";
 
 describe("Desired count delegation Handler", () => {
-  const AWS = require("aws-sdk-mock");
+  const ecs = require('@aws-sdk/client-ecs');
+  const rgs = require('@aws-sdk/client-resource-groups-tagging-api');
+  const { mockClient } = require('aws-sdk-client-mock');
   const sinon = require("sinon");
   const DesiredCountDelegation = require("../lib/desired-count-delegation");
   const LambdaTester = require("lambda-tester").noVersionCheck();
@@ -18,6 +20,8 @@ describe("Desired count delegation Handler", () => {
   const testSvc = "testSvc";
   const testECSService = "testECSService";
 
+  const ecsMock = mockClient(ecs.ECSClient);
+  const rgsMock = mockClient(rgs.ResourceGroupsTaggingAPIClient);
   beforeEach(() => {
     DesiredCountDelegation.withDefaultResponseURL(responseURL);
     // Prevent logging.
@@ -25,7 +29,8 @@ describe("Desired count delegation Handler", () => {
   });
   afterEach(() => {
     // Restore logger
-    AWS.restore();
+    ecsMock.reset();
+    rgsMock.reset();
     console.log = origLog;
   });
 
@@ -54,8 +59,8 @@ describe("Desired count delegation Handler", () => {
       ResourceTagMappingList: [],
     });
     const describeServicesFake = sinon.stub();
-    AWS.mock("ResourceGroupsTaggingAPI", "getResources", getResourcesFake);
-    AWS.mock("ECS", "describeServices", describeServicesFake);
+    rgsMock.on(rgs.GetResourcesCommand).callsFake(getResourcesFake);
+    ecsMock.on(ecs.DescribeServicesCommand).callsFake(describeServicesFake);
     const request = nock(responseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.DesiredCount == 3 && body.PhysicalResourceId === "copilot/apps/mockApp/envs/testEnv/services/testSvc/autoscaling";
@@ -116,8 +121,8 @@ describe("Desired count delegation Handler", () => {
         },
       ],
     });
-    AWS.mock("ResourceGroupsTaggingAPI", "getResources", getResourcesFake);
-    AWS.mock("ECS", "describeServices", describeServicesFake);
+    rgsMock.on(rgs.GetResourcesCommand).callsFake(getResourcesFake);
+    ecsMock.on(ecs.DescribeServicesCommand).callsFake(describeServicesFake);
     const request = nock(responseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.DesiredCount == 2;

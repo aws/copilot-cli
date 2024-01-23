@@ -133,6 +133,11 @@ func (s *ScheduledJob) requiredEnvironmentFeatures() []string {
 	return features
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (j *ScheduledJob) Dockerfile() string {
+	return j.ImageConfig.Image.dockerfilePath()
+}
+
 // Publish returns the list of topics where notifications can be published.
 func (j *ScheduledJob) Publish() []Topic {
 	return j.ScheduledJobConfig.PublishConfig.publishedTopics()

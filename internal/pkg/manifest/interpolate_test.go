@@ -117,6 +117,23 @@ network:
       - sg-3
 `,
 		},
+		"should not substitute escaped dollar signs": {
+			inputStr: "echo \\${name}",
+			inputEnvVar: map[string]string{
+				"name": "this variable should not be read",
+			},
+			wanted: "echo ${name}\n",
+		},
+		"should substitute variables right after one another": {
+			inputStr: "${a}${b}\\${c}${d}",
+			inputEnvVar: map[string]string{
+				"a": "A",
+				"b": "B",
+				"c": "C",
+				"d": "D",
+			},
+			wanted: "AB${c}D\n",
+		},
 	}
 
 	for name, tc := range testCases {

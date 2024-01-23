@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
 const sinon = require("sinon");
 const nock = require("nock");
@@ -31,7 +30,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       .reply(200);
   }
 
-  let handler, reset, withDeadlineExpired;
+  let handler, reset, withDeadlineExpired, waitForCertificateValidation, waitForRecordChange;
+  let imported, r53Mock,acmMock,rgtMock, r53Client, acmClient, rgtClient;
   beforeEach(() => {
     // Prevent logging.
     console.log = function () {};
@@ -40,11 +40,19 @@ describe("DNS Certificate Validation And Custom Domains", () => {
     // A description of the issue can be found here: https://github.com/dwyl/aws-sdk-mock/issues/206.
     // This workaround follows the comment here: https://github.com/dwyl/aws-sdk-mock/issues/206#issuecomment-640418772.
     jest.resetModules();
-    AWS.setSDKInstance(require("aws-sdk"));
-    const imported = require("../lib/wkld-cert-validator");
+    r53Client = require("@aws-sdk/client-route-53");
+    acmClient = require("@aws-sdk/client-acm");
+    rgtClient = require("@aws-sdk/client-resource-groups-tagging-api");
+    const { mockClient } = require("aws-sdk-client-mock");
+    imported = require("../lib/wkld-cert-validator");
+    r53Mock = mockClient(r53Client.Route53Client);
+    acmMock = mockClient(acmClient.ACMClient);
+    rgtMock = mockClient(rgtClient.ResourceGroupsTaggingAPIClient);
     handler = imported.handler;
     reset = imported.reset;
     withDeadlineExpired = imported.withDeadlineExpired;
+    waitForCertificateValidation = imported.waitForCertificateValidation;
+    waitForRecordChange = imported.waitForRecordChange;
 
     // Mocks wait functions.
     imported.withSleep((_) => {
@@ -53,12 +61,16 @@ describe("DNS Certificate Validation And Custom Domains", () => {
     withDeadlineExpired((_) => {
       return new Promise(function (resolve, reject) {});
     });
+    waitForCertificateValidation = function () { };
+    waitForRecordChange = function () { };
   });
 
   afterEach(() => {
     // Restore logger
     console.log = origLog;
-    AWS.restore();
+    r53Mock.reset();
+    acmMock.reset();
+    rgtMock.reset();
     reset();
   });
 
@@ -86,8 +98,6 @@ describe("DNS Certificate Validation And Custom Domains", () => {
     const mockRequestCertificate = sinon.stub();
     const mockDescribeCertificate = sinon.stub();
     const mockChangeResourceRecordSets = sinon.stub();
-    const mockWaitForRecordsChange = sinon.stub();
-    const mockWaitForCertificateValidation = sinon.stub();
     const mockAppHostedZoneID = "mockAppHostedZoneID";
     const mockRootHostedZoneID = "mockRootHostedZoneID";
 
@@ -154,8 +164,6 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           },
         ],
       });
-      mockWaitForRecordsChange.resolves();
-      mockWaitForCertificateValidation.resolves();
     });
 
     afterEach(() => {
@@ -206,8 +214,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           },
         ],
       });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -227,7 +235,7 @@ describe("DNS Certificate Validation And Custom Domains", () => {
         ],
       });
       mockListHostedZonesByName.withArgs(sinon.match.has("DNSName", "mockDomain.com")).rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -239,8 +247,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
 
     test("error validating aliases", () => {
       const mockListResourceRecordSets = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -262,8 +270,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           },
         ],
       });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
 
       let request = mockFailedRequest(
         /^Alias dash-test.mockDomain.com is already in use by other-lb-DNS. This could be another load balancer of a different service. \(Log: .*\)$/
@@ -279,9 +287,9 @@ describe("DNS Certificate Validation And Custom Domains", () => {
 
     test("fail to request a certificate", () => {
       const mockRequestCertificate = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -305,10 +313,10 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           ],
         },
       });
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
 
       let request = mockFailedRequest(/^resource validation records are not ready after 10 tries \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -324,10 +332,10 @@ describe("DNS Certificate Validation And Custom Domains", () => {
 
     test("error while waiting for validation options to be ready", () => {
       const mockDescribeCertificate = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -345,11 +353,11 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       const mockChangeResourceRecordSets = sinon.stub();
       mockChangeResourceRecordSets.rejects(new Error("some error"));
 
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -373,13 +381,14 @@ describe("DNS Certificate Validation And Custom Domains", () => {
     });
 
     test("fail to wait for resource record sets change to be finished", () => {
-      const mockWaitFor = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitFor);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+
+      const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordSetChangeFake.rejects(new Error("some error"));
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -391,23 +400,21 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           sinon.assert.callCount(mockRequestCertificate, 1);
           sinon.assert.callCount(mockDescribeCertificate, 1);
           sinon.assert.callCount(mockChangeResourceRecordSets, 4);
-          sinon.assert.callCount(mockWaitFor, 4);
+          sinon.assert.callCount(waitForRecordSetChangeFake, 4);
         });
     });
 
     test("fail to wait for certificate to be validated", () => {
-      const mockWaitForRecordsChange = sinon.stub();
-      mockWaitForRecordsChange.withArgs("resourceRecordSetsChanged", sinon.match.has("Id", "mockChangeID")).resolves();
-      const mockWaitForCertificateValidation = sinon.stub();
-      mockWaitForCertificateValidation.withArgs("certificateValidated", sinon.match.has("CertificateArn", "mockCertArn")).rejects(new Error("some error"));
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
-      AWS.mock("ACM", "waitFor", mockWaitForCertificateValidation);
+      const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordSetChangeFake.withArgs(sinon.match.any,"mockChangeID").resolves();
+      const waitForCertificateValidationFake = sinon.stub(imported, 'waitForCertificateValidation');
+      waitForCertificateValidationFake.withArgs("mockCertArn",sinon.match.any).rejects(new Error("some error"));
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -419,8 +426,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           sinon.assert.callCount(mockRequestCertificate, 1);
           sinon.assert.callCount(mockDescribeCertificate, 1);
           sinon.assert.callCount(mockChangeResourceRecordSets, 4);
-          sinon.assert.callCount(mockWaitForRecordsChange, 4);
-          sinon.assert.callCount(mockWaitForCertificateValidation, 1);
+          sinon.assert.callCount(waitForRecordSetChangeFake, 4);
+          sinon.assert.callCount(waitForCertificateValidationFake, 1);
         });
     });
 
@@ -430,12 +437,11 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           reject(new Error("lambda time out error"));
         });
       });
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", sinon.fake.resolves());
-      AWS.mock("ACM", "waitFor", sinon.fake.resolves());
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+
 
       let request = mockFailedRequest(/^lambda time out error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -446,15 +452,17 @@ describe("DNS Certificate Validation And Custom Domains", () => {
     });
 
     test("successful operation", () => {
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("ACM", "requestCertificate", mockRequestCertificate);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
-      AWS.mock("ACM", "waitFor", mockWaitForCertificateValidation);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      acmMock.on(acmClient.RequestCertificateCommand).callsFake(mockRequestCertificate);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
-      // let request = mockFailedRequest(/^some error \(Log: .*\)$/);
+      const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordSetChangeFake.resolves();
+      const waitForCertificateValidationFake = sinon.stub(imported, 'waitForCertificateValidation');
+      waitForCertificateValidationFake.resolves();
+
       let request = nock(mockResponseURL)
         .put("/", (body) => {
           return body.Status === "SUCCESS" && body.PhysicalResourceId === "mockCertArn";
@@ -470,8 +478,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           sinon.assert.callCount(mockRequestCertificate, 1);
           sinon.assert.callCount(mockDescribeCertificate, 1);
           sinon.assert.callCount(mockChangeResourceRecordSets, 4);
-          sinon.assert.callCount(mockWaitForRecordsChange, 4);
-          sinon.assert.callCount(mockWaitForCertificateValidation, 1);
+          sinon.assert.callCount(waitForRecordSetChangeFake, 4);
+          sinon.assert.callCount(waitForCertificateValidationFake, 1);
         });
     });
   });
@@ -717,7 +725,7 @@ describe("DNS Certificate Validation And Custom Domains", () => {
 
     test("error retrieving service certificate by tags", () => {
       const mockGetResources = sinon.stub().rejects(new Error("some error"));
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -745,8 +753,8 @@ describe("DNS Certificate Validation And Custom Domains", () => {
 
     test("error describing certificate", () => {
       const mockDescribeCertificate = sinon.stub().rejects(new Error("some error"));
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -759,10 +767,10 @@ describe("DNS Certificate Validation And Custom Domains", () => {
 
     test("error listing resource record set", () => {
       const mockListResourceRecordSets = sinon.stub().rejects(new Error("some error"));
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -778,11 +786,11 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       mockChangeResourceRecordSets
         .withArgs(sinon.match.hasNested("ChangeBatch.Changes[0].ResourceRecordSet.Name", "validate.unused.mockDomain.com"))
         .rejects(new Error("some error"));
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
       let request = mockFailedRequest(/^delete record validate.unused.mockDomain.com: some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -795,13 +803,13 @@ describe("DNS Certificate Validation And Custom Domains", () => {
     });
 
     test("error waiting for resource record sets change to be finished", () => {
-      const mockWaitForRecordsChange = sinon.fake.rejects(new Error("some error"));
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      const waitForRecordSetChangeFake = sinon.stub(imported, 'waitForRecordChange');
+      waitForRecordSetChangeFake.rejects(new Error("some error"));
 
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -811,7 +819,7 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           sinon.assert.callCount(mockGetResources, 1);
           sinon.assert.callCount(mockDescribeCertificate, 3);
           sinon.assert.callCount(mockChangeResourceRecordSets, 1); // Only one validation option is to be deleted.
-          sinon.assert.callCount(mockWaitForRecordsChange, 1);
+          sinon.assert.callCount(waitForRecordSetChangeFake, 1);
           sinon.assert.calledWithMatch(
             mockChangeResourceRecordSets,
             sinon.match.hasNested("ChangeBatch.Changes[0].ResourceRecordSet.Name", "validate.unused.mockDomain.com")
@@ -825,12 +833,12 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           InUseBy: ["inuse"],
         },
       });
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      sinon.stub(imported, 'waitForRecordChange');
 
       let request = mockFailedRequest(/^Certificate still in use after checking for 12 attempts. \(Log: .*\)$/);
       return LambdaTester(handler)
@@ -849,13 +857,13 @@ describe("DNS Certificate Validation And Custom Domains", () => {
           InUseBy: [],
         },
       });
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
-      AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      acmMock.on(acmClient.DeleteCertificateCommand).callsFake(mockDeleteCertificate);
+      sinon.stub(imported, 'waitForRecordChange');
       let request = mockFailedRequest(/^some error \(Log: .*\)$/);
       return LambdaTester(handler)
         .event(mockRequest)
@@ -875,12 +883,12 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       let resourceNotFoundErr = new Error("some error");
       resourceNotFoundErr.name = "ResourceNotFoundException";
       mockDescribeCertificate.rejects(resourceNotFoundErr);
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      sinon.stub(imported, 'waitForRecordChange');
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {
@@ -901,13 +909,13 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       let resourceNotFoundErr = new Error("some error");
       resourceNotFoundErr.name = "ResourceNotFoundException";
       mockDescribeCertificate.rejects(resourceNotFoundErr);
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      acmMock.on(acmClient.DeleteCertificateCommand).callsFake(mockDeleteCertificate);
+      sinon.stub(imported, 'waitForRecordChange');
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {
@@ -932,13 +940,13 @@ describe("DNS Certificate Validation And Custom Domains", () => {
       let resourceNotFoundErr = new Error("some error");
       resourceNotFoundErr.name = "ResourceNotFoundException";
       const mockDeleteCertificate = sinon.stub().rejects(resourceNotFoundErr);
-      AWS.mock("ResourceGroupsTaggingAPI", "getResources", mockGetResources);
-      AWS.mock("ACM", "describeCertificate", mockDescribeCertificate);
-      AWS.mock("Route53", "listResourceRecordSets", mockListResourceRecordSets);
-      AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-      AWS.mock("ACM", "deleteCertificate", mockDeleteCertificate);
-      AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-      AWS.mock("Route53", "waitFor", mockWaitForRecordsChange);
+      rgtMock.on(rgtClient.GetResourcesCommand).callsFake(mockGetResources);
+      acmMock.on(acmClient.DescribeCertificateCommand).callsFake(mockDescribeCertificate);
+      r53Mock.on(r53Client.ListResourceRecordSetsCommand).callsFake(mockListResourceRecordSets);
+      r53Mock.on(r53Client.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+      r53Mock.on(r53Client.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+      acmMock.on(acmClient.DeleteCertificateCommand).callsFake(mockDeleteCertificate);
+      sinon.stub(imported, 'waitForRecordChange');
 
       let request = nock(mockResponseURL)
         .put("/", (body) => {

@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.32: `run local --proxy`, `run local --watch`, imported ALB support
+title: 'AWS Copilot v1.32: `run local --proxy`, `run local --watch`, imported ALB support'
 twitter_title: 'AWS Copilot v1.32'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# 'AWS Copilot v1.32: `run local --proxy`, `run local --watch`, imported ALB support
+# AWS Copilot v1.32: `run local --proxy`, `run local --watch`, imported ALB support
 
 Posted On: November 9, 2023
 

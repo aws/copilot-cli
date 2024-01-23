@@ -155,6 +155,16 @@ Resources: # If a bucket URL is specified, that means the template exists.
                   - 'kms:Decrypt'
                 Resource:
                   - !Ref ArtifactKeyARN
+              - Sid: DecryptTaggedKMSKey
+                Effect: 'Allow'
+                Action:
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
         - !If
           # Optional IAM permission required by ECS task def env file
           # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam
@@ -250,7 +260,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   DynamicDesiredCountFunctionRole:
     Metadata:
       'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
@@ -337,6 +347,25 @@ Resources: # If a bucket URL is specified, that means the template exists.
         ScaleInCooldown: 120
         ScaleOutCooldown: 150
         TargetValue: 70
+  AutoScalingPolicyALBAverageResponseTime:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join ['-', [!Ref WorkloadName, ALBAverageResponseTime, ScalingPolicy]]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        CustomizedMetricSpecification:
+          Dimensions:
+            - Name: LoadBalancer
+              Value: mockImportALBName
+            - Name: TargetGroup
+              Value: !GetAtt TargetGroupForImportedALB.TargetGroupFullName
+          MetricName: TargetResponseTime
+          Namespace: AWS/ApplicationELB
+          Statistic: Average
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        TargetValue: 2
   EnvControllerAction:
     Metadata:
       'aws:copilot:description': "Update your environment's shared resources"
@@ -354,7 +383,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   EnvControllerRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update your environment stack"
@@ -495,7 +524,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt "RulePriorityFunctionRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   RulePriorityFunctionRole:
     Metadata:
       'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"

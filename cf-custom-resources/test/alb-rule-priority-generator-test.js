@@ -3,7 +3,8 @@
 "use strict";
 
 describe("ALB Rule Priority Generator", () => {
-  const AWS = require("aws-sdk-mock");
+  const elbv2 = require("@aws-sdk/client-elastic-load-balancing-v2");
+  const { mockClient } = require('aws-sdk-client-mock');
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
   const albRulePriorityHandler = require("../lib/alb-rule-priority-generator");
@@ -23,11 +24,13 @@ describe("ALB Rule Priority Generator", () => {
     albRulePriorityHandler.withDefaultLogGroup(LogGroup);
     albRulePriorityHandler.withDefaultLogStream(LogStream);
     console.log = function () {};
+    elbv2Mock.reset();
   });
   afterEach(() => {
-    AWS.restore();
     console.log = origLog;
   });
+
+  const elbv2Mock = mockClient(elbv2.ElasticLoadBalancingV2Client);
 
   test("Bogus operation fails", () => {
     const bogusType = "bogus";
@@ -57,7 +60,7 @@ describe("ALB Rule Priority Generator", () => {
       Rules: [],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+   elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
 
     const requestType = "Delete";
     const request = nock(ResponseURL)
@@ -98,7 +101,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -150,7 +153,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -202,7 +205,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.Priority == 1;
@@ -279,7 +282,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.Priority == 6;
@@ -354,7 +357,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.Priority == 49998;
@@ -439,7 +442,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.Priority == 101;
@@ -524,7 +527,7 @@ describe("ALB Rule Priority Generator", () => {
       ],
     });
 
-    AWS.mock("ELBv2", "describeRules", describeRulesFake);
+    elbv2Mock.on(elbv2.DescribeRulesCommand).callsFake(describeRulesFake);
     const request = nock(ResponseURL)
         .put("/", (body) => {
           return body.Status === "SUCCESS" &&
