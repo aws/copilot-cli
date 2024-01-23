@@ -90,7 +90,12 @@ Metadata:
           path: '/etc/mount1'
           efs:
             id:
-             from_cfn: stack-fs-12345
+              from_cfn: stack-fs-12345
+        externalEFSVolume2:
+          path: '/etc/mount2'
+          efs:
+            id:
+              from_cfn: stack-fs-12345
 
     # Optional fields for more advanced use-cases.
     #
@@ -190,7 +195,7 @@ Resources:
                   yourtopicyourtopicfifoURL: !Ref yourtopicyourtopicfifoEventsQueue
                   nonfifotopicnonfifotopicURL: !Ref nonfifotopicnonfifotopicEventsQueue
             - Name: COPILOT_MOUNT_POINTS
-              Value: '{"externalEFSVolume":"/etc/mount1"}'
+              Value: '{"externalEFSVolume":"/etc/mount1","externalEFSVolume2":"/etc/mount2"}'
           EnvironmentFiles:
           - !If
             - HasEnvFile
@@ -207,8 +212,18 @@ Resources:
             - ContainerPath: '/etc/mount1'
               ReadOnly: true
               SourceVolume: externalEFSVolume
+            - ContainerPath: '/etc/mount2'
+              ReadOnly: true
+              SourceVolume: externalEFSVolume2
       Volumes:
         - Name: externalEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: !ImportValue 'stack-fs-12345'
+            RootDirectory: '/'
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: DISABLED
+        - Name: externalEFSVolume2
           EFSVolumeConfiguration:
             FilesystemId: !ImportValue 'stack-fs-12345'
             RootDirectory: '/'
@@ -320,6 +335,15 @@ Resources:
                 Action: ["logs:CreateLogStream", "logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:PutLogEvents"]
                 Resource: "*"
         - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345', '-0']]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                Resource:
+                  - !Join ['/', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', !ImportValue 'stack-fs-12345']]
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345', '-1']]
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
