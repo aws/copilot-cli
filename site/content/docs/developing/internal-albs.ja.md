@@ -24,6 +24,12 @@ network:
   vpc:
     placement: private
 ```
+Service をデプロイしようとしている VPC 内に既存の内部 ALB がある場合、 デプロイ前に Manifest 内で ALB を指定して Backend Service 毎にインポートできます。
+```yaml
+http:
+  path: '/'
+  alb: [name or ARN]
+```
 
 ## 高度な設定
 
