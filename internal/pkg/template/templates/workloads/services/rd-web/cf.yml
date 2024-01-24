@@ -100,9 +100,9 @@ Resources:
             {{- end}}
             {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
             {{- range $secret := .NestedStack.SecretOutputs}}
-            - Name: {{toSnakeCase $secret}}
-              Value:
-                Fn::GetAtt: [{{$stackName}}, Outputs.{{$secret}}]
+              - Name: {{toSnakeCase $secret}}
+                Value:
+                  Fn::GetAtt: [{{$stackName}}, Outputs.{{$secret}}]
             {{- end}}
             {{- end}}
             RuntimeEnvironmentVariables:
