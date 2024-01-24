@@ -854,16 +854,33 @@ func convertMountPoints(input map[string]*manifest.Volume) []*template.MountPoin
 	if len(input) == 0 {
 		return nil
 	}
+
+	// Sort by names for consistent testing
+	var names []string
+	for name := range input {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	var output []*template.MountPoint
-	for name, volume := range input {
+	for _, name := range names {
+		volume := input[name]
 		output = append(output, convertMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly))
 	}
 	return output
 }
 
 func convertEFSPermissions(input map[string]*manifest.Volume) []*template.EFSPermission {
+	// Sort by names for consistent testing
+	var names []string
+	for name := range input {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	var output []*template.EFSPermission
-	for _, volume := range input {
+	for _, name := range names {
+		volume := input[name]
 		// If there's no EFS configuration, we don't need to generate any permissions.
 		if volume.EmptyVolume() {
 			continue
@@ -893,8 +910,16 @@ func convertEFSPermissions(input map[string]*manifest.Volume) []*template.EFSPer
 }
 
 func convertManagedFSInfo(wlName *string, input map[string]*manifest.Volume) *template.ManagedVolumeCreationInfo {
+	// Sort by names for consistent testing
+	var names []string
+	for name := range input {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	var output *template.ManagedVolumeCreationInfo
-	for name, volume := range input {
+	for _, name := range names {
+		volume := input[name]
 		if volume.EmptyVolume() || !volume.EFS.UseManagedFS() {
 			continue
 		}
@@ -923,8 +948,16 @@ func getRandomUIDGID(name *string) uint32 {
 }
 
 func convertVolumes(input map[string]*manifest.Volume) []*template.Volume {
+	// Sort by names for consistent testing
+	var names []string
+	for name := range input {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	var output []*template.Volume
-	for name, volume := range input {
+	for _, name := range names {
+		volume := input[name]
 		// Volumes can contain either:
 		//   a) an EFS configuration, which must be valid
 		//   b) no EFS configuration, in which case the volume is created using task scratch storage in order to share
