@@ -420,9 +420,15 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		img = image.URI()
 	}
 
-	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
-	if err != nil {
-		return nil, fmt.Errorf("determine image repository type: %w", err)
+	// This happens only when `copilot svc pacakage` is used with out `--upload-assets` flag.
+	// Incase of `image.build` is used then `w.rc.PushedImages` will be nil which leads to `img` to be empty.
+	// Skip the image repository type check in that case.
+	var imageRepositoryType string
+	if img != "" {
+		imageRepositoryType, err = apprunner.DetermineImageRepositoryType(img)
+		if err != nil {
+			return nil, fmt.Errorf("determine image repository type: %w", err)
+		}
 	}
 
 	if w.imageConfig.Port == nil {
