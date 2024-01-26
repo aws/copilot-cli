@@ -421,6 +421,53 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 				ParameterValue: aws.String("1024"),
 			}},
 		},
+		"skip checking image repository type when `image.build` is specified": {
+			imageConfig: manifest.ImageWithPort{
+				Image: manifest.Image{
+					ImageLocationOrBuild: manifest.ImageLocationOrBuild{
+						Build: manifest.BuildArgsOrString{
+							BuildString: aws.String("./frontend/Dockerfile"),
+						},
+					},
+				},
+				Port: aws.Uint16(80),
+			},
+			instanceConfig: manifest.AppRunnerInstanceConfig{
+				CPU:    aws.Int(1024),
+				Memory: aws.Int(1024),
+			},
+			wantedParams: []*cloudformation.Parameter{{
+				ParameterKey:   aws.String("AppName"),
+				ParameterValue: aws.String("phonetool"),
+			}, {
+				ParameterKey:   aws.String("EnvName"),
+				ParameterValue: aws.String("test"),
+			}, {
+				ParameterKey:   aws.String("WorkloadName"),
+				ParameterValue: aws.String("frontend"),
+			}, {
+				ParameterKey:   aws.String("ContainerImage"),
+				ParameterValue: aws.String(""),
+			}, {
+				ParameterKey:   aws.String("AddonsTemplateURL"),
+				ParameterValue: aws.String(""),
+			}, {
+				ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+				ParameterValue: aws.String(""),
+			}, {
+				ParameterKey:   aws.String(RDWkldImageRepositoryType),
+				ParameterValue: aws.String(""),
+			}, {
+				ParameterKey:   aws.String(WorkloadContainerPortParamKey),
+				ParameterValue: aws.String("80"),
+			}, {
+				ParameterKey:   aws.String(RDWkldInstanceCPUParamKey),
+				ParameterValue: aws.String("1024"),
+			}, {
+				ParameterKey:   aws.String(RDWkldInstanceMemoryParamKey),
+				ParameterValue: aws.String("1024"),
+			}},
+		},
 		"error when port unspecified": {
 			imageConfig: manifest.ImageWithPort{
 				Image: manifest.Image{
