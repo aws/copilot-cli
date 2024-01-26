@@ -420,7 +420,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		img = image.URI()
 	}
 
-	// This happens only when `copilot svc pacakage` is used with out `--upload-assets` flag.
+	// This happens only when `copilot svc package` is used with out `--upload-assets` flag.
 	// Incase of `image.build` is used then `w.rc.PushedImages` will be nil which leads to `img` to be empty.
 	// Skip the image repository type check in that case.
 	var imageRepositoryType string
