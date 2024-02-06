@@ -437,7 +437,8 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 					Do(func(_ string, _ []string, opt exec.CmdOption) {
 						cmd := &osexec.Cmd{}
 						opt(cmd)
-						_, _ = cmd.Stdout.Write([]byte(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`))
+						_, _ = cmd.Stdout.Write([]byte(`Cannot connect to the Docker daemon at unix:///Users/penghaoh/.docker/run/docker.sock. Is the docker daemon running?
+'{"ID":"","Containers":0,"ContainersRunning":0,"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`))
 					}).Return(nil)
 			},
 

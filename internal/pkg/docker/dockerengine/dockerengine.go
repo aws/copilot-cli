@@ -15,6 +15,7 @@ import (
 	"os"
 	osexec "os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -481,14 +482,17 @@ func (c DockerCmdClient) CheckDockerEngineRunning() error {
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
-	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
-	// {"ServerErrors":["Cannot connect...}
-	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
+	// Trim redundant prefix and suffix. For example: '...{"ServerErrors":["Cannot connect...}...' returns
+	// '"ServerErrors":["Cannot connect..."]'
+	match := regexp.MustCompile(`"ServerErrors"\s*:\s*\[.*?\]`).FindString(buf.String())
+	if len(match) == 0 {
+		return nil
+	}
 	type dockerEngineNotRunningMsg struct {
 		ServerErrors []string `json:"ServerErrors"`
 	}
 	var msg dockerEngineNotRunningMsg
-	if err := json.Unmarshal([]byte(out), &msg); err != nil {
+	if err := json.Unmarshal([]byte("{"+match+"}"), &msg); err != nil {
 		return fmt.Errorf("unmarshal docker info message: %w", err)
 	}
 	if len(msg.ServerErrors) == 0 {
