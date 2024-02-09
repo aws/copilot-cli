@@ -439,7 +439,7 @@ func (d *DockerCmdClient) containerState(ctx context.Context, containerName stri
 		return ContainerState{}, fmt.Errorf("run docker inspect: %w", err)
 	}
 	// Make sure we unmarshal a valid json string.
-	out := regexp.MustCompile(`{.*}`).FindString(buf.String())
+	out := regexp.MustCompile(`{(.|\n)*}`).FindString(buf.String())
 	var containerState ContainerState
 	if err := json.Unmarshal([]byte(out), &containerState); err != nil {
 		return ContainerState{}, fmt.Errorf("unmarshal state of container %q:%w", containerName, err)
@@ -485,7 +485,7 @@ func (c DockerCmdClient) CheckDockerEngineRunning() error {
 		return fmt.Errorf("get docker info: %w", err)
 	}
 	// Make sure we unmarshal a valid json string.
-	out := regexp.MustCompile(`{.*}`).FindString(buf.String())
+	out := regexp.MustCompile(`{(.|\n)*}`).FindString(buf.String())
 	type dockerEngineNotRunningMsg struct {
 		ServerErrors []string `json:"ServerErrors"`
 	}
@@ -513,7 +513,7 @@ func (c DockerCmdClient) GetPlatform() (os, arch string, err error) {
 	}
 
 	// Make sure we unmarshal a valid json string.
-	out := regexp.MustCompile(`{.*}`).FindString(buf.String())
+	out := regexp.MustCompile(`{(.|\n)*}`).FindString(buf.String())
 	type dockerServer struct {
 		OS   string `json:"Os"`
 		Arch string `json:"Arch"`
