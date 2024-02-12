@@ -15,6 +15,7 @@ import (
 	"os"
 	osexec "os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -437,8 +438,10 @@ func (d *DockerCmdClient) containerState(ctx context.Context, containerName stri
 	if err := d.runner.RunWithContext(ctx, "docker", []string{"inspect", "--format", "{{json .State}}", containerID}, exec.Stdout(buf)); err != nil {
 		return ContainerState{}, fmt.Errorf("run docker inspect: %w", err)
 	}
+	// Make sure we unmarshal a valid json string.
+	out := regexp.MustCompile(`{(.|\n)*}`).FindString(buf.String())
 	var containerState ContainerState
-	if err := json.Unmarshal([]byte(strings.TrimSpace(buf.String())), &containerState); err != nil {
+	if err := json.Unmarshal([]byte(out), &containerState); err != nil {
 		return ContainerState{}, fmt.Errorf("unmarshal state of container %q:%w", containerName, err)
 	}
 	return containerState, nil
@@ -477,13 +480,12 @@ func (c DockerCmdClient) CheckDockerEngineRunning() error {
 		return ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, exec.Stdout(buf))
+	err := c.runner.Run("docker", []string{"info", "-f", "json"}, exec.Stdout(buf))
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
-	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
-	// {"ServerErrors":["Cannot connect...}
-	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
+	// Make sure we unmarshal a valid json string.
+	out := regexp.MustCompile(`{(.|\n)*}`).FindString(buf.String())
 	type dockerEngineNotRunningMsg struct {
 		ServerErrors []string `json:"ServerErrors"`
 	}
@@ -510,7 +512,8 @@ func (c DockerCmdClient) GetPlatform() (os, arch string, err error) {
 		return "", "", fmt.Errorf("run docker version: %w", err)
 	}
 
-	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
+	// Make sure we unmarshal a valid json string.
+	out := regexp.MustCompile(`{(.|\n)*}`).FindString(buf.String())
 	type dockerServer struct {
 		OS   string `json:"Os"`
 		Arch string `json:"Arch"`
