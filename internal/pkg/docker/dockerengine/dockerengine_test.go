@@ -425,7 +425,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 		"error running docker info": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().Run("docker", []string{"info", "-f", "json"}, gomock.Any()).Return(mockError)
+				mockCmd.EXPECT().Run("docker", []string{"info", "-f", "{{json .}}"}, gomock.Any()).Return(mockError)
 			},
 
 			wantedErr: fmt.Errorf("get docker info: some error"),
@@ -433,7 +433,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 		"return when docker engine is not started": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().Run("docker", []string{"info", "-f", "json"}, gomock.Any()).
+				mockCmd.EXPECT().Run("docker", []string{"info", "-f", "{{json .}}"}, gomock.Any()).
 					Do(func(_ string, _ []string, opt exec.CmdOption) {
 						cmd := &osexec.Cmd{}
 						opt(cmd)
@@ -449,7 +449,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 		"success": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockCmd = NewMockCmd(controller)
-				mockCmd.EXPECT().Run("docker", []string{"info", "-f", "json"}, gomock.Any()).
+				mockCmd.EXPECT().Run("docker", []string{"info", "-f", "{{json .}}"}, gomock.Any()).
 					Do(func(_ string, _ []string, opt exec.CmdOption) {
 						cmd := &osexec.Cmd{}
 						opt(cmd)
