@@ -480,7 +480,7 @@ func (c DockerCmdClient) CheckDockerEngineRunning() error {
 		return ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"info", "-f", "json"}, exec.Stdout(buf))
+	err := c.runner.Run("docker", []string{"info", "-f", "{{json .}}"}, exec.Stdout(buf))
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
