@@ -734,7 +734,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 		return nil
 	}
 	port, err := o.prompt.Get(
-		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port(s)")),
+		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
 		svcInitSvcPortHelpPrompt,
 		validateSvcPort,
 		prompt.WithDefaultInput(defaultPort),
