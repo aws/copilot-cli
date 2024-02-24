@@ -223,6 +223,7 @@ func (o *packageEnvOpts) Execute() error {
 				parentErr: err,
 			}
 		}
+		return nil
 	}
 	addonsTemplate, err := packager.AddonsTemplate()
 	if err != nil {
