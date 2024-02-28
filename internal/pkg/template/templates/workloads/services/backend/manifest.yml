@@ -42,16 +42,14 @@ platform: {{.Platform.PlatformString}}     # See https://aws.github.io/copilot-c
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 {{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
-{{- end}}
 {{- if .ImageConfig.Port}}
 network:
   connect: true # Enable Service Connect for intra-environment traffic between services.
-{{- end}}
-{{- if not .TaskConfig.IsWindows}}
+{{- end}}{{/* end if .ImageConfig.Port */}}
 
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
-{{- end}}
+{{- end}}{{/* end if not .TaskConfig.IsWindows */}}
 
 # Optional fields for more advanced use-cases.
 #
