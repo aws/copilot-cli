@@ -362,7 +362,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
-		"error if fail to validate windows": {
+		"error if fail to validate windows with volumes": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
@@ -391,6 +391,30 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if Windows is used with service connect": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+					},
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
+						},
+					},
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							EnableServiceConnect: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "validate Windows: service connect (`network.connect`) is not supported for Window",
 		},
 		"error if fail to validate ARM": {
 			lbConfig: LoadBalancedWebService{
@@ -665,7 +689,7 @@ func TestBackendService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
-		"error if fail to validate Windows": {
+		"error if fail to validate Windows with volumes": {
 			config: BackendService{
 				Workload: Workload{Name: aws.String("mockName")},
 				BackendServiceConfig: BackendServiceConfig{
@@ -687,6 +711,23 @@ func TestBackendService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if Windows is used with service connect": {
+			config: BackendService{
+				Workload: Workload{Name: aws.String("mockName")},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+					},
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							EnableServiceConnect: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "validate Windows: service connect (`network.connect`) is not supported for Window",
 		},
 		"error if fail to validate ARM": {
 			config: BackendService{
