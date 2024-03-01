@@ -30,7 +30,7 @@ network:
 
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
- 
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

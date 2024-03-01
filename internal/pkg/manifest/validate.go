@@ -272,6 +272,9 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
+		if l.Network.Connect.Enabled() {
+			return fmt.Errorf("validate Windows: service connect (`network.connect`) is not supported for Windows")
+		}
 	}
 	if l.TaskConfig.IsARM() {
 		if err = validateARM(validateARMOpts{
@@ -401,6 +404,9 @@ func (b BackendServiceConfig) validate() error {
 			readOnlyFS: b.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
+		}
+		if b.Network.Connect.Enabled() {
+			return fmt.Errorf("validate Windows: service connect (`network.connect`) is not supported for Windows")
 		}
 	}
 	if b.TaskConfig.IsARM() {
