@@ -69,10 +69,12 @@ sidecars:
 network:
   vpc:
     security_groups:
-      - sg-0c10c4fe23f5e5361
-      - sg-09295097b2a41b59d
-      - from_cfn: MyUserDBAccessSecurityGroup1
-      - from_cfn: MyUserDBAccessSecurityGroup2
+      deny_default: true
+      groups:
+        - sg-0c10c4fe23f5e5361
+        - sg-09295097b2a41b59d
+        - from_cfn: MyUserDBAccessSecurityGroup1
+        - from_cfn: MyUserDBAccessSecurityGroup2
 
 environments:
   test:
