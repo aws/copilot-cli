@@ -147,7 +147,7 @@ CodeBuild のビルドプロジェクトで利用する Docker イメージの U
 build:
   additional_policy:
     PolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Action:
