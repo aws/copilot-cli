@@ -61,6 +61,7 @@ type deployMocks struct {
 	mockValidator              *mocks.MockaliasCertValidator
 	mockLabeledTermPrinter     *mocks.MockLabeledTermPrinter
 	mockdockerEngineRunChecker *mocks.MockdockerEngineRunChecker
+	mockELBGetter              *mocks.MockelbGetter
 }
 
 type mockTemplateFS struct {

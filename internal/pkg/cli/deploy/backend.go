@@ -164,22 +164,22 @@ func (d *backendSvcDeployer) validateImportedALBConfig() error {
 	if alb.Scheme != "internal" {
 		return fmt.Errorf(`imported ALB %q for Backend Service %q should have "internal" Scheme value`, alb.ARN, aws.StringValue(d.backendMft.Name))
 	}
-	if len(alb.Listeners) == 0 || len(alb.Listeners) > 2 {
-		return fmt.Errorf(`imported ALB %q must have either one or two listeners`, alb.ARN)
+	if len(alb.Listeners) == 0 {
+		return fmt.Errorf(`imported ALB %q must have at least one listener. For two listeners, one must be of protocol HTTP and the other of protocol HTTPS`, alb.ARN)
 	}
 	if len(alb.Listeners) == 1 {
 		return nil
 	}
-	var isHTTP, isHTTPS bool
+	var quantHTTP, quantHTTPS int
 	for _, listener := range alb.Listeners {
 		if listener.Protocol == "HTTP" {
-			isHTTP = true
+			quantHTTP += 1
 		} else if listener.Protocol == "HTTPS" {
-			isHTTPS = true
+			quantHTTPS += 1
 		}
 	}
-	if !(isHTTP && isHTTPS) {
-		return fmt.Errorf("imported ALB %q must have listeners of protocols HTTP and HTTPS", alb.ARN)
+	if quantHTTP != 1 || quantHTTPS != 1 {
+		return fmt.Errorf("imported ALB %q must have exactly one listener of protocol HTTP and exactly one listener of protocol HTTPS", alb.ARN)
 	}
 	return nil
 }

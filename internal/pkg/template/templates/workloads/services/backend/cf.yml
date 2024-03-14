@@ -142,15 +142,13 @@ Resources:
       {{- end }}
       LoadBalancers:
         {{- range $i, $rule := .ALBListener.Rules}}
-          {{- if $.ImportedALB}}
         - ContainerName: {{$rule.TargetContainer}}
           ContainerPort: {{$rule.TargetPort}}
+        {{- if $.ImportedALB}}
           TargetGroupArn: !Ref TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
-          {{- else}}
-        - ContainerName: {{$rule.TargetContainer}}
-          ContainerPort: {{$rule.TargetPort}}
+        {{- else}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
-          {{- end}}
+        {{- end}}
         {{- end}}
       {{- end }}
 {{include "efs-access-point" . | indent 2}}

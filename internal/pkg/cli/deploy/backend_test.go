@@ -337,9 +337,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 					Listeners: []elbv2.Listener{},
 				}, nil)
 			},
-			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have either one or two listeners`,
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have at least one listener. For two listeners, one must be of protocol HTTP and the other of protocol HTTPS`,
 		},
-		"failure if imported ALB has more than 3 listeners": {
+		"failure if imported ALB has more than 2 listeners": {
 			App: &config.Application{
 				Name: mockAppName,
 			},
@@ -381,7 +381,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 						}},
 				}, nil)
 			},
-			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have either one or two listeners`,
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have exactly one listener of protocol HTTP and exactly one listener of protocol HTTPS`,
 		},
 		"failure if imported ALB has two listeners but they don't have HTTP and HTTPS protocols": {
 			App: &config.Application{
@@ -423,7 +423,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 						}},
 				}, nil)
 			},
-			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have listeners of protocols HTTP and HTTPS`,
+			expectedErr: `validate imported ALB configuration for "http": imported ALB "mockALBARN" must have exactly one listener of protocol HTTP and exactly one listener of protocol HTTPS`,
 		},
 		"success imported ALB": {
 			App: &config.Application{
