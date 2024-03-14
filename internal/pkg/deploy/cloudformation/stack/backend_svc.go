@@ -145,6 +145,9 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	importedALBConfig, err := s.convertImportedALB()
+	if err != nil {
+		return "", err
+	}
 	scTarget := s.manifest.ServiceConnectTarget(exposedPorts)
 	scOpts := template.ServiceConnectOpts{
 		Server: convertServiceConnectServer(s.manifest.Network.Connect, scTarget),
