@@ -59,3 +59,15 @@ $ copilot svc deploy --app my-app --env test
 
 service のデプロイに environment を `test`、applicatoon を `my-app` と指定しているため、Copilot は `/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/db_password` を `/copilot/my-app/test/secrets/db_password` と解釈します。
 (アプリケーションに秘密情報を渡す方法の詳細については、[こちら](../developing/secrets.ja.md))を参照してください。)
+
+## エスケープ処理
+変数を置換したくない場合、先頭にバックスラッシュを付けます:
+
+```yaml
+command: echo hello \${name}
+# or command: "echo \\${name}"
+variable:
+  name: world
+```
+
+この場合、 Copilot は `${name}` を環境変数 `name` で置き換えようとはしません。

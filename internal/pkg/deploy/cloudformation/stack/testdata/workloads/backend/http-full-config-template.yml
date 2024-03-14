@@ -33,6 +33,9 @@ Parameters:
     Description: "URL of the environment file."
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
   LogRetention:
     Type: Number
     Default: 30
@@ -90,6 +93,8 @@ Resources:
               Value: !Sub "${EnvName}"
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub "${WorkloadName}"
+            - Name: COPILOT_LB_DNS
+              Value: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
           EnvironmentFiles:
             - !If
               - HasEnvFile
@@ -119,6 +124,8 @@ Resources:
               Value: !Sub "${EnvName}"
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub "${WorkloadName}"
+            - Name: COPILOT_LB_DNS
+              Value: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
           EnvironmentFiles:
             - !If
               - HasEnvFileForfluentbit
@@ -184,7 +191,17 @@ Resources:
                 Action:
                   - "kms:Decrypt"
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*"
+                  - !Ref ArtifactKeyARN
+              - Sid: DecryptTaggedKMSKey
+                Effect: 'Allow'
+                Action:
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
         - !If
           # Optional IAM permission required by ECS task def env file
           # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam
@@ -419,7 +436,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt "RulePriorityFunctionRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   RulePriorityFunctionRole:
     Metadata:
       "aws:copilot:description": "An IAM Role to describe load balancer rules for assigning a priority"
@@ -551,7 +568,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "EnvControllerRole.Arn"
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   EnvControllerRole:
     Metadata:
       "aws:copilot:description": "An IAM role to update your environment stack"

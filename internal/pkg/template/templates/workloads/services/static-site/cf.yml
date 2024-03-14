@@ -27,6 +27,9 @@ Parameters:
     Description: URL of the addons nested stack template within the S3 bucket.
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
 
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
@@ -163,7 +166,7 @@ Resources:
     Properties:
       Handler: index.handler
       Role: !GetAtt TriggerStateMachineFunctionRole.Arn
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
       Timeout: 900
       MemorySize: 512
       {{- with $cr := index .CustomResources "TriggerStateMachineFunction" }}
@@ -329,12 +332,10 @@ Resources:
                   - arn:aws:s3:::{{.AssetMappingFileBucket}}/local-assets/*
               - Effect: Allow
                 Action: kms:Decrypt
-                Resource:
-                  Fn::ImportValue:
-                    !Sub "${AppName}-ArtifactKey"
+                Resource: !Ref ArtifactKeyARN
                 Condition:
                   StringEquals:
-                    kms:EncryptionContext:aws:s3:arn: arn:aws:s3:::{{.AssetMappingFileBucket}}
+                    kms:EncryptionContext:aws:s3:arn: "arn:aws:s3:::{{.AssetMappingFileBucket}}"
                     kms:ViaService: !Sub 's3.${AWS::Region}.amazonaws.com'
         - PolicyName: ServiceBucketAccess
           PolicyDocument:
@@ -416,10 +417,6 @@ Resources:
       RootDNSRole: {{ .AppDNSDelegationRole }}
       DomainName:  {{ .AppDNSName }}
       Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
-      {{- if .HostedZones}}
-      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
-      AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
-      {{- end}}
 
   CustomDomainFunction:
     Type: AWS::Lambda::Function
@@ -433,7 +430,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CustomDomainRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
 
   CustomDomainRole:
     Metadata:
@@ -491,10 +488,6 @@ Resources:
       DomainName:  {{ .AppDNSName }}
       IsCloudFrontCertificate: true
       Aliases: {{ if .StaticSiteAlias }} [{{ quote .StaticSiteAlias }}] {{ else }} [] {{ end }}
-      {{- if .HostedZones}}
-      RootHostedZoneId: {{.HostedZones.RootDomainHostedZoneId}}
-      AppHostedZoneId: {{.HostedZones.AppDomainHostedZoneId}}
-      {{- end}}
 
   CertificateValidationFunction:
     Type: AWS::Lambda::Function
@@ -508,7 +501,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CertificateValidatorRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
 
   CertificateValidatorRole:
     Metadata:

@@ -46,9 +46,10 @@ Optionally, when you set up an application, you can provide a domain name that y
 
 An internal ALB is created when a Backend Service with [`http`](../manifest/backend-service.en.md#http) configured in its manifest is deployed in an environment. For an HTTPS endpoint, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag when running `copilot env init` and import a VPC with only private subnets. For more on internal ALBs, go [here](../developing/internal-albs.en.md).
 
-If you already have a public-facing ALB in your VPC and would like to use it instead of letting Copilot create one, specify that ALB by name or ARN in your Load-Balanced Web Service's manifest before deploying it to the environment:
+If you already have an ALB in your VPC and would like to use it instead of letting Copilot create one, specify that ALB by name or ARN in your Load-Balanced Web Service's (for internet-facing ALBs) or Backend Service's (for internal ALBs) manifest before deploying it to the environment:
 ```yaml
 http:
+  path: '/'
   alb: [name or ARN]
 ```
 Your imported ALB will be associated with only that service (and any others that similarly import it), rather than shared among all load-balanced services in the environment.  

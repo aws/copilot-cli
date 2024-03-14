@@ -4,7 +4,8 @@
 "use strict";
 
 describe("trigger state machine", () => {
-  const aws = require("aws-sdk-mock");
+  const sfn = require("@aws-sdk/client-sfn");
+  const { mockClient } = require('aws-sdk-client-mock');
   const lambdaTester = require("lambda-tester").noVersionCheck();
   const nock = require("nock");
   const sinon = require("sinon");
@@ -19,12 +20,14 @@ describe("trigger state machine", () => {
 
   const origConsole = console;
 
+  const sfnMock = mockClient(sfn.SFNClient);
+
   handler.withDeadlineExpired(() => {
     return new Promise((resolve, reject) => { });
   });
 
   afterEach(() => {
-    aws.restore();
+   sfnMock.reset();
   });
   afterAll(() => {
     console = origConsole;
@@ -91,7 +94,7 @@ describe("trigger state machine", () => {
       .reply(200);
 
     const fake = sinon.fake.resolves({ status: "SUCCEEDED" });
-    aws.mock("StepFunctions", "startSyncExecution", fake);
+    sfnMock.on(sfn.StartSyncExecutionCommand).callsFake(fake);
 
     return lambdaTester(handler.handler)
       .context({
@@ -129,7 +132,7 @@ describe("trigger state machine", () => {
       .reply(200);
 
     const fake = sinon.fake.resolves({ status: "FAILED", cause: "some error" });
-    aws.mock("StepFunctions", "startSyncExecution", fake);
+    sfnMock.on(sfn.StartSyncExecutionCommand).callsFake(fake);
 
     return lambdaTester(handler.handler)
       .context({
@@ -168,7 +171,7 @@ describe("trigger state machine", () => {
       .reply(200);
 
     const fake = sinon.fake.rejects("some error");
-    aws.mock("StepFunctions", "startSyncExecution", fake);
+    sfnMock.on(sfn.StartSyncExecutionCommand).callsFake(fake);
 
     return lambdaTester(handler.handler)
       .context({

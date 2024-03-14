@@ -3,7 +3,9 @@
 "use strict";
 
 describe("DNS Validated Certificate Handler", () => {
-  const AWS = require("aws-sdk-mock");
+  const r53 = require("@aws-sdk/client-route-53");
+  const acm = require("@aws-sdk/client-acm");
+  const{mockClient} = require("aws-sdk-client-mock");
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
   const handler = require("../lib/dns-cert-validator");
@@ -11,6 +13,8 @@ describe("DNS Validated Certificate Handler", () => {
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
   const LogGroup = "/aws/lambda/testLambda";
   const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
+  const r53Mock = mockClient(r53.Route53Client);
+  const acmMock = mockClient(acm.ACMClient);
 
   let origLog = console.log;
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
@@ -226,23 +230,16 @@ describe("DNS Validated Certificate Handler", () => {
     handler.withDefaultResponseURL(ResponseURL);
     handler.withDefaultLogGroup(LogGroup);
     handler.withDefaultLogStream(LogStream);
-    handler.withWaiter(function () {
-      // Mock waiter is merely a self-fulfilling promise
-      return {
-        promise: () => {
-          return new Promise((resolve) => {
-            resolve();
-          });
-        },
-      };
-    });
     handler.withSleep(spySleep);
     console.log = function () {};
+    handler.waitForCertificateValidation = async function () { };
+    handler.waitForRecordChange = async function () { };
   });
   afterEach(() => {
     // Restore waiters and logger
     handler.reset();
-    AWS.restore();
+    r53Mock.reset();
+    acmMock.reset();
     console.log = origLog;
     spySleep.resetHistory();
   });
@@ -339,14 +336,10 @@ describe("DNS Validated Certificate Handler", () => {
       ],
     });
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -480,13 +473,9 @@ describe("DNS Validated Certificate Handler", () => {
       },
     });
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -550,8 +539,8 @@ describe("DNS Validated Certificate Handler", () => {
       DomainValidationOptions: newCertValidateOptions,
     });
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -609,8 +598,8 @@ describe("DNS Validated Certificate Handler", () => {
       DomainValidationOptions: legacyCertValidatorOptions,
     });
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -684,14 +673,10 @@ describe("DNS Validated Certificate Handler", () => {
       HostedZones: [],
     });
 
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -742,7 +727,7 @@ describe("DNS Validated Certificate Handler", () => {
     const requestCertificateFake = sinon.fake.resolves({
       CertificateArn: testCertificateArn,
     });
-    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
+    acmMock.on(acm.RequestCertificateCommand).callsFake(requestCertificateFake);
 
     const describeCertificateFake = sinon.fake.resolves({
       Certificate: {
@@ -750,18 +735,14 @@ describe("DNS Validated Certificate Handler", () => {
         DomainValidationOptions: legacyCertValidatorOptions,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const changeResourceRecordSetsFake = sinon.fake.resolves({
       ChangeInfo: {
         Id: "bogus",
       },
     });
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -801,10 +782,10 @@ describe("DNS Validated Certificate Handler", () => {
         DomainValidationOptions: legacyCertValidatorOptions,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.onFirstCall().resolves({
@@ -823,18 +804,13 @@ describe("DNS Validated Certificate Handler", () => {
         },
       ],
     });
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
-
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
     const changeResourceRecordSetsFake = sinon.fake.resolves({
       ChangeInfo: {
         Id: "bogus",
       },
     });
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -901,10 +877,10 @@ describe("DNS Validated Certificate Handler", () => {
         DomainValidationOptions: newCertValidateOptions,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.resolves({
@@ -919,7 +895,7 @@ describe("DNS Validated Certificate Handler", () => {
         },
       ],
     });
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -979,10 +955,10 @@ describe("DNS Validated Certificate Handler", () => {
         DomainValidationOptions: newCertValidatorOptionsWithoutV2,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.resolves({
@@ -997,18 +973,14 @@ describe("DNS Validated Certificate Handler", () => {
         },
       ],
     });
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
 
     const changeResourceRecordSetsFake = sinon.fake.resolves({
       ChangeInfo: {
         Id: "bogus",
       },
     });
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
 
     const listHostedZonesByNameFake = sinon.fake.resolves({
       HostedZones: [
@@ -1017,7 +989,7 @@ describe("DNS Validated Certificate Handler", () => {
         },
       ],
     });
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1091,10 +1063,10 @@ describe("DNS Validated Certificate Handler", () => {
         DomainValidationOptions: newCertValidatorOptionsWithoutV2,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.resolves({
@@ -1109,14 +1081,10 @@ describe("DNS Validated Certificate Handler", () => {
         },
       ],
     });
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
 
     const changeResourceRecordSetsFake = sinon.fake.rejects(new Error("Tried to delete resource record set [name='validate.unused.mockDomain.com', type='CNAME'] but it was not found"));
-    AWS.mock(
-        "Route53",
-        "changeResourceRecordSets",
-        changeResourceRecordSetsFake
-    );
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
 
     const listHostedZonesByNameFake = sinon.fake.resolves({
       HostedZones: [
@@ -1125,7 +1093,7 @@ describe("DNS Validated Certificate Handler", () => {
         },
       ],
     });
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
         .put("/", (body) => {
@@ -1190,10 +1158,10 @@ describe("DNS Validated Certificate Handler", () => {
     error.name = "ResourceNotFoundException";
 
     const describeCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1250,14 +1218,14 @@ describe("DNS Validated Certificate Handler", () => {
         InUseBy: [],
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.resolves({});
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1307,12 +1275,12 @@ describe("DNS Validated Certificate Handler", () => {
         InUseBy: [usedByArn],
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const error = new Error();
     error.name = "ResourceInUseException";
     const deleteCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1362,10 +1330,10 @@ describe("DNS Validated Certificate Handler", () => {
     error.name = "SomeOtherException";
 
     const describeCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1410,16 +1378,16 @@ describe("DNS Validated Certificate Handler", () => {
         CertificateArn: testCertificateArn,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const error = new Error();
     error.name = "SomeOtherException";
     const deleteCertificateFake = sinon.fake.rejects(error);
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.resolves({});
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1466,14 +1434,14 @@ describe("DNS Validated Certificate Handler", () => {
         CertificateArn: testCertificateArn,
       },
     });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    acmMock.on(acm.DescribeCertificateCommand).callsFake(describeCertificateFake);
 
     const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    acmMock.on(acm.DeleteCertificateCommand).callsFake(deleteCertificateFake);
 
     const listCertificatesFake = sinon.stub();
     listCertificatesFake.resolves({});
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+    acmMock.on(acm.ListCertificatesCommand).callsFake(listCertificatesFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {

@@ -109,6 +109,7 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 			Manifest:           d.jobMft,
 			RawManifest:        d.rawMft,
 			ArtifactBucketName: d.resources.S3Bucket,
+			ArtifactKey:        d.resources.KMSKeyARN,
 			RuntimeConfig:      *rc,
 			Addons:             d.addons,
 		})

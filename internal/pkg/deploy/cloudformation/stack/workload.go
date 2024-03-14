@@ -37,6 +37,7 @@ const (
 	WorkloadTaskCountParamKey         = "TaskCount"
 	WorkloadLogRetentionParamKey      = "LogRetention"
 	WorkloadEnvFileARNParamKey        = "EnvFileARN"
+	WorkloadArtifactKeyARNParamKey    = "ArtifactKeyARN"
 	WorkloadLoggingEnvFileARNParamKey = "LoggingEnvFileARN"
 
 	FmtSidecarEnvFileARNParamKey = "EnvFileARNFor%s"
@@ -152,6 +153,7 @@ type wkld struct {
 	app                string
 	permBound          string
 	artifactBucketName string
+	artifactKey        string
 	rc                 RuntimeConfig
 	image              location
 	rawManifest        string
@@ -171,8 +173,8 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.PushedImages != nil {
-		img = w.rc.PushedImages[w.name].URI()
+	if image, ok := w.rc.PushedImages[w.name]; ok {
+		img = image.URI()
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -194,6 +196,10 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(w.rc.AddonsTemplateURL),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(w.artifactKey),
 		},
 	}, nil
 }
@@ -410,13 +416,19 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.image != nil {
 		img = w.image.GetLocation()
 	}
-	if w.rc.PushedImages != nil {
-		img = w.rc.PushedImages[w.name].URI()
+	if image, ok := w.rc.PushedImages[w.name]; ok {
+		img = image.URI()
 	}
 
-	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
-	if err != nil {
-		return nil, fmt.Errorf("determine image repository type: %w", err)
+	// This happens only when `copilot svc package` is used with out `--upload-assets` flag.
+	// In case of `image.build` is used, then `w.rc.PushedImages` will be nil, which leads to `img` to be empty.
+	// Skip the image repository type check in that case.
+	var imageRepositoryType string
+	if img != "" {
+		imageRepositoryType, err = apprunner.DetermineImageRepositoryType(img)
+		if err != nil {
+			return nil, fmt.Errorf("determine image repository type: %w", err)
+		}
 	}
 
 	if w.imageConfig.Port == nil {

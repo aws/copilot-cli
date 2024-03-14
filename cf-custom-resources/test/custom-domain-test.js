@@ -3,7 +3,8 @@
 "use strict";
 
 describe("DNS Validated Certificate Handler", () => {
-  const AWS = require("aws-sdk-mock");
+  const r53 = require('@aws-sdk/client-route-53');
+  const { mockClient } = require('aws-sdk-client-mock');
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
   const handler = require("../lib/custom-domain");
@@ -17,37 +18,24 @@ describe("DNS Validated Certificate Handler", () => {
   const testEnvName = "test";
   const testDomainName = "example.com";
   const testAliases = `{"frontend": ["v1.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
-  const testAliases2 = `{"frontend": ["v2.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
   const testUpdatedAliases = `{"frontend": ["v2.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
   const testAccessDNS =
     "examp-publi-gsedbvf8t12c-852245110.us-west-1.elb.amazonaws.com.";
   const testLBHostedZone = "Z1H1FL5HABSF5";
   const testHostedZoneId = "Z3P5QSUBK4POTI";
   const testRootDNSRole = "mockRole";
-  const mockRootHostedZoneId = "Z00ABC"
-  const mockAppHostedZoneID = "Z00DEF"
-  const mockEnvHostedZoneID = "Z00GHI"
+  const r53Mock = mockClient(r53.Route53Client);
 
   beforeEach(() => {
     handler.withDefaultResponseURL(ResponseURL);
     handler.withDefaultLogGroup(LogGroup);
     handler.withDefaultLogStream(LogStream);
-    handler.withWaiter(function () {
-      // Mock waiter is merely a self-fulfilling promise
-      return {
-        promise: () => {
-          return new Promise((resolve) => {
-            resolve();
-          });
-        },
-      };
-    });
-    console.log = function () {};
+    handler.waitForRecordChange = async function () { };
+    console.log = function () { };
   });
   afterEach(() => {
     // Restore waiters and logger
-    handler.reset();
-    AWS.restore();
+    r53Mock.reset();
     console.log = origLog;
   });
 
@@ -134,8 +122,7 @@ describe("DNS Validated Certificate Handler", () => {
     const listHostedZonesByNameFake = sinon.fake.resolves({
       HostedZones: [],
     });
-
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -186,12 +173,8 @@ describe("DNS Validated Certificate Handler", () => {
       ],
     });
 
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -246,68 +229,6 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Create success with out listhostedzones api call", () => {
-    const changeResourceRecordSetsFake = sinon.fake.resolves({
-      ChangeInfo: {
-        Id: "bogus",
-      },
-    });
-
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-
-    const request = nock(ResponseURL)
-      .put("/", (body) => {
-        return body.Status === "SUCCESS";
-      })
-      .reply(200);
-    return LambdaTester(handler.handler)
-      .event({
-        RequestType: "Create",
-        ResourceProperties: {
-          AppName: testAppName,
-          EnvName: testEnvName,
-          DomainName: testDomainName,
-          Aliases: testAliases2,
-          Region: "us-east-1",
-          PublicAccessDNS: testAccessDNS,
-          PublicAccessHostedZone: testLBHostedZone,
-          AppDNSRole: testRootDNSRole,
-          RootHostedZoneId: mockRootHostedZoneId,
-          AppHostedZoneId:mockAppHostedZoneID,
-          EnvHostedZoneId: mockEnvHostedZoneID,
-        },
-      })
-      .expectResolve(() => {
-        sinon.assert.calledWith(
-          changeResourceRecordSetsFake,
-          sinon.match({
-            ChangeBatch: {
-              Changes: [
-                {
-                  Action: "UPSERT",
-                  ResourceRecordSet: {
-                    Name: `v2.${testEnvName}.${testAppName}.${testDomainName}`,
-                    Type: "A",
-                    AliasTarget: {
-                      HostedZoneId: testLBHostedZone,
-                      DNSName: testAccessDNS,
-                      EvaluateTargetHealth: true,
-                    },
-                  },
-                },
-              ],
-            },
-            HostedZoneId: mockEnvHostedZoneID,
-          })
-        );
-        expect(request.isDone()).toBe(true);
-      });
-  });
-
   test("Update success", () => {
     const changeResourceRecordSetsFake = sinon.fake.resolves({
       ChangeInfo: {
@@ -323,12 +244,8 @@ describe("DNS Validated Certificate Handler", () => {
       ],
     });
 
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -418,12 +335,8 @@ describe("DNS Validated Certificate Handler", () => {
       ],
     });
 
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -484,12 +397,8 @@ describe("DNS Validated Certificate Handler", () => {
       ],
     });
 
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+    r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(changeResourceRecordSetsFake);
+    r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {

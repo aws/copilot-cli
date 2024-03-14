@@ -50,7 +50,6 @@ type deployMocks struct {
 	mockRepositoryService      *mocks.MockrepositoryService
 	mockEndpointGetter         *mocks.MockendpointGetter
 	mockSpinner                *mocks.Mockspinner
-	mockPublicCIDRBlocksGetter *mocks.MockpublicCIDRBlocksGetter
 	mockSNSTopicsLister        *mocks.MocksnsTopicsLister
 	mockServiceDeployer        *mocks.MockserviceDeployer
 	mockServiceForceUpdater    *mocks.MockserviceForceUpdater
@@ -62,8 +61,6 @@ type deployMocks struct {
 	mockValidator              *mocks.MockaliasCertValidator
 	mockLabeledTermPrinter     *mocks.MockLabeledTermPrinter
 	mockdockerEngineRunChecker *mocks.MockdockerEngineRunChecker
-	mockdomainHostedZonegetter *mocks.MockdomainHostedZoneGetter
-	mockELBGetter              *mocks.MockelbGetter
 }
 
 type mockTemplateFS struct {
@@ -924,26 +921,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("validate ALB runtime configuration for \"http\": validate aliases against the imported CDN certificate for env mockEnv: some error"),
 		},
-		"fail to get public CIDR blocks": {
-			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Listener: manifest.NetworkLoadBalancerListener{
-					Port: aws.String("443/tcp"),
-				},
-			},
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name: mockAppName,
-			},
-			mock: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
-				m.mockPublicCIDRBlocksGetter.EXPECT().PublicCIDRBlocks().Return(nil, errors.New("some error"))
-			},
-			wantErr: fmt.Errorf("get public CIDR blocks information from the VPC of environment mockEnv: some error"),
-		},
 		"alias used while app is not associated with a domain": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inEnvironment: &config.Environment{
@@ -1233,7 +1210,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", false, gomock.Any()).Return(nil)
-				m.mockdomainHostedZonegetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, "mockDomain")).Return("Z00ABC", nil)
 			},
 		},
 		"success": {
@@ -1258,7 +1234,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil).Times(2)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", false, gomock.Any()).Return(nil)
-				m.mockdomainHostedZonegetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, "mockDomain")).Return("Z00ABC", nil)
 			},
 		},
 		"success with http redirect disabled and alb certs imported": {
@@ -1334,7 +1309,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil).Times(2)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", false, gomock.Any()).Return(nil)
-				m.mockdomainHostedZonegetter.EXPECT().PublicDomainHostedZoneID(fmt.Sprintf("%s.%s", mockAppName, "mockDomain")).Return("Z00ABC", nil)
 			},
 		},
 		"success with force update": {
@@ -1366,15 +1340,13 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockAppVersionGetter:       mocks.NewMockversionGetter(ctrl),
-				mockEnvVersionGetter:       mocks.NewMockversionGetter(ctrl),
-				mockEndpointGetter:         mocks.NewMockendpointGetter(ctrl),
-				mockServiceDeployer:        mocks.NewMockserviceDeployer(ctrl),
-				mockServiceForceUpdater:    mocks.NewMockserviceForceUpdater(ctrl),
-				mockSpinner:                mocks.NewMockspinner(ctrl),
-				mockPublicCIDRBlocksGetter: mocks.NewMockpublicCIDRBlocksGetter(ctrl),
-				mockValidator:              mocks.NewMockaliasCertValidator(ctrl),
-				mockdomainHostedZonegetter: mocks.NewMockdomainHostedZoneGetter(ctrl),
+				mockAppVersionGetter:    mocks.NewMockversionGetter(ctrl),
+				mockEnvVersionGetter:    mocks.NewMockversionGetter(ctrl),
+				mockEndpointGetter:      mocks.NewMockendpointGetter(ctrl),
+				mockServiceDeployer:     mocks.NewMockserviceDeployer(ctrl),
+				mockServiceForceUpdater: mocks.NewMockserviceForceUpdater(ctrl),
+				mockSpinner:             mocks.NewMockspinner(ctrl),
+				mockValidator:           mocks.NewMockaliasCertValidator(ctrl),
 			}
 			tc.mock(m)
 
@@ -1386,17 +1358,16 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			deployer := lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:                   mockName,
-						app:                    tc.inApp,
-						env:                    tc.inEnvironment,
-						envConfig:              tc.inEnvironmentConfig(),
-						resources:              mockResources,
-						deployer:               m.mockServiceDeployer,
-						endpointGetter:         m.mockEndpointGetter,
-						spinner:                m.mockSpinner,
-						envVersionGetter:       m.mockEnvVersionGetter,
-						overrider:              new(override.Noop),
-						domainHostedZoneGetter: m.mockdomainHostedZonegetter,
+						name:             mockName,
+						app:              tc.inApp,
+						env:              tc.inEnvironment,
+						envConfig:        tc.inEnvironmentConfig(),
+						resources:        mockResources,
+						deployer:         m.mockServiceDeployer,
+						endpointGetter:   m.mockEndpointGetter,
+						spinner:          m.mockSpinner,
+						envVersionGetter: m.mockEnvVersionGetter,
+						overrider:        new(override.Noop),
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater
@@ -1405,8 +1376,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						return mockNowTime
 					},
 				},
-				appVersionGetter:       m.mockAppVersionGetter,
-				publicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
+				appVersionGetter: m.mockAppVersionGetter,
 				newAliasCertValidator: func(region *string) aliasCertValidator {
 					return m.mockValidator
 				},

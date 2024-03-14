@@ -575,6 +575,42 @@ func TestClient_ServiceConnectServices(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`get service: get ECS service mockService: some error`),
 		},
+		"return early when no deployments": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: mockSvcARN},
+					}, nil)
+				m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: "mockARN1"}, {ARN: "mockARN2"},
+					}, nil)
+				m.ecsClient.EXPECT().ActiveClusters("mockARN1", "mockARN2").Return([]string{"mockARN1"}, nil)
+				m.ecsClient.EXPECT().ActiveServices("mockARN1", []string{mockSvcARN}).Return([]string{mockSvcARN}, nil)
+				m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
+					Deployments: []*awsecs.Deployment{},
+				}, nil)
+			},
+		},
+		"return early when service connect is not enabled": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: mockSvcARN},
+					}, nil)
+				m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgEnvClusterInput).
+					Return([]*resourcegroups.Resource{
+						{ARN: "mockARN1"}, {ARN: "mockARN2"},
+					}, nil)
+				m.ecsClient.EXPECT().ActiveClusters("mockARN1", "mockARN2").Return([]string{"mockARN1"}, nil)
+				m.ecsClient.EXPECT().ActiveServices("mockARN1", []string{mockSvcARN}).Return([]string{mockSvcARN}, nil)
+				m.ecsClient.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
+					Deployments: []*awsecs.Deployment{
+						{},
+					},
+				}, nil)
+			},
+		},
 		"error listing namespace": {
 			setupMocks: func(m clientMocks) {
 				m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).

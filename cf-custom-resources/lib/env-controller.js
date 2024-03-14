@@ -2,17 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const { CloudFormation, waitUntilStackUpdateComplete, DescribeStacksCommand, UpdateStackCommand } = require("@aws-sdk/client-cloudformation");
 
 // These are used for test purposes only
 let defaultResponseURL;
 let defaultLogGroup;
 let defaultLogStream;
 
-const updateStackWaiter = {
-  delay: 30,
-  maxAttempts: 29,
-};
 
 const AliasParamKey = "Aliases";
 
@@ -96,15 +92,14 @@ const controlEnv = async function (
   aliases,
   envControllerParameters
 ) {
-  var cfn = new aws.CloudFormation();
+  var cfn = new CloudFormation();
   aliases = aliases || [];
   envControllerParameters = envControllerParameters || [];
   while (true) {
     var describeStackResp = await cfn
-      .describeStacks({
-        StackName: stackName,
-      })
-      .promise();
+      .send(new DescribeStacksCommand({ 
+        StackName: stackName 
+      }));
     if (describeStackResp.Stacks.length !== 1) {
       throw new Error(`Cannot find environment stack ${stackName}`);
     }
@@ -165,14 +160,13 @@ const controlEnv = async function (
 
     try {
       await cfn
-        .updateStack({
+        .send(new UpdateStackCommand({
           StackName: stackName,
           Parameters: envParams,
           UsePreviousTemplate: true,
           RoleARN: exportedValues["CFNExecutionRoleARN"],
           Capabilities: updatedEnvStack.Capabilities,
-        })
-        .promise();
+      }));
     } catch (err) {
       if (
         !err.message.match(
@@ -182,31 +176,31 @@ const controlEnv = async function (
         throw err;
       }
       // If the other workload is updating the env stack, wait until update completes.
-      await cfn
-        .waitFor("stackUpdateComplete", {
-          StackName: stackName,
-          $waiter: updateStackWaiter,
-        })
-        .promise();
+      await exports.waitForStackUpdate(cfn, stackName);
       continue;
     }
     // Wait until update complete, then return the updated env stack output.
-    await cfn
-      .waitFor("stackUpdateComplete", {
-        StackName: stackName,
-        $waiter: updateStackWaiter,
-      })
-      .promise();
+    await exports.waitForStackUpdate(cfn, stackName);
     describeStackResp = await cfn
-      .describeStacks({
+      .send(new DescribeStacksCommand({
         StackName: stackName,
-      })
-      .promise();
+      }));
     if (describeStackResp.Stacks.length !== 1) {
       throw new Error(`Cannot find environment stack ${stackName}`);
     }
     return getExportedValues(describeStackResp.Stacks[0]);
   }
+};
+
+const waitForStackUpdate = async function (cfn, stackName) {
+  await waitUntilStackUpdateComplete({
+    client: cfn,
+    maxWaitTime: 30 * 29,
+    minDelay: 30,
+    maxDelay: 30,
+  },{
+    StackName: stackName,
+  });
 };
 
 /**
@@ -366,3 +360,10 @@ exports.withDefaultLogStream = function (logStream) {
 exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
 };
+
+/**
+ * @private
+ */
+exports.waitForStackUpdate = function(cfn, stackName) {
+  return waitForStackUpdate(cfn, stackName);
+}

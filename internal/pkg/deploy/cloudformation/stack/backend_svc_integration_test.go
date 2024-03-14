@@ -98,6 +98,7 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 				},
 				EnvManifest:        envConfig,
 				ArtifactBucketName: "bucket",
+				ArtifactKey:        "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 				Manifest:           mft.(*manifest.BackendService),
 				RuntimeConfig: stack.RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),

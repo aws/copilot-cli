@@ -2838,6 +2838,75 @@ func TestLoadBalancedWebService_BuildArgs(t *testing.T) {
 	}
 }
 
+func TestLoadBalancedWebService_ContainerDependencies(t *testing.T) {
+	testCases := map[string]struct {
+		in                 *LoadBalancedWebService
+		wantedDependencies map[string]ContainerDependency
+		wantedErr          error
+	}{
+		"return container dependencies of all containers": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(manifestinfo.LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								DependsOn: DependsOn{
+									"nginx": "start",
+								},
+							},
+						},
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"nginx": {
+							Essential: aws.Bool(true),
+						},
+						"nginx1": {
+							DependsOn: DependsOn{
+								"nginx":    "healthy",
+								"mock-svc": "start",
+							},
+						},
+					},
+					Logging: Logging{
+						ConfigFile: aws.String("mockConfigFile"),
+					},
+				},
+			},
+			wantedDependencies: map[string]ContainerDependency{
+				"mock-svc": {
+					IsEssential: true,
+					DependsOn: DependsOn{
+						"nginx": "start",
+					},
+				},
+				"nginx": {
+					IsEssential: true,
+				},
+				"nginx1": {
+					IsEssential: true,
+					DependsOn: DependsOn{
+						"nginx":    "healthy",
+						"mock-svc": "start",
+					},
+				},
+				"firelens_log_router": {},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.ContainerDependencies()
+			// THEN
+			require.Equal(t, tc.wantedDependencies, got)
+		})
+	}
+}
+
 func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
 	testCases := map[string]struct {
 		in     NetworkLoadBalancerConfiguration
@@ -2897,6 +2966,85 @@ func TestNetworkLoadBalancerConfiguration_NLBListeners(t *testing.T) {
 			got := tc.in.NLBListeners()
 			// THEN
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestLoadBalancedWebService_Dockerfile(t *testing.T) {
+	testCases := map[string]struct {
+		input                  *LoadBalancedWebService
+		expectedDockerfilePath string
+	}{
+		"specific dockerfile from buildargs": {
+			input: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("path/to/Dockerfile"),
+										},
+										BuildString: aws.String("other/path/to/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDockerfilePath: "path/to/Dockerfile",
+		},
+		"specific dockerfile from buildstring": {
+			input: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("path/to/Dockerfile"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDockerfilePath: "path/to/Dockerfile",
+		},
+		"dockerfile from context": {
+			input: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								ImageLocationOrBuild: ImageLocationOrBuild{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Context: aws.String("path/to"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDockerfilePath: "path/to/Dockerfile",
+		},
+	}
+
+	for name, tc := range testCases {
+		svc := tc.input
+
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			dockerfilePath := svc.Dockerfile()
+
+			// THEN
+			require.Equal(t, tc.expectedDockerfilePath, dockerfilePath)
 		})
 	}
 }

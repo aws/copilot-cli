@@ -103,6 +103,11 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *BackendService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Port returns the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {
@@ -137,6 +142,12 @@ func (s *BackendService) BuildArgs(contextDir string) (map[string]*DockerBuildAr
 // and the values are either env file paths or empty strings.
 func (s *BackendService) EnvFiles() map[string]string {
 	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
+}
+
+// ContainerDependencies returns a map of ContainerDependency objects for the BackendService
+// including dependencies for its main container, any logging sidecar, and additional sidecars.
+func (s *BackendService) ContainerDependencies() map[string]ContainerDependency {
+	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)
 }
 
 func (s *BackendService) subnets() *SubnetListOrArgs {
