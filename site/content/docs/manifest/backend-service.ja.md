@@ -71,7 +71,7 @@
         secrets:
           GITHUB_WEBHOOK_SECRET: GH_WEBHOOK_SECRET
           DB_PASSWORD:
-            secretsmanager: 'demo/test/mysql:password::'
+            secretsmanager: 'mysql:password::'
         ```
 
     === "With a domain"
