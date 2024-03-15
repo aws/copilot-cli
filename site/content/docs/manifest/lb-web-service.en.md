@@ -26,7 +26,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         secrets:
           GITHUB_TOKEN: GITHUB_TOKEN
           DB_SECRET:
-            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+            secretsmanager: 'mysql'
         ```
 
     === "With a domain"
