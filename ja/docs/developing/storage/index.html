@@ -1,0 +1,3880 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Develop, Release and Operate Container Apps on AWS.">
+      
+      
+      
+      
+        <link rel="canonical" href="https://aws.github.io/copilot-cli/ja/docs/developing/storage/">
+      
+      <link rel="icon" href="../../../../assets/images/cli.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-7.3.6">
+    
+    
+      
+        <title>Storage - AWS Copilot CLI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.a57b2b03.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.3f5d1f46.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#ffffff">
+        
+      
+    
+    
+    
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../../../stylesheets/extra.css">
+    
+    
+      
+
+  
+
+
+  
+
+  
+
+
+  <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-7S4JR3KFHK"),document.addEventListener("DOMContentLoaded",function(){"undefined"!=typeof location$&&location$.subscribe(function(t){gtag("config","G-7S4JR3KFHK",{page_path:t.pathname})})})</script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7S4JR3KFHK"></script>
+
+
+    
+    
+
+
+
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="white" data-md-color-accent="">
+  
+    
+    <script>function __prefix(e){return new URL("../../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <!-- Application header -->
+<header class="md-header" data-md-component="header">
+
+  <!-- Top-level navigation -->
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+
+    <!-- Link to home -->
+    <a href="https://aws.github.io/copilot-cli/" title="AWS Copilot CLI" class="md-header__button md-logo" aria-label="AWS Copilot CLI">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25H1.75zM7.25 8a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 1 1-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 1 1 1.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3z"/></svg>
+
+    </a>
+
+    <!-- Button to open drawer -->
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+
+    <!-- Header title -->
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AWS Copilot CLI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Storage
+            
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Site language selector -->
+    
+    <div class="md-header__option"></form>
+      <div class="md-select">
+        
+        <button class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04M18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12m-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg>
+        </button>
+        <div class="md-select__inner">
+          <ul class="md-select__list">
+            
+            <li class="md-select__item">
+              <a
+                      href="../../../../en/"
+                      hreflang="en"
+                      class="md-select__link"
+              >
+                English
+              </a>
+            </li>
+            
+            <li class="md-select__item">
+              <a
+                      href="../../../"
+                      hreflang="ja"
+                      class="md-select__link"
+              >
+                日本語
+              </a>
+            </li>
+            
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+
+    <!-- Button to open search dialogue -->
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+
+      <!-- Search interface -->
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="クリア" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    <!-- Repository containing source -->
+    
+      <div class="md-header__source">
+        
+<a href="https://github.com/aws/copilot-cli/" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aws/copilot-cli
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="タブ" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../../../" class="md-tabs__link">
+      Home
+    </a>
+  </li>
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../overview/" class="md-tabs__link md-tabs__link--active">
+        Documentation
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../blogs/release-v133/" class="md-tabs__link">
+        Blogs
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../community/get-involved/" class="md-tabs__link">
+        Community
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="AWS Copilot CLI" class="md-nav__button md-logo" aria-label="AWS Copilot CLI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25H1.75zM7.25 8a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 1 1-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 1 1 1.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3z"/></svg>
+
+    </a>
+    AWS Copilot CLI
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/aws/copilot-cli/" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aws/copilot-cli
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Documentation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Documentation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Documentation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_2">
+          Getting Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/install/" class="md-nav__link">
+        Install Copilot
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/verify/" class="md-nav__link">
+        (Optional) Verify the installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-app-tutorial/" class="md-nav__link">
+        Deploy your first application
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_3">
+          Concepts
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Concepts" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_3">
+          <span class="md-nav__icon md-icon"></span>
+          Concepts
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/applications/" class="md-nav__link">
+        Applications
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/environments/" class="md-nav__link">
+        Environments
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/services/" class="md-nav__link">
+        Services
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/jobs/" class="md-nav__link">
+        Jobs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/pipelines/" class="md-nav__link">
+        Pipelines
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../credentials/" class="md-nav__link">
+        Credentials
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_5" type="checkbox" id="__nav_2_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_5">
+          Manifest
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Manifest" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_5">
+          <span class="md-nav__icon md-icon"></span>
+          Manifest
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/overview/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/backend-service/" class="md-nav__link">
+        Backend Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/lb-web-service/" class="md-nav__link">
+        Load Balanced Web Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/rd-web-service/" class="md-nav__link">
+        Request-Driven Web Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/scheduled-job/" class="md-nav__link">
+        Scheduled Job
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/static-site/" class="md-nav__link">
+        Static Site
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/worker-service/" class="md-nav__link">
+        Worker Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/environment/" class="md-nav__link">
+        Environment
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/pipeline/" class="md-nav__link">
+        Pipeline
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_6" type="checkbox" id="__nav_2_6" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_6">
+          Developing
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Developing" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_6">
+          <span class="md-nav__icon md-icon"></span>
+          Developing
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_6_1" type="checkbox" id="__nav_2_6_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_6_1">
+          Additional AWS Resources
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Additional AWS Resources" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_6_1">
+          <span class="md-nav__icon md-icon"></span>
+          Additional AWS Resources
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../addons/workload/" class="md-nav__link">
+        Additional Workload Resources
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../addons/environment/" class="md-nav__link">
+        Additional Environment Resources
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../addons/package/" class="md-nav__link">
+        Uploading Local Artifacts
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        Container Environment Variables
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../content-delivery/" class="md-nav__link">
+        Content Delivery
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-environment-resources/" class="md-nav__link">
+        Custom Environment Resources
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../domain/" class="md-nav__link">
+        Domain
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_6_6" type="checkbox" id="__nav_2_6_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_6_6">
+          Extend Copilot with Overrides
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Extend Copilot with Overrides" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_6_6">
+          <span class="md-nav__icon md-icon"></span>
+          Extend Copilot with Overrides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overrides/yamlpatch/" class="md-nav__link">
+        YAML Patch Overrides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overrides/cdk/" class="md-nav__link">
+        CDK Overrides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overrides/taskdef-overrides/" class="md-nav__link">
+        Task Definition Overrides
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../internal-albs/" class="md-nav__link">
+        Internal Load Balancers
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manifest-env-var/" class="md-nav__link">
+        Manifest Environment Variables
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        Observability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publish-subscribe/" class="md-nav__link">
+        Publish/Subscribe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../secrets/" class="md-nav__link">
+        Secrets
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../svc-to-svc-communication/" class="md-nav__link">
+        Service-to-Service Communication
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sidecars/" class="md-nav__link">
+        Sidecars
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Storage
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Storage
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    データベースおよびアーティファクト
+  </a>
+  
+    <nav class="md-nav" aria-label="データベースおよびアーティファクト">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    Environment ストレージ
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    ファイルシステム
+  </a>
+  
+    <nav class="md-nav" aria-label="ファイルシステム">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#copilot-efs" class="md-nav__link">
+    Copilot 管理の EFS
+  </a>
+  
+    <nav class="md-nav" aria-label="Copilot 管理の EFS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    内部的な詳細
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    高度なユースケース
+  </a>
+  
+    <nav class="md-nav" aria-label="高度なユースケース">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#copilot-efs_1" class="md-nav__link">
+    Copilot 管理の EFS ボリュームに初期データを投入する
+  </a>
+  
+    <nav class="md-nav" aria-label="Copilot 管理の EFS ボリュームに初期データを投入する">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    サイドカーを利用する
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#copilot-svc-exec" class="md-nav__link">
+    copilot svc exec を利用する
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#efs" class="md-nav__link">
+    既存 EFS ファイルシステム
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manifest" class="md-nav__link">
+    Manifest 構文
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    マウントターゲットの作成
+  </a>
+  
+    <nav class="md-nav" aria-label="マウントターゲットの作成">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aws-cli" class="md-nav__link">
+    AWS CLI
+  </a>
+  
+    <nav class="md-nav" aria-label="AWS CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    リソースのクリーンアップ
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cloudformation" class="md-nav__link">
+    CloudFormation
+  </a>
+  
+    <nav class="md-nav" aria-label="CloudFormation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    リソースのクリーンアップ
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7" type="checkbox" id="__nav_2_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7">
+          Commands
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Commands" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_7">
+          <span class="md-nav__icon md-icon"></span>
+          Commands
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_1" type="checkbox" id="__nav_2_7_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_1">
+          Getting Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_1">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/docs/" class="md-nav__link">
+        docs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/init/" class="md-nav__link">
+        init
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_2" type="checkbox" id="__nav_2_7_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_2">
+          Build
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Build" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_2">
+          <span class="md-nav__icon md-icon"></span>
+          Build
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-init/" class="md-nav__link">
+        app init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-upgrade/" class="md-nav__link">
+        app upgrade
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-delete/" class="md-nav__link">
+        app delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-init/" class="md-nav__link">
+        env init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-override/" class="md-nav__link">
+        env override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-package/" class="md-nav__link">
+        env package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-delete/" class="md-nav__link">
+        env delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-init/" class="md-nav__link">
+        job init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-override/" class="md-nav__link">
+        job override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-package/" class="md-nav__link">
+        job package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-delete/" class="md-nav__link">
+        job delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-init/" class="md-nav__link">
+        svc init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-override/" class="md-nav__link">
+        svc override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-package/" class="md-nav__link">
+        svc package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-delete/" class="md-nav__link">
+        svc delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/run-local/" class="md-nav__link">
+        run local
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_3" type="checkbox" id="__nav_2_7_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_3">
+          Release
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Release" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_3">
+          <span class="md-nav__icon md-icon"></span>
+          Release
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-deploy/" class="md-nav__link">
+        env deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-deploy/" class="md-nav__link">
+        job deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-init/" class="md-nav__link">
+        pipeline init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-deploy/" class="md-nav__link">
+        pipeline deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-ls/" class="md-nav__link">
+        pipeline ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-override/" class="md-nav__link">
+        pipeline override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-show/" class="md-nav__link">
+        pipeline show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-status/" class="md-nav__link">
+        pipeline status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-delete/" class="md-nav__link">
+        pipeline delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-deploy/" class="md-nav__link">
+        svc deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/deploy/" class="md-nav__link">
+        deploy
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_4" type="checkbox" id="__nav_2_7_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_4">
+          Operate
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Operate" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_4">
+          <span class="md-nav__icon md-icon"></span>
+          Operate
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-ls/" class="md-nav__link">
+        app ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-show/" class="md-nav__link">
+        app show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-ls/" class="md-nav__link">
+        env ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-show/" class="md-nav__link">
+        env show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-ls/" class="md-nav__link">
+        job ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-logs/" class="md-nav__link">
+        job logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-run/" class="md-nav__link">
+        job run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-ls/" class="md-nav__link">
+        svc ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-show/" class="md-nav__link">
+        svc show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-status/" class="md-nav__link">
+        svc status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-logs/" class="md-nav__link">
+        svc logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-exec/" class="md-nav__link">
+        svc exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/task-run/" class="md-nav__link">
+        task run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/task-exec/" class="md-nav__link">
+        task exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/task-delete/" class="md-nav__link">
+        task delete
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_5" type="checkbox" id="__nav_2_7_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_5">
+          Extend
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Extend" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_5">
+          <span class="md-nav__icon md-icon"></span>
+          Extend
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/secret-init/" class="md-nav__link">
+        secret init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/storage-init/" class="md-nav__link">
+        storage init
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_6" type="checkbox" id="__nav_2_7_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_6">
+          Settings
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Settings" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_6">
+          <span class="md-nav__icon md-icon"></span>
+          Settings
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/version/" class="md-nav__link">
+        version
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/completion/" class="md-nav__link">
+        completion
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_7" type="checkbox" id="__nav_2_7_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_7">
+          All
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="All" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_7">
+          <span class="md-nav__icon md-icon"></span>
+          All
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-delete/" class="md-nav__link">
+        app delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-init/" class="md-nav__link">
+        app init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-ls/" class="md-nav__link">
+        app ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-show/" class="md-nav__link">
+        app show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/app-upgrade/" class="md-nav__link">
+        app upgrade
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/completion/" class="md-nav__link">
+        completion
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/deploy/" class="md-nav__link">
+        deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/docs/" class="md-nav__link">
+        docs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-delete/" class="md-nav__link">
+        env delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-deploy/" class="md-nav__link">
+        env deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-init/" class="md-nav__link">
+        env init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-ls/" class="md-nav__link">
+        env ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-override/" class="md-nav__link">
+        env override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-package/" class="md-nav__link">
+        env package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/env-show/" class="md-nav__link">
+        env show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/init/" class="md-nav__link">
+        init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-delete/" class="md-nav__link">
+        job delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-deploy/" class="md-nav__link">
+        job deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-init/" class="md-nav__link">
+        job init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-logs/" class="md-nav__link">
+        job logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-ls/" class="md-nav__link">
+        job ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-override/" class="md-nav__link">
+        job override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-package/" class="md-nav__link">
+        job package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/job-run/" class="md-nav__link">
+        job run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-delete/" class="md-nav__link">
+        pipeline delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-deploy/" class="md-nav__link">
+        pipeline deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-init/" class="md-nav__link">
+        pipeline init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-ls/" class="md-nav__link">
+        pipeline ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-override/" class="md-nav__link">
+        pipeline override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-show/" class="md-nav__link">
+        pipeline show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/pipeline-status/" class="md-nav__link">
+        pipeline status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/run-local/" class="md-nav__link">
+        run local
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/secret-init/" class="md-nav__link">
+        secret init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/storage-init/" class="md-nav__link">
+        storage init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-delete/" class="md-nav__link">
+        svc delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-deploy/" class="md-nav__link">
+        svc deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-exec/" class="md-nav__link">
+        svc exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-init/" class="md-nav__link">
+        svc init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-logs/" class="md-nav__link">
+        svc logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-ls/" class="md-nav__link">
+        svc ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-override/" class="md-nav__link">
+        svc override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-package/" class="md-nav__link">
+        svc package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-show/" class="md-nav__link">
+        svc show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-status/" class="md-nav__link">
+        svc status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-pause/" class="md-nav__link">
+        svc pause
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/svc-resume/" class="md-nav__link">
+        svc resume
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/task-delete/" class="md-nav__link">
+        task delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/task-exec/" class="md-nav__link">
+        task exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/task-run/" class="md-nav__link">
+        task run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/version/" class="md-nav__link">
+        version
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Blogs
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Blogs" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Blogs
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v133/" class="md-nav__link">
+        Release v1.33
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v132/" class="md-nav__link">
+        Release v1.32
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v131/" class="md-nav__link">
+        Release v1.31
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v130/" class="md-nav__link">
+        Release v1.30
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v129/" class="md-nav__link">
+        Release v1.29
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v128/" class="md-nav__link">
+        Release v1.28
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v127/" class="md-nav__link">
+        Release v1.27
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/apprunner-waf/" class="md-nav__link">
+        AWS App Runner WAF
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v126/" class="md-nav__link">
+        Release v1.26
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v125/" class="md-nav__link">
+        Release v1.25
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v124/" class="md-nav__link">
+        Release v1.24
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v123/" class="md-nav__link">
+        Release v1.23
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v122/" class="md-nav__link">
+        Release v1.22
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v121/" class="md-nav__link">
+        Release v1.21
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v120/" class="md-nav__link">
+        Release v1.20
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/apprunner-vpc/" class="md-nav__link">
+        AWS App Runner VPC
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v119/" class="md-nav__link">
+        Release v1.19
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v118/" class="md-nav__link">
+        Release v1.18
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v117/" class="md-nav__link">
+        Release v1.17
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../blogs/release-v116/" class="md-nav__link">
+        Release v1.16
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Community
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Community" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Community
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../community/get-involved/" class="md-nav__link">
+        Get Involved
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../community/guides/" class="md-nav__link">
+        Guides and Resources
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    データベースおよびアーティファクト
+  </a>
+  
+    <nav class="md-nav" aria-label="データベースおよびアーティファクト">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment" class="md-nav__link">
+    Environment ストレージ
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    ファイルシステム
+  </a>
+  
+    <nav class="md-nav" aria-label="ファイルシステム">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#copilot-efs" class="md-nav__link">
+    Copilot 管理の EFS
+  </a>
+  
+    <nav class="md-nav" aria-label="Copilot 管理の EFS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    内部的な詳細
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    高度なユースケース
+  </a>
+  
+    <nav class="md-nav" aria-label="高度なユースケース">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#copilot-efs_1" class="md-nav__link">
+    Copilot 管理の EFS ボリュームに初期データを投入する
+  </a>
+  
+    <nav class="md-nav" aria-label="Copilot 管理の EFS ボリュームに初期データを投入する">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    サイドカーを利用する
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#copilot-svc-exec" class="md-nav__link">
+    copilot svc exec を利用する
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#efs" class="md-nav__link">
+    既存 EFS ファイルシステム
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manifest" class="md-nav__link">
+    Manifest 構文
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    マウントターゲットの作成
+  </a>
+  
+    <nav class="md-nav" aria-label="マウントターゲットの作成">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aws-cli" class="md-nav__link">
+    AWS CLI
+  </a>
+  
+    <nav class="md-nav" aria-label="AWS CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    リソースのクリーンアップ
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cloudformation" class="md-nav__link">
+    CloudFormation
+  </a>
+  
+    <nav class="md-nav" aria-label="CloudFormation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    リソースのクリーンアップ
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/developing/storage.ja.md" title="編集" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <h1 id="_1">ストレージ</h1>
+<p>Copilot ワークロードに永続性を追加するには 2 つの方法があります。<a href="#データベースおよびアーティファクト"><code>copilot storage init</code></a> を使用してデータベースや S3 バケットを作成する方法、あるいは Manifest の <a href="#ファイルシステム"><code>storage</code> フィールド</a> を使用して既存の EFS ファイルシステムをアタッチする方法です。</p>
+<h2 id="_2">データベースおよびアーティファクト</h2>
+<p>Job や Service に、データベースや S3 バケットを追加するには <a href="../../commands/storage-init/"><code>copilot storage init</code></a> を実行します。</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>ウィザードに従い S3 バケットを作成する
+<span class="gp">$ </span>copilot storage init -t S3
+
+<span class="gp"># </span><span class="s2">&quot;api&quot;</span> Service からアクセス可能な <span class="s2">&quot;my-bucket&quot;</span> という名前の S3 バケットを作成し、<span class="s2">&quot;api&quot;</span>でデプロイと削除を行います。
+<span class="gp">$ </span>copilot storage init -n my-bucket -t S3 -w api -l workload
+</code></pre></div>
+<p>このコマンドにより、"api" Service の <a href="../addons/workload/">addons</a> ディレクトリに S3 バケットを定義した CloudFormation テンプレートが作成されます。続いて <code>copilot deploy -n api</code> を実行することで S3 バケットが作成されます。<code>api</code> タスクロールに S3 バケットへのアクセス権限が付与され、バケット名が <code>api</code> コンテナの環境変数に <code>MY_BUCKET_NAME</code> の形で設定されます。</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>すべての名前は、ハイフンやアンダースコアに基づいて SCREAMING_SNAKE_CASE のように変換されます。<code>copilot svc show</code> を実行することで、Service の環境変数を確認できます。</p>
+</div>
+<p><code>copilot storage init</code> を実行して <a href="https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/Introduction.html">DynamoDB テーブル</a> の作成も可能です。例えば、ソートキーおよびローカルセカンダリインデックスを持つテーブルを定義した CloudFormation テンプレートは、次のコマンドで作成可能です。</p>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>ウィザードに従い DynamoDB テーブルを作成する
+<span class="gp">$ </span>copilot storage init -t DynamoDB
+
+<span class="gp"># </span>もしくは、DynamoDB テーブルの作成に必要な情報をフラグで指定する
+<span class="gp">$ </span>copilot storage init -n users -t DynamoDB -w api -l workload --partition-key id:N --sort-key email:S --lsi post-count:N
+</code></pre></div>
+<p>このコマンドにより <code>${app}-${env}-${svc}-users</code> という名前の DynamoDB テーブルが作成されます。パーティションキーは <code>id</code> となり、データ型は数値です。ソートキーは <code>email</code> となり、データ型は文字列です。また、<a href="https://docs.aws.amazon.com/ja_jp/amazondynamodb/latest/developerguide/LSI.html">ローカルセカンダリインデックス</a> (代替のソートキー) として、データ型が数値である <code>post-count</code> が作成されます。</p>
+<p>同様に、<code>copilot storage init</code> を実行して <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html">RDS Aurora Serverless v2</a> クラスターを作成できます。
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>ウィザードに従い RDS Aurora Serverless クラスターを作成する
+<span class="gp">$ </span>copilot storage init -t Aurora
+
+<span class="gp"># </span>もしくは、RDS Aurora Serverless クラスターの作成に必要な情報をフラグで指定する
+<span class="gp">$ </span>copilot storage init -n my-cluster -t Aurora -w api -l workload --engine PostgreSQL --initial-db my_db
+</code></pre></div>
+このコマンドにより PostgreSQL エンジンを使用する <code>my_db</code> という名前のデータベースを持つ RDS Aurora Serverless v2 クラスターが作成されます。JSON 文字列として <code>MYCLUSTER_SECRET</code> という名前の環境変数がワークロードに追加されます。この JSON 文字列は、<code>'host'</code>、<code>'port'</code>、<code>'dbname'</code>、<code>'username'</code>、<code>'password'</code>、<code>'dbClusterIdentifier'</code>、<code>'engine'</code> フィールドを含みます。</p>
+<p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html">RDS Aurora Serverless v1</a> クラスターを作成するには、次のコマンドを実行します。
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>copilot storage init -n my-cluster -t Aurora --serverless-version v1
+</code></pre></div></p>
+<h3 id="environment">Environment ストレージ</h3>
+<p><code>-l</code> フラグは <code>--lifecycle</code> の略です。上記の例では、<code>-l</code> フラグの値は <code>workload</code> です。
+これは、ストレージリソースが Service Addon または Job Addon として作成されることを意味します。
+ストレージは <code>copilot [svc/job] deploy</code> を実行するとデプロイされ、<code>copilot [svc/job] delete</code> を実行すると削除されます。</p>
+<p>また、Service や Job を削除してもストレージを維持したい場合は、Environment ストレージリソースを作成することができます。Environment ストレージリソースは Environment Addonとして作成され、<code>copilot env deploy</code>を実行すると展開され、<code>copilot env delete</code>を実行するまで削除されることはありません。</p>
+<h2 id="_3">ファイルシステム</h2>
+<p>Copilot で EFS ファイルシステムを使う方法は２つあります: Copilot 管理の EFS、あるいは既存の EFS ファイルシステムのインポートです。</p>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>EFS は、Windows ベースの Service ではサポートされておりません。</p>
+</div>
+<h3 id="copilot-efs">Copilot 管理の EFS</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">frontend</span>
+
+<span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">myManagedEFSVolume</span><span class="p">:</span>
+      <span class="nt">efs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/efs</span>
+      <span class="nt">read_only</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<p>この Manifest では、Environment ごとに EFS ボリュームと EFS アクセスポイントが作成され、Service 専用のディレクトリが EFS ファイルシステム内の <code>/frontend</code> パスに作成されます。コンテナはこのボリュームをマウントし、コンテナ内ファイルシステムの <code>/var/efs</code> パスへのアクセスによって EFS ファイルシステム内に作成された専用ディレクトリとその配下のすべてのサブディレクトリにアクセスできるようになります。EFS ファイルシステムとその中の <code>/frontend</code> ディレクトリは Environment を削除するまで維持されます。各 Service にアクセスポイントを使用すると、2 つの Service が相互にデータアクセスできなくなります。</p>
+<p>また、高度な EFS 設定にある <code>uid</code> と <code>gid</code> の指定によって、EFS アクセスポイントの UID と GID のカスタマイズも可能です。UID あるいは GID が未指定の場合、Copilot は Service 名の <a href="https://stackoverflow.com/a/14210379/5890422">CRC32 チェックサム</a>を元にした擬似乱数 (pseudorandom numbers) をこれらの設定値として利用します。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">myManagedEFSVolume</span><span class="p">:</span>
+      <span class="nt">efs</span><span class="p">:</span> 
+        <span class="nt">uid</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1000</span>
+        <span class="nt">gid</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10000</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/efs</span>
+      <span class="nt">read_only</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<p><code>uid</code> と <code>gid</code> は、その他の高度な EFS 設定との併用はできない点にご注意ください。</p>
+<h4 id="_4">内部的な詳細</h4>
+<p>Copilot 管理の EFS を有効にすると、Copilot は以下のリソースを Environment ごとに作成します。</p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-filesystem.html">EFS ファイルシステム</a></li>
+<li>Environment 内の各プライベートサブネットごとの<a href="https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-mounttarget.html">マウントターゲット</a></li>
+<li>Environment セキュリティグループからマウントターゲットへのアクセスを許可するセキュリティグループルール</li>
+</ul>
+<p>また、Copilot は Service ごとに以下のリソースを作成します。</p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-accesspoint.html">EFS アクセスポイント</a>。このアクセスポイントは Copilot 管理の EFS を利用する設定を行った Service あるいは Job の名前に基づいたディレクトリを参照します。</li>
+</ul>
+<p>Environment ごとに作成されたリソースは <code>copilot env show --json --resources</code> で得られる結果を任意の JSON パーサで処理することで確認できます。次はそのようなコマンドの例です。
+<div class="highlight"><pre><span></span><code>&gt; copilot env show -n test --json --resources | jq &#39;.resources[] | select( .type | contains(&quot;EFS&quot;) )&#39;
+</code></pre></div></p>
+<h4 id="_5">高度なユースケース</h4>
+<h5 id="copilot-efs_1">Copilot 管理の EFS ボリュームに初期データを投入する</h5>
+<p>Service がその EFS ボリュームを利用する前にデータを投入しておきたいケースがあるかもしれません。以下にいくつかの方法を紹介しますが、コンテナの要件（例えばコンテナ起動処理にそのデータは必要か？のような）に合わせた方法を検討しましょう。</p>
+<h6 id="_6">サイドカーを利用する</h6>
+<p>作成した EFS ボリュームは、<a href="../sidecars/"><code>mount_points</code></a> フィールドを利用してサイドカーへのマウントが可能です。EFS ボリュームをマウントしたサイドカーの <code>COMMAND</code> あるいは <code>ENTRYPOINT</code> インストラクションを利用して、サイドカー自身のファイルシステムからデータをコピーしたり、あるいは S3 やその他のサービスからデータをダウンロードしたりといった方法が利用できます。</p>
+<p>サイドカーを <code>essential:false</code> によって任意コンテナと設定すれば、サイドカーは必要な処理を済ませた上で Service メインコンテナの実行状態に影響を与えずに停止できます。ただし、これは外部データソースをもとに EFS ファイルシステム内のデータを常に最新に保つ必要があるタイプのワークロードには適していない可能性がある点にはご注意ください。</p>
+<h6 id="copilot-svc-exec"><code>copilot svc exec</code> を利用する</h6>
+<p>アプリケーションの起動時点でデータが必要となるタイプのワークロードの場合は、そのアプリケーションより先にプレースホルダとなるコンテナを利用してデータのダウンロードを先に済ませておくと良いでしょう。</p>
+<p>例えば、次のような Manifest を使って <code>frontend</code> Service をデプロイします。
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Load Balanced Web Service</span>
+
+<span class="nt">image</span><span class="p">:</span>
+  <span class="nt">location</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">amazon/amazon-ecs-sample</span>
+<span class="nt">exec</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">myVolume</span><span class="p">:</span>
+      <span class="nt">efs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/efs</span>
+      <span class="nt">read_only</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div></p>
+<p>コンテナが起動したら次のコマンドを実行しましょう。
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>copilot svc <span class="nb">exec</span>
+</code></pre></div>
+これによりコンテナへのインタラクティブなシェルアクセスが可能となりますので、<code>curl</code> や <code>wget</code> といったコマンドをインストールした上で、それらを利用して必要なデータのダウンロードや必要なディレクトリの作成などを EFS ボリュームに対して実施します。</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>本番環境でこのようなオペレーションによってコンテナにソフトウェアを追加インストールすることは推奨されません。コンテナはエフェメラルなものであり、コンテナ内部で利用したいソフトウェアがあるのであればそれらは前もってコンテナのビルド時に追加されるように Dockerfile に記述し、<code>RUN</code> インストラクションを使って実行すべきです。</p>
+</div>
+<p>必要な作業が終わったら、Manifest から <code>exec</code> フィールドを削除し、<code>image</code> フィールド以下を実際に実行したいコンテナイメージのビルド設定やコンテナイメージに書き換えましょう。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Load Balanced Web Service</span>
+
+<span class="nt">image</span><span class="p">:</span>
+  <span class="nt">build</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">./Dockerfile</span>
+<span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">myVolume</span><span class="p">:</span>
+      <span class="nt">efs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/efs</span>
+      <span class="nt">read_only</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<h3 id="efs">既存 EFS ファイルシステム</h3>
+<p>Copilot タスクに既存 EFS ファイルシステムをボリュームマウントするには次の２つを満たす必要があります。</p>
+<ol>
+<li>Environment のリージョンに <a href="https://docs.aws.amazon.com/ja_jp/efs/latest/ug/whatisefs.html">EFS ファイルシステム</a> を作成する</li>
+<li>Environment の各サブネットに、Copilot Environment のセキュリティグループを使用した <a href="https://docs.aws.amazon.com/ja_jp/efs/latest/ug/accessing-fs.html">EFS マウントターゲット</a> を作成する</li>
+</ol>
+<p>これらの前提条件を満たしている場合、Manifest に設定を追加することで EFS ストレージが使用できます。設定には、ファイルシステム ID と、使用する場合は EFS ファイルシステムのアクセスポイント情報が必要です。</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>特定のファイルシステムは、一度に 1 つの Environment でのみ使用可能です。マウントターゲットは、アベイラビリティーゾーンごとで 1 つに制限されています。したがって、Copilot タスクにマウントする予定の EFS ボリュームを別の VPC で使用したことがある場合は、Copilot タスクで使用する前に既存のマウントターゲットを削除する必要があります。</p>
+</div>
+<h3 id="manifest">Manifest 構文</h3>
+<p>EFS ボリュームをもっともシンプルに指定できるのは次の構文です。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">myEFSVolume</span><span class="p">:</span> <span class="c1"># このキーは任意の文字列を指定可能</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="s">&#39;/etc/mount1&#39;</span>
+      <span class="nt">efs</span><span class="p">:</span>
+        <span class="nt">id</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">fs-1234567</span>
+</code></pre></div>
+<p>この構文により、ファイルシステム <code>fs-1234567</code> を使用して Service または Job のコンテナに読み取り専用のボリュームが作成されます。Environment のサブネットにマウントターゲットが作成されていない場合、タスクの起動に失敗します。</p>
+<p>既存 EFS ファイルシステムを利用する完全な構文は次の通りです。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">&lt;volume name&gt;</span><span class="p">:</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;mount path&gt;</span>             <span class="c1"># 必須。コンテナ内でのパスを指定</span>
+      <span class="nt">read_only</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;boolean&gt;</span>           <span class="c1"># デフォルト: true</span>
+      <span class="nt">efs</span><span class="p">:</span>
+        <span class="nt">id</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;filesystem ID&gt;</span>          <span class="c1"># 必須</span>
+        <span class="nt">root_dir</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;filesystem root&gt;</span>  <span class="c1"># オプション。デフォルトは &quot;/&quot;。</span>
+                                         <span class="c1"># アクセスポイントを使用する場合、このパラメータは指定しない</span>
+        <span class="nt">auth</span><span class="p">:</span>
+          <span class="nt">iam</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;boolean&gt;</span>             <span class="c1"># オプション。</span>
+                                         <span class="c1"># このファイルシステムをマウントする際に IAM 認証を使用するかどうか</span>
+          <span class="nt">access_point_id</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;access point ID&gt;</span> <span class="c1"># オプション.</span>
+                                                <span class="c1"># このファイルシステムをマウントするときに使用する EFS アクセスポイントの ID</span>
+        <span class="nt">uid</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;uint32&gt;</span>                <span class="c1"># オプション。Copilot 管理 EFS の EFS アクセスポイント用 UID。</span>
+        <span class="nt">gid</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;uint32&gt;</span>                <span class="c1"># オプション。Copilot 管理 EFS の EFS アクセスポイント用 UID。</span>
+                                     <span class="c1"># `id`、`root_dir`、`auth` とは併用できません。</span>
+</code></pre></div>
+<h3 id="_7">マウントターゲットの作成</h3>
+<p>既存の EFS ファイルシステムのマウントターゲットは、<a href="#aws-cli">AWS CLI</a> や <a href="#cloudformation">CloudFormation</a> などを使用して作成できます。</p>
+<h4 id="aws-cli">AWS CLI</h4>
+<p>既存のファイルシステムのマウントターゲットを作成する場合、以下の項目が必要です。</p>
+<ol>
+<li>ファイルシステム ID</li>
+<li>ファイルシステムと同じアカウントおよびリージョンにデプロイされた Copilot Environment</li>
+</ol>
+<p>次の AWS CLI のコマンドでファイルシステム ID を取得できます。
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nv">EFS_FILESYSTEMS</span><span class="o">=</span><span class="k">$(</span>aws efs describe-file-systems <span class="p">|</span> <span class="se">\</span>
+  jq <span class="s1">&#39;.FileSystems[] | {ID: .FileSystemId, CreationTime: .CreationTime, Size: .SizeInBytes.Value}&#39;</span><span class="k">)</span>
+</code></pre></div></p>
+<p>この変数を <code>echo</code> することで、必要なファイルシステムの情報が確認できます。ファイルシステム ID を <code>$EFS_ID</code> に設定し、手順を続けます。</p>
+<p>同様に、Copilot Environment のパブリックサブネットとセキュリティグループが必要です。次の jq コマンドは、describe-stacks の結果から必要な情報を抽出しています。</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>使用するファイルシステムは Copilot Environment と同じリージョンに作成されている必要があります。</p>
+</div>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nv">SUBNETS</span><span class="o">=</span><span class="k">$(</span>aws cloudformation describe-stacks --stack-name <span class="si">${</span><span class="nv">YOUR_APP</span><span class="si">}</span>-<span class="si">${</span><span class="nv">YOUR_ENV</span><span class="si">}</span> <span class="se">\</span>
+  <span class="p">|</span> jq <span class="s1">&#39;.Stacks[] | .Outputs[] | select(.OutputKey == &quot;PublicSubnets&quot;) | .OutputValue&#39;</span><span class="k">)</span>
+<span class="gp">$ </span><span class="nv">SUBNET1</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$SUBNETS</span> <span class="p">|</span> jq -r <span class="s1">&#39;split(&quot;,&quot;) | .[0]&#39;</span><span class="k">)</span>
+<span class="gp">$ </span><span class="nv">SUBNET2</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$SUBNETS</span> <span class="p">|</span> jq -r <span class="s1">&#39;split(&quot;,&quot;) | .[1]&#39;</span><span class="k">)</span>
+<span class="gp">$ </span><span class="nv">ENV_SG</span><span class="o">=</span><span class="k">$(</span>aws cloudformation describe-stacks --stack-name <span class="si">${</span><span class="nv">YOUR_APP</span><span class="si">}</span>-<span class="si">${</span><span class="nv">YOUR_ENV</span><span class="si">}</span> <span class="se">\</span>
+  <span class="p">|</span> jq -r <span class="s1">&#39;.Stacks[] | .Outputs[] | select(.OutputKey == &quot;EnvironmentSecurityGroup&quot;) | .OutputValue&#39;</span><span class="k">)</span>
+</code></pre></div>
+<p>これらの情報を取得後、マウントターゲットを作成します。</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span><span class="nv">MOUNT_TARGET_1_ID</span><span class="o">=</span><span class="k">$(</span>aws efs create-mount-target <span class="se">\</span>
+    --subnet-id <span class="nv">$SUBNET_1</span> <span class="se">\</span>
+    --security-groups <span class="nv">$ENV_SG</span> <span class="se">\</span>
+    --file-system-id <span class="nv">$EFS_ID</span> <span class="p">|</span> jq -r .MountTargetID<span class="k">)</span>
+<span class="gp">$ </span><span class="nv">MOUNT_TARGET_2_ID</span><span class="o">=</span><span class="k">$(</span>aws efs create-mount-target <span class="se">\</span>
+    --subnet-id <span class="nv">$SUBNET_2</span> <span class="se">\</span>
+    --security-groups <span class="nv">$ENV_SG</span> <span class="se">\</span>
+    --file-system-id <span class="nv">$EFS_ID</span> <span class="p">|</span> jq -r .MountTargetID<span class="k">)</span>
+</code></pre></div>
+<p>コマンド実行後、先ほど示した Manifest のように <code>storage</code> を設定できます。</p>
+<h5 id="_8">リソースのクリーンアップ</h5>
+<p>AWS CLI を使用してマウントターゲットを削除します。</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>aws efs delete-mount-target --mount-target-id <span class="nv">$MOUNT_TARGET_1</span>
+<span class="gp">$ </span>aws efs delete-mount-target --mount-target-id <span class="nv">$MOUNT_TARGET_2</span>
+</code></pre></div>
+<h4 id="cloudformation">CloudFormation</h4>
+<p>CloudFormation スタックを使用して、外部ファイルシステムに適切な EFS インフラストラクチャを作成する例を示します。</p>
+<p>Environment の作成後、Environment と同じアカウントおよびリージョンに次の CloudFormation テンプレートをデプロイします。</p>
+<p>次の CloudFormation テンプレートを <code>efs.yml</code> というファイル名で保存します。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">Parameters</span><span class="p">:</span>
+  <span class="nt">App</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+    <span class="nt">Description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Your application&#39;s name.</span>
+  <span class="nt">Env</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+    <span class="nt">Description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">The environment name your service, job, or workflow is being deployed to.</span>
+
+<span class="nt">Resources</span><span class="p">:</span>
+  <span class="nt">EFSFileSystem</span><span class="p">:</span>
+    <span class="nt">Metadata</span><span class="p">:</span>
+      <span class="s">&#39;aws:copilot:description&#39;</span><span class="p p-Indicator">:</span> <span class="s">&#39;An</span><span class="nv"> </span><span class="s">EFS</span><span class="nv"> </span><span class="s">File</span><span class="nv"> </span><span class="s">System</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">persistent</span><span class="nv"> </span><span class="s">backing</span><span class="nv"> </span><span class="s">storage</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">tasks</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">services&#39;</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::EFS::FileSystem</span>
+    <span class="nt">Properties</span><span class="p">:</span>
+      <span class="nt">PerformanceMode</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">generalPurpose</span>
+      <span class="nt">ThroughputMode</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bursting</span>
+      <span class="nt">Encrypted</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+
+  <span class="nt">MountTargetPublicSubnet1</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::EFS::MountTarget</span>
+    <span class="nt">Properties</span><span class="p">:</span>
+      <span class="nt">FileSystemId</span><span class="p">:</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">EFSFileSystem</span>
+      <span class="nt">SecurityGroups</span><span class="p">:</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Fn::ImportValue</span><span class="p p-Indicator">:</span>
+            <span class="kt">!Sub</span> <span class="s">&quot;${App}-${Env}-EnvironmentSecurityGroup&quot;</span>
+      <span class="nt">SubnetId</span><span class="p">:</span> <span class="kt">!Select</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+        <span class="p p-Indicator">-</span> <span class="kt">!Split</span>
+            <span class="p p-Indicator">-</span> <span class="s">&quot;,&quot;</span>
+            <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Fn::ImportValue</span><span class="p p-Indicator">:</span>
+                <span class="kt">!Sub</span> <span class="s">&quot;${App}-${Env}-PublicSubnets&quot;</span>
+
+  <span class="nt">MountTargetPublicSubnet2</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::EFS::MountTarget</span>
+    <span class="nt">Properties</span><span class="p">:</span>
+      <span class="nt">FileSystemId</span><span class="p">:</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">EFSFileSystem</span>
+      <span class="nt">SecurityGroups</span><span class="p">:</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Fn::ImportValue</span><span class="p p-Indicator">:</span>
+            <span class="kt">!Sub</span> <span class="s">&quot;${App}-${Env}-EnvironmentSecurityGroup&quot;</span>
+      <span class="nt">SubnetId</span><span class="p">:</span> <span class="kt">!Select</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+        <span class="p p-Indicator">-</span> <span class="kt">!Split</span>
+            <span class="p p-Indicator">-</span> <span class="s">&quot;,&quot;</span>
+            <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Fn::ImportValue</span><span class="p p-Indicator">:</span>
+                <span class="kt">!Sub</span> <span class="s">&quot;${App}-${Env}-PublicSubnets&quot;</span>
+<span class="nt">Outputs</span><span class="p">:</span>
+  <span class="nt">EFSVolumeID</span><span class="p">:</span>
+    <span class="nt">Value</span><span class="p">:</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">EFSFileSystem</span>
+    <span class="nt">Export</span><span class="p">:</span>
+      <span class="nt">Name</span><span class="p">:</span> <span class="kt">!Sub</span> <span class="l l-Scalar l-Scalar-Plain">${App}-${Env}-FilesystemID</span>
+</code></pre></div>
+<p>次のコマンドを実行します。
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>aws cloudformation deploy
+<span class="go">    --stack-name efs-cfn \</span>
+<span class="go">    --template-file ecs.yml</span>
+<span class="go">    --parameter-overrides App=${YOUR_APP} Env=${YOUR_ENV}</span>
+</code></pre></div></p>
+<p>これにより EFS ファイルシステムと、Copilot Environment スタックからの出力を使用して、タスクに必要なマウントターゲットが作成されます。</p>
+<p>ファイルシステム ID を取得するには、<code>describe-stacks</code> を実行します。</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>aws cloudformation describe-stacks --stack-name efs-cfn <span class="p">|</span> <span class="se">\</span>
+    jq -r <span class="s1">&#39;.Stacks[] | .Outputs[] | .OutputValue&#39;</span>
+</code></pre></div>
+<p>次に、EFS ファイルシステムにアクセスさせたい Service の Manifest に以下の設定を追加します。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">storage</span><span class="p">:</span>
+  <span class="nt">volumes</span><span class="p">:</span>
+    <span class="nt">copilotVolume</span><span class="p">:</span> <span class="c1"># このキーは任意の文字列を指定可能</span>
+      <span class="nt">path</span><span class="p">:</span> <span class="s">&#39;/etc/mount1&#39;</span>
+      <span class="nt">read_only</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span> <span class="c1"># Service に書き込み処理が必要な場合は false を指定</span>
+      <span class="nt">efs</span><span class="p">:</span>
+        <span class="nt">id</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;your filesystem ID&gt;</span>
+</code></pre></div>
+<p>最後に、<code>/etc/mount1</code> にファイルシステムをマウントするため、<code>copilot svc deploy</code> を実行して Service の設定を変更します。</p>
+<h5 id="_9">リソースのクリーンアップ</h5>
+<p>クリーンアップをするには、Manifest から <code>storage</code> 設定を削除して Service を再デプロイします。
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>copilot svc deploy
+</code></pre></div></p>
+<p>次に、スタックを削除します。</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>aws cloudformation delete-stack --stack-name efs-cfn
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        
+
+<!-- Application footer -->
+<footer class="md-footer">
+  <!-- Further information -->
+  <div class="md-footer-meta md-typeset" style="background-color: #fff;">
+    <div class="md-footer-meta__inner md-grid" style="background-color: #fff;">
+
+      <!-- Copyright and theme information -->
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight" style="color: rgb(38, 38, 38);">
+            Copyright &copy; 2023 Amazon
+          </div>
+        
+        <div style="color: rgb(38, 38, 38);">
+          Made with
+          <a
+                  href="https://squidfunk.github.io/mkdocs-material/"
+                  target="_blank" rel="noopener"
+                  style="color: black;"
+          >
+            Material for MkDocs
+          </a>
+        </div>
+      </div>
+
+      <!-- Social links -->
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": ["tabs", "instant", "navigation.tabs"], "translations": {"clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "search.config.lang": "ja", "search.config.pipeline": "trimmer, stemmer", "search.config.separator": "[\\s\\-\u3000\u3001\u3002\uff0c\uff0e]+", "search.placeholder": "\u691c\u7d22", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.fcfe8b6d.min.js", "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.b1047164.min.js"></script>
+      
+    
+  </body>
+</html>

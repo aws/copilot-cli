@@ -1,0 +1,3732 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Develop, Release and Operate Container Apps on AWS.">
+      
+      
+      
+      
+        <link rel="canonical" href="https://aws.github.io/copilot-cli/en/docs/developing/addons/environment/">
+      
+      <link rel="icon" href="../../../../../assets/images/cli.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-7.3.6">
+    
+    
+      
+        <title>Additional Environment Resources - AWS Copilot CLI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../../assets/stylesheets/main.a57b2b03.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../../assets/stylesheets/palette.3f5d1f46.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#ffffff">
+        
+      
+    
+    
+    
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../../../../stylesheets/extra.css">
+    
+    
+      
+
+  
+
+
+  
+
+  
+
+
+  <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-7S4JR3KFHK"),document.addEventListener("DOMContentLoaded",function(){"undefined"!=typeof location$&&location$.subscribe(function(t){gtag("config","G-7S4JR3KFHK",{page_path:t.pathname})})})</script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7S4JR3KFHK"></script>
+
+
+    
+    
+
+
+
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="white" data-md-color-accent="">
+  
+    
+    <script>function __prefix(e){return new URL("../../../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#modeling-additional-environment-resources-with-aws-cloudformation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <!-- Application header -->
+<header class="md-header" data-md-component="header">
+
+  <!-- Top-level navigation -->
+  <nav class="md-header__inner md-grid" aria-label="Header">
+
+    <!-- Link to home -->
+    <a href="https://aws.github.io/copilot-cli/" title="AWS Copilot CLI" class="md-header__button md-logo" aria-label="AWS Copilot CLI">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25H1.75zM7.25 8a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 1 1-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 1 1 1.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3z"/></svg>
+
+    </a>
+
+    <!-- Button to open drawer -->
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+
+    <!-- Header title -->
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AWS Copilot CLI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Additional Environment Resources
+            
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Site language selector -->
+    
+    <div class="md-header__option"></form>
+      <div class="md-select">
+        
+        <button class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04M18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12m-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg>
+        </button>
+        <div class="md-select__inner">
+          <ul class="md-select__list">
+            
+            <li class="md-select__item">
+              <a
+                      href="../../../../"
+                      hreflang="en"
+                      class="md-select__link"
+              >
+                English
+              </a>
+            </li>
+            
+            <li class="md-select__item">
+              <a
+                      href="../../../../../ja/"
+                      hreflang="ja"
+                      class="md-select__link"
+              >
+                日本語
+              </a>
+            </li>
+            
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+
+    <!-- Button to open search dialogue -->
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+
+      <!-- Search interface -->
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    <!-- Repository containing source -->
+    
+      <div class="md-header__source">
+        
+<a href="https://github.com/aws/copilot-cli/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aws/copilot-cli
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../../../../" class="md-tabs__link">
+      Home
+    </a>
+  </li>
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../overview/" class="md-tabs__link md-tabs__link--active">
+        Documentation
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../blogs/release-v133/" class="md-tabs__link">
+        Blogs
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../../community/get-involved/" class="md-tabs__link">
+        Community
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../../.." title="AWS Copilot CLI" class="md-nav__button md-logo" aria-label="AWS Copilot CLI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25H1.75zM7.25 8a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 1 1-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 1 1 1.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3z"/></svg>
+
+    </a>
+    AWS Copilot CLI
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/aws/copilot-cli/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    aws/copilot-cli
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../" class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Documentation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Documentation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Documentation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../overview/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_2">
+          Getting Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/install/" class="md-nav__link">
+        Install Copilot
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/verify/" class="md-nav__link">
+        (Optional) Verify the installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/first-app-tutorial/" class="md-nav__link">
+        Deploy your first application
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_3">
+          Concepts
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Concepts" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_3">
+          <span class="md-nav__icon md-icon"></span>
+          Concepts
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/overview/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/applications/" class="md-nav__link">
+        Applications
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/environments/" class="md-nav__link">
+        Environments
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/services/" class="md-nav__link">
+        Services
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/jobs/" class="md-nav__link">
+        Jobs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/pipelines/" class="md-nav__link">
+        Pipelines
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../credentials/" class="md-nav__link">
+        Credentials
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_5" type="checkbox" id="__nav_2_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_5">
+          Manifest
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Manifest" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_5">
+          <span class="md-nav__icon md-icon"></span>
+          Manifest
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/overview/" class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/backend-service/" class="md-nav__link">
+        Backend Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/lb-web-service/" class="md-nav__link">
+        Load Balanced Web Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/rd-web-service/" class="md-nav__link">
+        Request-Driven Web Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/scheduled-job/" class="md-nav__link">
+        Scheduled Job
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/static-site/" class="md-nav__link">
+        Static Site
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/worker-service/" class="md-nav__link">
+        Worker Service
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/environment/" class="md-nav__link">
+        Environment
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/pipeline/" class="md-nav__link">
+        Pipeline
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_6" type="checkbox" id="__nav_2_6" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_6">
+          Developing
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Developing" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_6">
+          <span class="md-nav__icon md-icon"></span>
+          Developing
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_6_1" type="checkbox" id="__nav_2_6_1" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_6_1">
+          Additional AWS Resources
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Additional AWS Resources" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_6_1">
+          <span class="md-nav__icon md-icon"></span>
+          Additional AWS Resources
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workload/" class="md-nav__link">
+        Additional Workload Resources
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Additional Environment Resources
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Additional Environment Resources
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-do-i-add-an-s3-bucket-a-ddb-table-or-an-aurora-serverless-cluster" class="md-nav__link">
+    How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-add-other-resources" class="md-nav__link">
+    How to add other resources?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-an-addon-template-look-like" class="md-nav__link">
+    What does an addon template look like?
+  </a>
+  
+    <nav class="md-nav" aria-label="What does an addon template look like?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#writing-the-parameters-section" class="md-nav__link">
+    Writing the Parameters section
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing the Parameters section">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#customizing-the-parameters-section" class="md-nav__link">
+    Customizing the Parameters section
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-the-conditions-and-the-mappings-sections" class="md-nav__link">
+    Writing the Conditions and the Mappings sections
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-the-outputs-section" class="md-nav__link">
+    Writing the Outputs section
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing the Outputs section">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-addon-connecting-to-your-workloads" class="md-nav__link">
+    Environment addon: Connecting to your workloads
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment addon: Connecting to your workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#referencing-from-a-workload-addon" class="md-nav__link">
+    Referencing from a workload addon
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#referencing-from-a-workload-manifest" class="md-nav__link">
+    Referencing from a workload manifest
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-addons-walk-through" class="md-nav__link">
+    Environment Addons Walk-through
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../package/" class="md-nav__link">
+        Uploading Local Artifacts
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../environment-variables/" class="md-nav__link">
+        Container Environment Variables
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../content-delivery/" class="md-nav__link">
+        Content Delivery
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-environment-resources/" class="md-nav__link">
+        Custom Environment Resources
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../domain/" class="md-nav__link">
+        Domain
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_6_6" type="checkbox" id="__nav_2_6_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_6_6">
+          Extend Copilot with Overrides
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Extend Copilot with Overrides" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_6_6">
+          <span class="md-nav__icon md-icon"></span>
+          Extend Copilot with Overrides
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overrides/yamlpatch/" class="md-nav__link">
+        YAML Patch Overrides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overrides/cdk/" class="md-nav__link">
+        CDK Overrides
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overrides/taskdef-overrides/" class="md-nav__link">
+        Task Definition Overrides
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internal-albs/" class="md-nav__link">
+        Internal Load Balancers
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest-env-var/" class="md-nav__link">
+        Manifest Environment Variables
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/" class="md-nav__link">
+        Observability
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../publish-subscribe/" class="md-nav__link">
+        Publish/Subscribe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../secrets/" class="md-nav__link">
+        Secrets
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../svc-to-svc-communication/" class="md-nav__link">
+        Service-to-Service Communication
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sidecars/" class="md-nav__link">
+        Sidecars
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        Storage
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7" type="checkbox" id="__nav_2_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7">
+          Commands
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Commands" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_7">
+          <span class="md-nav__icon md-icon"></span>
+          Commands
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_1" type="checkbox" id="__nav_2_7_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_1">
+          Getting Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_1">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/docs/" class="md-nav__link">
+        docs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/init/" class="md-nav__link">
+        init
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_2" type="checkbox" id="__nav_2_7_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_2">
+          Build
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Build" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_2">
+          <span class="md-nav__icon md-icon"></span>
+          Build
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-init/" class="md-nav__link">
+        app init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-upgrade/" class="md-nav__link">
+        app upgrade
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-delete/" class="md-nav__link">
+        app delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-init/" class="md-nav__link">
+        env init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-override/" class="md-nav__link">
+        env override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-package/" class="md-nav__link">
+        env package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-delete/" class="md-nav__link">
+        env delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-init/" class="md-nav__link">
+        job init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-override/" class="md-nav__link">
+        job override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-package/" class="md-nav__link">
+        job package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-delete/" class="md-nav__link">
+        job delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-init/" class="md-nav__link">
+        svc init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-override/" class="md-nav__link">
+        svc override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-package/" class="md-nav__link">
+        svc package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-delete/" class="md-nav__link">
+        svc delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/run-local/" class="md-nav__link">
+        run local
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_3" type="checkbox" id="__nav_2_7_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_3">
+          Release
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Release" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_3">
+          <span class="md-nav__icon md-icon"></span>
+          Release
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-deploy/" class="md-nav__link">
+        env deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-deploy/" class="md-nav__link">
+        job deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-init/" class="md-nav__link">
+        pipeline init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-deploy/" class="md-nav__link">
+        pipeline deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-ls/" class="md-nav__link">
+        pipeline ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-override/" class="md-nav__link">
+        pipeline override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-show/" class="md-nav__link">
+        pipeline show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-status/" class="md-nav__link">
+        pipeline status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-delete/" class="md-nav__link">
+        pipeline delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-deploy/" class="md-nav__link">
+        svc deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/deploy/" class="md-nav__link">
+        deploy
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_4" type="checkbox" id="__nav_2_7_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_4">
+          Operate
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Operate" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_4">
+          <span class="md-nav__icon md-icon"></span>
+          Operate
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-ls/" class="md-nav__link">
+        app ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-show/" class="md-nav__link">
+        app show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-ls/" class="md-nav__link">
+        env ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-show/" class="md-nav__link">
+        env show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-ls/" class="md-nav__link">
+        job ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-logs/" class="md-nav__link">
+        job logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-run/" class="md-nav__link">
+        job run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-ls/" class="md-nav__link">
+        svc ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-show/" class="md-nav__link">
+        svc show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-status/" class="md-nav__link">
+        svc status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-logs/" class="md-nav__link">
+        svc logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-exec/" class="md-nav__link">
+        svc exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/task-run/" class="md-nav__link">
+        task run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/task-exec/" class="md-nav__link">
+        task exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/task-delete/" class="md-nav__link">
+        task delete
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_5" type="checkbox" id="__nav_2_7_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_5">
+          Extend
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Extend" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_5">
+          <span class="md-nav__icon md-icon"></span>
+          Extend
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/secret-init/" class="md-nav__link">
+        secret init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/storage-init/" class="md-nav__link">
+        storage init
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_6" type="checkbox" id="__nav_2_7_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_6">
+          Settings
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Settings" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_6">
+          <span class="md-nav__icon md-icon"></span>
+          Settings
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/version/" class="md-nav__link">
+        version
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/completion/" class="md-nav__link">
+        completion
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_7_7" type="checkbox" id="__nav_2_7_7" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_7_7">
+          All
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="All" data-md-level="3">
+        <label class="md-nav__title" for="__nav_2_7_7">
+          <span class="md-nav__icon md-icon"></span>
+          All
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-delete/" class="md-nav__link">
+        app delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-init/" class="md-nav__link">
+        app init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-ls/" class="md-nav__link">
+        app ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-show/" class="md-nav__link">
+        app show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/app-upgrade/" class="md-nav__link">
+        app upgrade
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/completion/" class="md-nav__link">
+        completion
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/deploy/" class="md-nav__link">
+        deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/docs/" class="md-nav__link">
+        docs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-delete/" class="md-nav__link">
+        env delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-deploy/" class="md-nav__link">
+        env deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-init/" class="md-nav__link">
+        env init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-ls/" class="md-nav__link">
+        env ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-override/" class="md-nav__link">
+        env override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-package/" class="md-nav__link">
+        env package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/env-show/" class="md-nav__link">
+        env show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/init/" class="md-nav__link">
+        init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-delete/" class="md-nav__link">
+        job delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-deploy/" class="md-nav__link">
+        job deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-init/" class="md-nav__link">
+        job init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-logs/" class="md-nav__link">
+        job logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-ls/" class="md-nav__link">
+        job ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-override/" class="md-nav__link">
+        job override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-package/" class="md-nav__link">
+        job package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/job-run/" class="md-nav__link">
+        job run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-delete/" class="md-nav__link">
+        pipeline delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-deploy/" class="md-nav__link">
+        pipeline deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-init/" class="md-nav__link">
+        pipeline init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-ls/" class="md-nav__link">
+        pipeline ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-override/" class="md-nav__link">
+        pipeline override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-show/" class="md-nav__link">
+        pipeline show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/pipeline-status/" class="md-nav__link">
+        pipeline status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/run-local/" class="md-nav__link">
+        run local
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/secret-init/" class="md-nav__link">
+        secret init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/storage-init/" class="md-nav__link">
+        storage init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-delete/" class="md-nav__link">
+        svc delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-deploy/" class="md-nav__link">
+        svc deploy
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-exec/" class="md-nav__link">
+        svc exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-init/" class="md-nav__link">
+        svc init
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-logs/" class="md-nav__link">
+        svc logs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-ls/" class="md-nav__link">
+        svc ls
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-override/" class="md-nav__link">
+        svc override
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-package/" class="md-nav__link">
+        svc package
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-show/" class="md-nav__link">
+        svc show
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-status/" class="md-nav__link">
+        svc status
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-pause/" class="md-nav__link">
+        svc pause
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/svc-resume/" class="md-nav__link">
+        svc resume
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/task-delete/" class="md-nav__link">
+        task delete
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/task-exec/" class="md-nav__link">
+        task exec
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/task-run/" class="md-nav__link">
+        task run
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/version/" class="md-nav__link">
+        version
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Blogs
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Blogs" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Blogs
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v133/" class="md-nav__link">
+        Release v1.33
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v132/" class="md-nav__link">
+        Release v1.32
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v131/" class="md-nav__link">
+        Release v1.31
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v130/" class="md-nav__link">
+        Release v1.30
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v129/" class="md-nav__link">
+        Release v1.29
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v128/" class="md-nav__link">
+        Release v1.28
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v127/" class="md-nav__link">
+        Release v1.27
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/apprunner-waf/" class="md-nav__link">
+        AWS App Runner WAF
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v126/" class="md-nav__link">
+        Release v1.26
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v125/" class="md-nav__link">
+        Release v1.25
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v124/" class="md-nav__link">
+        Release v1.24
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v123/" class="md-nav__link">
+        Release v1.23
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v122/" class="md-nav__link">
+        Release v1.22
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v121/" class="md-nav__link">
+        Release v1.21
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v120/" class="md-nav__link">
+        Release v1.20
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/apprunner-vpc/" class="md-nav__link">
+        AWS App Runner VPC
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v119/" class="md-nav__link">
+        Release v1.19
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v118/" class="md-nav__link">
+        Release v1.18
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v117/" class="md-nav__link">
+        Release v1.17
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../blogs/release-v116/" class="md-nav__link">
+        Release v1.16
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          Community
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Community" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Community
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../community/get-involved/" class="md-nav__link">
+        Get Involved
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../community/guides/" class="md-nav__link">
+        Guides and Resources
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-do-i-add-an-s3-bucket-a-ddb-table-or-an-aurora-serverless-cluster" class="md-nav__link">
+    How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-add-other-resources" class="md-nav__link">
+    How to add other resources?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-an-addon-template-look-like" class="md-nav__link">
+    What does an addon template look like?
+  </a>
+  
+    <nav class="md-nav" aria-label="What does an addon template look like?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#writing-the-parameters-section" class="md-nav__link">
+    Writing the Parameters section
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing the Parameters section">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#customizing-the-parameters-section" class="md-nav__link">
+    Customizing the Parameters section
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-the-conditions-and-the-mappings-sections" class="md-nav__link">
+    Writing the Conditions and the Mappings sections
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-the-outputs-section" class="md-nav__link">
+    Writing the Outputs section
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing the Outputs section">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-addon-connecting-to-your-workloads" class="md-nav__link">
+    Environment addon: Connecting to your workloads
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment addon: Connecting to your workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#referencing-from-a-workload-addon" class="md-nav__link">
+    Referencing from a workload addon
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#referencing-from-a-workload-manifest" class="md-nav__link">
+    Referencing from a workload manifest
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-addons-walk-through" class="md-nav__link">
+    Environment Addons Walk-through
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/developing/addons/environment.en.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <h1 id="modeling-additional-environment-resources-with-aws-cloudformation">Modeling Additional Environment Resources with AWS CloudFormation</h1>
+<p>Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a <a href="../../../manifest/overview/">service or environment manifest</a> does not integrate by default. 
+For example, an addon can be a DynamoDB table, an S3 bucket, or an RDS Aurora Serverless cluster that your service needs to read or write to.</p>
+<p>You can define additional resources for a workload (such as a <a href="../../../manifest/lb-web-service/">Load Balanced Web Service</a>
+or a <a href="../../../manifest/scheduled-job/">Scheduled Job</a>).
+The lifecycle of workload addons will be managed by the workload and will be deleted once the workload is deleted.</p>
+<p>Alternatively, you can define additional shareable resource for an environment.
+Environment addons won't be deleted unless the environment is deleted.</p>
+<p>This page documents how to create environment-level addons.
+For workload-level addons, visit <a href="../workload/">Modeling Additional Workload Resources with AWS CloudFormation</a>.</p>
+<h2 id="how-do-i-add-an-s3-bucket-a-ddb-table-or-an-aurora-serverless-cluster">How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?</h2>
+<p>Copilot provides the following commands to help you create certain kinds of addons:</p>
+<ul>
+<li><a href="../../../commands/storage-init/"><code>storage init</code></a> will create a DynamoDB table, an S3 bucket, or an Aurora Serverless cluster.</li>
+</ul>
+<p>You can run <code>copilot storage init</code> from your workspace and be guided through some questions to help you set up these resources.</p>
+<h2 id="how-to-add-other-resources">How to add other resources?</h2>
+<p>For other types of addons, you can add your own custom CloudFormation templates:</p>
+<ol>
+<li>You can store the custom templates in your workspace under <code>copilot/environments/addons</code> directory.</li>
+<li>When running <code>copilot env deploy</code>, the custom addons template will be deployed along with your environment stack.</li>
+</ol>
+<details class="- note"><summary>Sample workspace layout with environment addons</summary><div class="highlight"><pre><span></span><code>.
+└── copilot
+    └── environments
+        ├── addons  # Store environment addons.
+        │   └── mys3.yaml
+        ├── dev
+        └── prod      
+</code></pre></div>
+</details>
+<h2 id="what-does-an-addon-template-look-like">What does an addon template look like?</h2>
+<p>An environment addon template can be <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html">any valid CloudFormation template</a> that satisfies the following:</p>
+<ul>
+<li>Includes at least one <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html"><code>Resource</code></a>.</li>
+<li>The <code>Parameters</code> section includes <code>App</code>, <code>Env</code>.</li>
+</ul>
+<p>you can customize your resource properties with <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html">Conditions</a> or <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html">Mappings</a>.</p>
+<div class="admonition info">
+<p>We recommend following <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html">Amazon IAM best practices</a> while defining AWS Managed Policies for the additional resources, including:</p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege">Grant least privilege</a> to the policies defined in your <code>addons/</code> directory.  </li>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#use-policy-conditions">Use policy conditions for extra security</a> to restrict your policies to access only the resources defined in your <code>addons/</code> directory.   </li>
+</ul>
+</div>
+<h3 id="writing-the-parameters-section">Writing the <code>Parameters</code> section</h3>
+<p>There are a few parameters that Copilot requires you to define in your templates. </p>
+<div class="admonition info">
+<div class="highlight"><pre><span></span><code><span class="nt">Parameters</span><span class="p">:</span>
+    <span class="nt">App</span><span class="p">:</span>
+        <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+    <span class="nt">Env</span><span class="p">:</span>
+        <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+</code></pre></div>
+</div>
+<h4 id="customizing-the-parameters-section">Customizing the <code>Parameters</code> section</h4>
+<p>If you'd like to define parameters in addition to the ones required by Copilot, you can do so with a
+<code>addons.parameters.yml</code> file.</p>
+<div class="highlight"><pre><span></span><code>.
+└── addons/
+    ├── template.yml
+    └── addons.parameters.yml # Add this file under your addons/ directory.
+</code></pre></div>
+<ol>
+<li>In your template file, add the additional parameters under the <code>Parameters</code> section.</li>
+<li>In your <code>addons.parameters.yml</code>, define the values of those additional parameters. They can refer to values from your environment stack. </li>
+</ol>
+<details class="- note"><summary>Examples: Customize addon parameters</summary><p><div class="highlight"><pre><span></span><code><span class="c1"># In &quot;environments/addons/my-addon.yml&quot;</span>
+<span class="nt">Parameters</span><span class="p">:</span>
+  <span class="c1"># Required parameters by AWS Copilot.</span>
+  <span class="nt">App</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+  <span class="nt">Env</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+  <span class="c1"># Additional parameters defined in addons.parameters.yml</span>
+  <span class="nt">ClusterName</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># In &quot;environments/addons/addons.parameters.yml&quot;</span>
+<span class="nt">Parameters</span><span class="p">:</span>
+    <span class="nt">ClusterName</span><span class="p">:</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">Cluster</span>
+</code></pre></div></p>
+</details>
+<h3 id="writing-the-conditions-and-the-mappings-sections">Writing the <code>Conditions</code> and the <code>Mappings</code> sections</h3>
+<p>Often, you want to configure your addon resources differently depending on certain conditions. 
+For example, you could conditionally configure your DB resource's capacity depending on whether it is deploying to a 
+production or a test environment. To do so, you can use the <code>Conditions</code> section and the <code>Mappings</code> section.</p>
+<details class="- note"><summary>Examples: Configure addons conditionally</summary><div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Using <code>Mappings</code></label><label for="__tabbed_1_2">Using <code>Conditions</code></label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nt">Mappings</span><span class="p">:</span>
+    <span class="nt">MyAuroraServerlessEnvScalingConfigurationMap</span><span class="p">:</span>
+        <span class="nt">dev</span><span class="p">:</span>
+            <span class="s">&quot;DBMinCapacity&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
+            <span class="s">&quot;DBMaxCapacity&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">8</span>   
+        <span class="nt">test</span><span class="p">:</span>
+            <span class="s">&quot;DBMinCapacity&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+            <span class="s">&quot;DBMaxCapacity&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">32</span>
+        <span class="nt">prod</span><span class="p">:</span>
+            <span class="s">&quot;DBMinCapacity&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+            <span class="s">&quot;DBMaxCapacity&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">64</span>
+<span class="nt">Resources</span><span class="p">:</span>
+    <span class="nt">MyCluster</span><span class="p">:</span>
+        <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::RDS::DBCluster</span>
+        <span class="nt">Properties</span><span class="p">:</span>
+            <span class="nt">ScalingConfiguration</span><span class="p">:</span>
+                <span class="nt">MinCapacity</span><span class="p">:</span> <span class="kt">!FindInMap</span>
+                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MyAuroraServerlessEnvScalingConfigurationMap</span>
+                    <span class="p p-Indicator">-</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">Env</span>
+                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">DBMinCapacity</span>
+                <span class="nt">MaxCapacity</span><span class="p">:</span> <span class="kt">!FindInMap</span>
+                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MyAuroraServerlessEnvScalingConfigurationMap</span>
+                    <span class="p p-Indicator">-</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">Env</span>
+                    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">DBMaxCapacity</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nt">Conditions</span><span class="p">:</span>
+  <span class="nt">IsProd</span><span class="p">:</span> <span class="kt">!Equals</span> <span class="p p-Indicator">[</span><span class="kt">!Ref</span> <span class="nv">Env</span><span class="p p-Indicator">,</span> <span class="s">&quot;prod&quot;</span><span class="p p-Indicator">]</span> 
+
+<span class="nt">Resources</span><span class="p">:</span>
+  <span class="nt">MyCluster</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::RDS::DBCluster</span>
+    <span class="nt">Properties</span><span class="p">:</span>
+      <span class="nt">ScalingConfiguration</span><span class="p">:</span>
+          <span class="nt">MinCapacity</span><span class="p">:</span> <span class="kt">!If</span> <span class="p p-Indicator">[</span><span class="nv">IsProd</span><span class="p p-Indicator">,</span> <span class="nv">1</span><span class="p p-Indicator">,</span> <span class="nv">0.5</span><span class="p p-Indicator">]</span>
+          <span class="nt">MaxCapacity</span><span class="p">:</span> <span class="kt">!If</span> <span class="p p-Indicator">[</span><span class="nv">IsProd</span><span class="p p-Indicator">,</span> <span class="nv">8</span><span class="p p-Indicator">,</span> <span class="nv">64</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</details>
+<h3 id="writing-the-outputs-section">Writing the <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html"><code>Outputs</code></a> section</h3>
+<p>You can use the <code>Outputs</code> section to define any values that can be consumed by other resources; for example, a service,
+a CloudFormation stack, etc.</p>
+<h4 id="environment-addon-connecting-to-your-workloads">Environment addon: Connecting to your workloads</h4>
+<p>A value from an environment addon can be referenced by a workload addon or a workload manifest.
+To do so, you should first export the value from the environment addon using the <code>Outputs</code> section.</p>
+<details class="note" open="open"><summary>Example: Export values from environment addons</summary><div class="highlight"><pre><span></span><code><span class="nt">Outputs</span><span class="p">:</span>
+    <span class="nt">MyTableARN</span><span class="p">:</span>
+        <span class="nt">Value</span><span class="p">:</span> <span class="kt">!GetAtt</span> <span class="l l-Scalar l-Scalar-Plain">ServiceTable.Arn</span>
+        <span class="nt">Export</span><span class="p">:</span>
+            <span class="nt">Name</span><span class="p">:</span> <span class="kt">!Sub</span> <span class="l l-Scalar l-Scalar-Plain">${App}-${Env}-MyTableARN</span>  <span class="c1"># This value can be consumed by a workload manifest or a workload addon.</span>
+    <span class="nt">MyTableName</span><span class="p">:</span>
+        <span class="nt">Value</span><span class="p">:</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">ServiceTable</span>
+        <span class="nt">Export</span><span class="p">:</span>
+            <span class="nt">Name</span><span class="p">:</span> <span class="kt">!Sub</span> <span class="l l-Scalar l-Scalar-Plain">${App}-${Env}-MyTableName</span>
+</code></pre></div>
+</details>
+<p>It is important that you add the <code>Export</code> block. 
+Otherwise, your workload stack or your workload addons won't be able to access the value.
+You will use <code>Export.Name</code> to reference the value from your workload-level resources.</p>
+<details class="- hint"><summary>Consideration: Namespace your <code>Export.Name</code></summary><p>You can specify any name you like for <code>Export.Name</code>.
+That is, it doesn't have to be prefixed with <code>!Sub ${App}-${Env}</code>; it can simply be <code>MyTableName</code>.</p>
+<p>However, within an AWS region, the <code>Export.Name</code> must be unique. 
+That is, you can't have two exports named <code>MyTableName</code> in <code>us-east-1</code>.</p>
+<p>Therefore, we recommend you to namespace your exports with <code>${App}</code> and <code>${Env}</code> to decrease the chance of name collision. 
+In addition, this makes it clear which application and environment the value is managed under.</p>
+<p>With the namespace, for example, say your application's name is <code>"my-app"</code>,
+and you deployed the addons with environment <code>test</code>, then the final export name would be rendered to <code>my-app-test-MyTableName</code>.</p>
+</details>
+<h5 id="referencing-from-a-workload-addon">Referencing from a workload addon</h5>
+<p>In your workload addons, you can reference a value from your environment addons, as long as that value is exported.
+To do so, use the <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html"><code>Fn::ImportValue</code></a>
+function with that value's export name to import it from an environment addon.</p>
+<details class="- note"><summary>Example: An IAM policy to access an environment-level DynamoDB table</summary><div class="highlight"><pre><span></span><code><span class="nt">Parameters</span><span class="p">:</span>
+  <span class="nt">App</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+    <span class="nt">Description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Your application&#39;s name.</span>
+  <span class="nt">Env</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+    <span class="nt">Description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">The environment name your service, job, or workflow is being deployed to.</span>
+  <span class="nt">Name</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">String</span>
+    <span class="nt">Description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Your workload&#39;s name.</span>
+<span class="nt">Resources</span><span class="p">:</span>
+  <span class="nt">MyTableAccessPolicy</span><span class="p">:</span>
+    <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::IAM::ManagedPolicy</span>
+    <span class="nt">Properties</span><span class="p">:</span>
+      <span class="nt">Description</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Grants CRUD access to the Dynamo DB table</span>
+      <span class="nt">PolicyDocument</span><span class="p">:</span>
+        <span class="nt">Version</span><span class="p">:</span> <span class="s">&#39;2012-10-17&#39;</span>
+        <span class="nt">Statement</span><span class="p">:</span>
+          <span class="p p-Indicator">-</span> <span class="nt">Sid</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">DDBActions</span>
+            <span class="nt">Effect</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Allow</span>
+            <span class="nt">Action</span><span class="p">:</span>
+              <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">dynamodb:*</span> <span class="c1"># NOTE: Scope down the permissions in your real application. This is done so that this example isn&#39;t too long!</span>
+            <span class="nt">Resource</span><span class="p">:</span> 
+              <span class="l l-Scalar l-Scalar-Plain">Fn::ImportValue</span><span class="p p-Indicator">:</span>                <span class="c1"># &lt;- We import the table ARN from the environment addons.</span>
+                <span class="kt">!Sub</span> <span class="l l-Scalar l-Scalar-Plain">${App}-${Env}-MyTableARN</span> <span class="c1"># &lt;- The export name that we used.</span>
+</code></pre></div>
+</details>
+<h5 id="referencing-from-a-workload-manifest">Referencing from a workload manifest</h5>
+<p>You can also reference a value from your environment addons in a workload manifest for 
+<a href="../../../manifest/lb-web-service/#variables-from-cfn"><code>variables</code></a>, 
+<a href="../../../manifest/lb-web-service/#secrets-from-cfn"><code>secrets</code></a> and 
+<a href="../../../manifest/lb-web-service/#network-vpc-security-groups-from-cfn"><code>security_groups</code></a>, 
+as long as that value is exported. To do so, use <code>from_cfn</code> fields in workload manifests with that value's export name.</p>
+<details class="- note"><summary>Examples: using <code>from_cfn</code></summary><div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Inject an environment variable</label><label for="__tabbed_2_2">Inject a secret</label><label for="__tabbed_2_3">Attach a security group</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">db-front</span>
+<span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Backend Service</span>
+<span class="nt">variables</span><span class="p">:</span>
+  <span class="nt">MY_TABLE_NAME</span><span class="p">:</span>
+    <span class="nt">from_cfn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-MyTableName</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">db-front</span>
+<span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Backend Service</span>
+
+<span class="nt">secrets</span><span class="p">:</span>
+  <span class="nt">MY_CLUSTER_CREDS</span><span class="p">:</span>
+    <span class="nt">from_cfn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-MyClusterSecret</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">db-front</span>
+<span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Backend Service</span>
+
+<span class="nt">security_groups</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="nt">from_cfn</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-MyClusterAllowedSecurityGroup</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+</details>
+<h2 id="examples">Examples</h2>
+<h3 id="environment-addons-walk-through">Environment Addons Walk-through</h3>
+<p>See our <a href="../../../../blogs/release-v125/#environment-addons">v1.25.0 blog post</a> for a detailed walk-through!</p>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        
+
+<!-- Application footer -->
+<footer class="md-footer">
+  <!-- Further information -->
+  <div class="md-footer-meta md-typeset" style="background-color: #fff;">
+    <div class="md-footer-meta__inner md-grid" style="background-color: #fff;">
+
+      <!-- Copyright and theme information -->
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight" style="color: rgb(38, 38, 38);">
+            Copyright &copy; 2023 Amazon
+          </div>
+        
+        <div style="color: rgb(38, 38, 38);">
+          Made with
+          <a
+                  href="https://squidfunk.github.io/mkdocs-material/"
+                  target="_blank" rel="noopener"
+                  style="color: black;"
+          >
+            Material for MkDocs
+          </a>
+        </div>
+      </div>
+
+      <!-- Social links -->
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../../../../..", "features": ["tabs", "instant", "navigation.tabs"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../../assets/javascripts/workers/search.fcfe8b6d.min.js", "version": null}</script>
+    
+    
+      <script src="../../../../../assets/javascripts/bundle.b1047164.min.js"></script>
+      
+    
+  </body>
+</html>
