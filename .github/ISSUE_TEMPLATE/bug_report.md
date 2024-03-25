@@ -28,3 +28,8 @@ If you do find an existing Issue, re-open or add a comment to that Issue instead
 ### Expected result:
 <!-- Describe what you expected. -->
 
+
+
+### Debugging:
+<!-- Describe what you steps you have taken to debug this issue. What docs have you looked at? What have you tried? -->
+
