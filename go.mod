@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/imdario/mergo v0.3.16
 	github.com/lnquy/cron v1.1.1
-	github.com/moby/buildkit v0.13.0
+	github.com/moby/buildkit v0.13.1
 	github.com/moby/patternmatcher v0.6.0
 	github.com/onsi/ginkgo/v2 v2.16.0
 	github.com/onsi/gomega v1.32.0
