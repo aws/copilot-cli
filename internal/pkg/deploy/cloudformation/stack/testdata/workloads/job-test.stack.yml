@@ -452,8 +452,7 @@ Resources:
         SecurityGroups:
           Fn::Join:
           - '","'
-          - - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
-            - sg-0c10c4fe23f5e5361
+          - - sg-0c10c4fe23f5e5361
             - sg-09295097b2a41b59d
             - Fn::ImportValue: MyUserDBAccessSecurityGroup1
             - Fn::ImportValue: MyUserDBAccessSecurityGroup2
