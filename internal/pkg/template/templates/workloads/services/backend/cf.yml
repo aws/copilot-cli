@@ -115,14 +115,23 @@ Resources:
     DependsOn:
       - EnvControllerAction
       {{- if .ALBListener }}
-      {{- range $i, $rule := .ALBListener.Rules }}
-      {{- if $.ALBListener.IsHTTPS}}
+        {{- range $i, $rule := .ALBListener.Rules }}
+          {{- if $.ImportedALB}}
+            {{- if ne $.ImportedALB.HTTPSListenerARN ""}}
+      - HTTPSListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+              {{- if ne $.ImportedALB.HTTPListenerARN ""}}
+      - HTTPListenerRedirectRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+              {{- end}}
+            {{- else if ne $.ImportedALB.HTTPListenerARN ""}}
+      - HTTPListenerRuleForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+            {{- end}}
+          {{- else if $.ALBListener.IsHTTPS}}
       - HTTPListenerRuleWithDomain{{ if ne $i 0 }}{{ $i }}{{ end }}
       - HTTPSListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
-      {{- else }}
+          {{- else }}
       - HTTPListenerRule{{ if ne $i 0 }}{{ $i }}{{ end }}
-      {{- end}}
-      {{- end }}
+          {{- end}}
+        {{- end }}
       {{- end }}
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
@@ -135,7 +144,11 @@ Resources:
         {{- range $i, $rule := .ALBListener.Rules}}
         - ContainerName: {{$rule.TargetContainer}}
           ContainerPort: {{$rule.TargetPort}}
+        {{- if $.ImportedALB}}
+          TargetGroupArn: !Ref TargetGroupForImportedALB{{ if ne $i 0 }}{{ $i }}{{ end }}
+        {{- else}}
           TargetGroupArn: !Ref TargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
+        {{- end}}
         {{- end}}
       {{- end }}
 {{include "efs-access-point" . | indent 2}}
