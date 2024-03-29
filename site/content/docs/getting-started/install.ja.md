@@ -43,5 +43,5 @@ brew install aws/tap/copilot-cli
 !!! info
     特定のバージョンをダウンロードするには、"latest" を特定のバージョンに置き換えてください。例えば、macOS で v0.6.0 をダウンロードするには、次のように入力します。
     ```
-    curl -Lo copilot https://github.com/aws/copilot-cli/releases/download/v0.6.0/copilot-darwin && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot &&  copilot --help
+    curl -Lo copilot https://github.com/aws/copilot-cli/releases/download/v0.6.0/copilot-darwin && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot && copilot --help
     ```
