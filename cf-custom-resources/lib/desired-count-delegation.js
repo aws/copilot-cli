@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
-
-const aws = require("aws-sdk");
+const { ECS, DescribeServicesCommand } = require('@aws-sdk/client-ecs');
+const { ResourceGroupsTaggingAPI, GetResourcesCommand } = require('@aws-sdk/client-resource-groups-tagging-api');
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -85,9 +85,9 @@ const getRunningTaskCount = async function (
   env,
   svc
 ) {
-  var resourcegroupstaggingapi = new aws.ResourceGroupsTaggingAPI();
+  var resourcegroupstaggingapi = new ResourceGroupsTaggingAPI();
   const rgResp = await resourcegroupstaggingapi
-    .getResources({
+    .send(new GetResourcesCommand({
       ResourceTypeFilters: ["ecs:service"],
       TagFilters: [
         {
@@ -103,8 +103,7 @@ const getRunningTaskCount = async function (
           Values: [svc],
         },
       ],
-    })
-    .promise();
+  }));
 
   const resources = rgResp.ResourceTagMappingList;
   if (resources.length !== 1) {
@@ -112,13 +111,12 @@ const getRunningTaskCount = async function (
   }
   const serviceARN = resources[0].ResourceARN;
 
-  var ecs = new aws.ECS();
+  var ecs = new ECS();
   const resp = await ecs
-    .describeServices({
+    .send(new DescribeServicesCommand({
       cluster: cluster,
       services: [serviceARN],
-    })
-    .promise();
+  }));
   if (resp.services.length !== 1) {
     return defaultDesiredCount;
   }

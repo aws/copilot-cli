@@ -102,10 +102,11 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			},
 		}
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App:                &config.Application{Name: appName, Domain: "example.com", DomainHostedZoneID: "Z00ABC"},
+			App:                &config.Application{Name: appName, Domain: "example.com"},
 			EnvManifest:        envConfig,
 			Manifest:           v,
 			ArtifactBucketName: "bucket",
+			ArtifactKey:        "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",
@@ -113,9 +114,8 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 				Version:                  "v1.29.0",
 			},
-			RootUserARN:     "arn:aws:iam::123456789123:root",
-			AppHostedZoneID: "Z00DEF",
-		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
+			RootUserARN: "arn:aws:iam::123456789123:root",
+		})
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids

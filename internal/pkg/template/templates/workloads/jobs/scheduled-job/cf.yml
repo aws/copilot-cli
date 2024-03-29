@@ -47,6 +47,9 @@ Parameters:
     Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar.'
     Default: ""
 {{- end }}
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
 Conditions: 
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]

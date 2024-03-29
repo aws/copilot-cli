@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
 
-const aws = require("aws-sdk");
+const { S3,HeadBucketCommand, ListObjectVersionsCommand, DeleteObjectsCommand } = require("@aws-sdk/client-s3");
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -75,10 +75,10 @@ let report = function (
  * @param {string} bucketName Name of the bucket to be cleaned.
  */
 const cleanBucket = async function (bucketName) {
-  const s3 = new aws.S3();
+  const s3 = new S3();
   // Make sure the bucket exists.
   try {
-    await s3.headBucket({ Bucket: bucketName }).promise();
+    await s3.send(new HeadBucketCommand({ Bucket: bucketName }));
   } catch (err) {
     if (err.name === "ResourceNotFoundException") {
       return;
@@ -89,7 +89,7 @@ const cleanBucket = async function (bucketName) {
     Bucket: bucketName
   }
   while (true) {
-    const listResp = await s3.listObjectVersions(listObjectVersionsParam).promise();
+    const listResp =  await s3.send(new ListObjectVersionsCommand(listObjectVersionsParam));
     // After deleting other versions, remove delete markers version.
     // For info on "delete marker": https://docs.aws.amazon.com/AmazonS3/latest/dev/DeleteMarker.html
     let objectsToDelete = [
@@ -99,13 +99,13 @@ const cleanBucket = async function (bucketName) {
     if (objectsToDelete.length === 0) {
       return
     }
-    const delResp = await s3.deleteObjects({
+    const delResp = await s3.send(new DeleteObjectsCommand({
       Bucket: bucketName,
       Delete: {
         Objects: objectsToDelete,
         Quiet: true
       }
-    }).promise()
+    }));
     if (delResp.Errors.length > 0) {
       throw new AggregateError([new Error(`${delResp.Errors.length}/${objectsToDelete.length} objects failed to delete`),
       new Error(`first failed on key "${delResp.Errors[0].Key}": ${delResp.Errors[0].Message}`)]);

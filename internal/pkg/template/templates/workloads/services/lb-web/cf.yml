@@ -50,6 +50,9 @@ Parameters:
     Description: 'URL of the environment file for the {{$sidecar.Name}} sidecar.'
     Default: ""
 {{- end }}
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
   TargetContainer:
     Type: String
   TargetPort:
@@ -161,19 +164,11 @@ Resources:
     {{- end}}
   {{- end}}
   {{- if .NLB}}
-    {{- if .NLB.UDPListenerExists }}
     {{- range $i, $listener := .NLB.Listener }}
         - ContainerName: {{$listener.TargetContainer}}
           ContainerPort: {{$listener.TargetPort}}
           TargetGroupArn: !Ref NetworkLoadBalancerTargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
     {{- end }}
-    {{- else}}
-    {{- range $i, $listener := .NLB.Listener }}
-        - ContainerName: {{$listener.TargetContainer}}
-          ContainerPort: {{$listener.TargetPort}}
-          TargetGroupArn: !Ref NLBTargetGroup{{ if ne $i 0 }}{{ $i }}{{ end }}
-    {{- end }}
-    {{- end}}
   {{- end }}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
@@ -212,15 +207,8 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
   {{- if .NLB}}
-  {{- if .NLB.UDPListenerExists }}
   PublicNetworkLoadBalancerDNSName:
     Value: !GetAtt PublicNetworkLoadBalancerV2.DNSName
     Export:
       Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
-  {{- else}}
-  PublicNetworkLoadBalancerDNSName:
-    Value: !GetAtt PublicNetworkLoadBalancer.DNSName
-    Export:
-      Name: !Sub ${AWS::StackName}-PublicNetworkLoadBalancerDNSName
-  {{- end}}
   {{- end}}

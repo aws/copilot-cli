@@ -3,7 +3,8 @@
 "use strict";
 
 describe("Env Controller Handler", () => {
-  const AWS = require("aws-sdk-mock");
+  const cfn = require("@aws-sdk/client-cloudformation");
+  const { mockClient } = require('aws-sdk-client-mock');
   const sinon = require("sinon");
   const EnvController = require("../lib/env-controller");
   const LambdaTester = require("lambda-tester").noVersionCheck();
@@ -13,7 +14,6 @@ describe("Env Controller Handler", () => {
   const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
   let origLog = console.log;
-
   const testEnvStack = "mockEnvStack";
   const testWorkload = "mockWorkload";
   const testAliases = ["example.com"];
@@ -34,6 +34,7 @@ describe("Env Controller Handler", () => {
         "arn:aws:iam::1234567890:role/my-project-prod-CFNExecutionRole",
     },
   ];
+  const cfnMock = mockClient(cfn.CloudFormationClient);
 
   beforeEach(() => {
     EnvController.withDefaultResponseURL(ResponseURL);
@@ -44,10 +45,11 @@ describe("Env Controller Handler", () => {
     };
     // Prevent logging.
     console.log = function () {};
+    EnvController.waitForStackUpdate = async function () { };
   });
   afterEach(() => {
     // Restore logger
-    AWS.restore();
+    cfnMock.reset();
     console.log = origLog;
   });
 
@@ -104,9 +106,7 @@ describe("Env Controller Handler", () => {
       });
 
       test("physical id matches when create succeeds", () => {
-        AWS.mock(
-          "CloudFormation",
-          "describeStacks",
+        cfnMock.on(cfn.DescribeStacksCommand).callsFake(()=> {
           sinon.fake.resolves({
             Stacks: [
               {
@@ -116,18 +116,16 @@ describe("Env Controller Handler", () => {
               },
             ],
           })
-        );
+        });
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
       });
 
       test("physical id matches when create fails", () => {
-        AWS.mock(
-          "CloudFormation",
-          "describeStacks",
+        cfnMock.on(cfn.DescribeStacksCommand).callsFake(()=> {
           sinon.fake.rejects("unexpected error")
-        );
+        });
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
@@ -148,9 +146,7 @@ describe("Env Controller Handler", () => {
       });
 
       test("physical id matches when update succeeds", () => {
-        AWS.mock(
-          "CloudFormation",
-          "describeStacks",
+        cfnMock.on(cfn.DescribeStacksCommand).callsFake(()=> {
           sinon.fake.resolves({
             Stacks: [
               {
@@ -160,18 +156,16 @@ describe("Env Controller Handler", () => {
               },
             ],
           })
-        );
+        });
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
       });
 
       test("physical id matches when update fails", () => {
-        AWS.mock(
-          "CloudFormation",
-          "describeStacks",
+        cfnMock.on(cfn.DescribeStacksCommand).callsFake(()=> {
           sinon.fake.rejects("unexpected error")
-        );
+        });
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
@@ -192,9 +186,7 @@ describe("Env Controller Handler", () => {
       });
 
       test("physical id matches when delete succeeds", () => {
-        AWS.mock(
-          "CloudFormation",
-          "describeStacks",
+        cfnMock.on(cfn.DescribeStacksCommand).callsFake(()=> {
           sinon.fake.resolves({
             Stacks: [
               {
@@ -204,18 +196,16 @@ describe("Env Controller Handler", () => {
               },
             ],
           })
-        );
+        });
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
       });
 
       test("physical id matches when delete fails", () => {
-        AWS.mock(
-          "CloudFormation",
-          "describeStacks",
+        cfnMock.on(cfn.DescribeStacksCommand).callsFake(()=> {
           sinon.fake.rejects("unexpected error")
-        );
+        });
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
@@ -227,7 +217,7 @@ describe("Env Controller Handler", () => {
     const describeStacksFake = sinon.fake.resolves({
       Stacks: [],
     });
-    AWS.mock("CloudFormation", "describeStacks", describeStacksFake);
+    cfnMock.on(cfn.DescribeStacksCommand).callsFake(describeStacksFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -271,9 +261,9 @@ describe("Env Controller Handler", () => {
         },
       ],
     });
-    AWS.mock("CloudFormation", "describeStacks", describeStacksFake);
+    cfnMock.on(cfn.DescribeStacksCommand).callsFake(describeStacksFake);
     const updateStackFake = sinon.fake.throws(new Error("not apple pie"));
-    AWS.mock("CloudFormation", "updateStack", updateStackFake);
+    cfnMock.on(cfn.UpdateStackCommand).callsFake(updateStackFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -355,9 +345,9 @@ describe("Env Controller Handler", () => {
         },
       ],
     });
-    AWS.mock("CloudFormation", "describeStacks", describeStacksFake);
+    cfnMock.on(cfn.DescribeStacksCommand).callsFake(describeStacksFake);
     const updateStackFake = sinon.stub();
-    AWS.mock("CloudFormation", "updateStack", updateStackFake);
+    cfnMock.on(cfn.UpdateStackCommand).callsFake(updateStackFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -425,11 +415,8 @@ describe("Env Controller Handler", () => {
       ],
     });
     const fakeUpdateStack = sinon.fake.resolves({});
-    const fakeWaitFor = sinon.fake.resolves({});
-
-    AWS.mock("CloudFormation", "describeStacks", fakeDescribeStacks);
-    AWS.mock("CloudFormation", "updateStack", fakeUpdateStack);
-    AWS.mock("CloudFormation", "waitFor", fakeWaitFor);
+    cfnMock.on(cfn.DescribeStacksCommand).callsFake(fakeDescribeStacks);
+    cfnMock.on(cfn.UpdateStackCommand).callsFake(fakeUpdateStack);
 
     const wantedRequest = nock(ResponseURL)
       .put("/", (body) => {
@@ -504,7 +491,7 @@ describe("Env Controller Handler", () => {
         },
       ],
     });
-    AWS.mock("CloudFormation", "describeStacks", describeStacksFake);
+    cfnMock.on(cfn.DescribeStacksCommand).callsFake(describeStacksFake);
     const updateStackFake = sinon.stub();
     updateStackFake
       .onFirstCall()
@@ -514,11 +501,10 @@ describe("Env Controller Handler", () => {
         )
       );
     updateStackFake.onSecondCall().resolves(null);
-    AWS.mock("CloudFormation", "updateStack", updateStackFake);
-    const waitForFake = sinon.stub();
-    waitForFake.onFirstCall().resolves(null);
-    waitForFake.onSecondCall().resolves(null);
-    AWS.mock("CloudFormation", "waitFor", waitForFake);
+    cfnMock.on(cfn.UpdateStackCommand).callsFake(updateStackFake);
+    const waitForStackUpdateFake = sinon.stub(EnvController, 'waitForStackUpdate');
+    waitForStackUpdateFake.onFirstCall().resolves(null);
+    waitForStackUpdateFake.onSecondCall().resolves(null);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -562,18 +548,14 @@ describe("Env Controller Handler", () => {
           })
         );
         sinon.assert.calledWith(
-          waitForFake.firstCall,
-          sinon.match("stackUpdateComplete"),
-          sinon.match({
-            StackName: "mockEnvStack",
-          })
+          waitForStackUpdateFake.firstCall,
+          sinon.match.any,
+          "mockEnvStack"
         );
         sinon.assert.calledWith(
-          waitForFake.secondCall,
-          sinon.match("stackUpdateComplete"),
-          sinon.match({
-            StackName: "mockEnvStack",
-          })
+          waitForStackUpdateFake.secondCall,
+          sinon.match.any,
+          "mockEnvStack"
         );
         expect(request.isDone()).toBe(true);
       });
@@ -598,11 +580,11 @@ describe("Env Controller Handler", () => {
         },
       ],
     });
-    AWS.mock("CloudFormation", "describeStacks", describeStacksFake);
+    cfnMock.on(cfn.DescribeStacksCommand).callsFake(describeStacksFake);
     const updateStackFake = sinon.fake.resolves({});
-    AWS.mock("CloudFormation", "updateStack", updateStackFake);
-    const waitForFake = sinon.fake.resolves({});
-    AWS.mock("CloudFormation", "waitFor", waitForFake);
+    cfnMock.on(cfn.UpdateStackCommand).callsFake(updateStackFake);
+    const waitForStackUpdateFake = sinon.stub(EnvController, 'waitForStackUpdate');
+    waitForStackUpdateFake.resolves(null);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -647,11 +629,9 @@ describe("Env Controller Handler", () => {
           })
         );
         sinon.assert.calledWith(
-          waitForFake,
-          sinon.match("stackUpdateComplete"),
-          sinon.match({
-            StackName: "mockEnvStack",
-          })
+          waitForStackUpdateFake.firstCall,
+          sinon.match.any, // or more specific argument matchers
+          "mockEnvStack"
         );
         expect(request.isDone()).toBe(true);
         expect(request.isDone()).toBe(true);

@@ -622,7 +622,7 @@ type: Request-Driven Web Service`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
 				m.mockSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
@@ -690,7 +690,7 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},
@@ -704,7 +704,7 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("expose error"))
 			},
@@ -718,7 +718,7 @@ type: Request-Driven Web Service`), nil)
 			setupMocks: func(m *initSvcMocks) {
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
-				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port(s)")), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompt.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
 				m.mockDockerfile.EXPECT().GetExposedPorts().Return(nil, errors.New("no expose"))
 			},

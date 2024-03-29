@@ -34,7 +34,7 @@
 
         secrets:
           DB:
-            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+            secretsmanager: 'mysql'
         ```
 
     === "Spot autoscaling"
@@ -205,7 +205,7 @@ filter_policy:
     - example_corp
   event:
     - anything-but: order_cancelled
-  cutomer_interests:
+  customer_interests:
     - rugby
     - football
     - baseball

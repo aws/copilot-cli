@@ -90,7 +90,12 @@ Metadata:
           path: '/etc/mount1'
           efs:
             id:
-             from_cfn: stack-fs-12345
+              from_cfn: stack-fs-12345
+        externalEFSVolume2:
+          path: '/etc/mount2'
+          efs:
+            id:
+              from_cfn: stack-fs-12345
 
     # Optional fields for more advanced use-cases.
     #
@@ -130,6 +135,9 @@ Parameters:
     Description: 'URL of the environment file.'
     Type: String
     Default: ""
+  ArtifactKeyARN:
+    Type: String
+    Description: 'KMS Key used for encrypting artifacts'
   LogRetention:
     Type: Number
     Default: 30
@@ -187,7 +195,7 @@ Resources:
                   yourtopicyourtopicfifoURL: !Ref yourtopicyourtopicfifoEventsQueue
                   nonfifotopicnonfifotopicURL: !Ref nonfifotopicnonfifotopicEventsQueue
             - Name: COPILOT_MOUNT_POINTS
-              Value: '{"externalEFSVolume":"/etc/mount1"}'
+              Value: '{"externalEFSVolume":"/etc/mount1","externalEFSVolume2":"/etc/mount2"}'
           EnvironmentFiles:
           - !If
             - HasEnvFile
@@ -204,8 +212,18 @@ Resources:
             - ContainerPath: '/etc/mount1'
               ReadOnly: true
               SourceVolume: externalEFSVolume
+            - ContainerPath: '/etc/mount2'
+              ReadOnly: true
+              SourceVolume: externalEFSVolume2
       Volumes:
         - Name: externalEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: !ImportValue 'stack-fs-12345'
+            RootDirectory: '/'
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: DISABLED
+        - Name: externalEFSVolume2
           EFSVolumeConfiguration:
             FilesystemId: !ImportValue 'stack-fs-12345'
             RootDirectory: '/'
@@ -251,7 +269,17 @@ Resources:
                 Action:
                   - 'kms:Decrypt'
                 Resource:
+                  - !Ref ArtifactKeyARN
+              - Sid: DecryptTaggedKMSKey
+                Effect: 'Allow'
+                Action:
+                  - 'kms:Decrypt'
+                Resource:
                   - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
         - !If
           - HasEnvFile
           - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, GetEnvFilePolicy]]
@@ -306,7 +334,16 @@ Resources:
               - Effect: 'Allow'
                 Action: ["logs:CreateLogStream", "logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:PutLogEvents"]
                 Resource: "*"
-        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345']]
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345', '-0']]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                Resource:
+                  - !Join ['/', [!Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system', !ImportValue 'stack-fs-12345']]
+        - PolicyName: !Join ['', ['GrantEFSAccess', !ImportValue 'stack-fs-12345', '-1']]
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -348,7 +385,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   DynamicDesiredCountFunctionRole:
     Metadata:
       'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
@@ -442,7 +479,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt BacklogPerTaskCalculatorRole.Arn
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
       Environment:
         Variables:
           CLUSTER_NAME:
@@ -1174,7 +1211,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   EnvControllerRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update your environment stack"

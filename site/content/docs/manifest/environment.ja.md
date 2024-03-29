@@ -330,7 +330,7 @@ http:
 <span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>   
 内部ロードバランサーを配置するサブネット ID。
 
-<span class="parent-field">http.private</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">[v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) で変更されました</span>
+<span class="parent-field">http.private.</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">[v1.23.0](../../blogs/release-v123.ja.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible) で変更されました</span>
 内部ロードバランサーを許可する Ingress ルール。  
 ```yaml
 http:

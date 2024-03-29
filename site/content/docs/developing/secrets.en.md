@@ -40,7 +40,7 @@ Suppose you have a Secrets Manager secret with the following configuration:
 
 | Field  | Value                                                                                                                                                                 |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name   | `demo/test/mysql`                                                                                                                                                     |
+| Name   | `mysql`                                                                                                                                                     |
 | ARN    | `arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL`                                                                                        |
 | Value  | `{"engine": "mysql","username": "user1","password": "i29wwX!%9wFV","host": "my-database-endpoint.us-east-1.rds.amazonaws.com","dbname": "myDatabase","port": "3306"`} |
 | Tags   | `copilot-application=demo`, `copilot-environment=test` |
@@ -49,15 +49,12 @@ Suppose you have a Secrets Manager secret with the following configuration:
 You can modify your manifest file with:
 ```yaml
 secrets:
-  # (Recommended) Option 1. Referring to the secret by name.
+  # Option 1. Referring to the secret by name.
   DB:
-    secretsmanager: 'demo/test/mysql'
+    secretsmanager: 'mysql'
   # You can refer to a specific key in the JSON blob.
   DB_PASSWORD:
-    secretsmanager: 'demo/test/mysql:password::'
-  # You can substitute predefined environment variables to keep your manifest succinct.
-  DB_PASSWORD:
-    secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql:password::'
+    secretsmanager: 'mysql:password::'
 
   # Option 2. Alternatively, you can refer to the secret by ARN.
   DB: "'arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL'"

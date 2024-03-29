@@ -43,11 +43,6 @@ $ copilot storage init -n my-cluster -t Aurora -w api -l workload --engine Postg
 ```
 This will create an RDS Aurora Serverless v2 cluster that uses PostgreSQL engine with a database named `my_db`. An environment variable named `MYCLUSTER_SECRET` is injected into your workload as a JSON string. The fields are `'host'`, `'port'`, `'dbname'`, `'username'`, `'password'`, `'dbClusterIdentifier'` and `'engine'`.
 
-To create an [RDS Aurora Serverless v1](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) cluster, you can run
-```console
-$ copilot storage init -n my-cluster -t Aurora --serverless-version v1
-```
-
 ### Environment storage
 
 The `-l` flag is short for `--lifecycle`. In the examples above, the value to the `-l` flag is `workload`.

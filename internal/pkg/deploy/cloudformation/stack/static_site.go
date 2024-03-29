@@ -37,9 +37,9 @@ type StaticSiteConfig struct {
 	RuntimeConfig      RuntimeConfig
 	RootUserARN        string
 	ArtifactBucketName string
+	ArtifactKey        string
 	Addons             NestedStackConfigurer
 	AssetMappingURL    string
-	AppHostedZoneID    string
 }
 
 // NewStaticSite creates a new CFN stack from a manifest file, given the options.
@@ -55,11 +55,9 @@ func NewStaticSite(cfg *StaticSiteConfig) (*StaticSite, error) {
 	if cfg.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                   cfg.App.Name,
-			Domain:                 cfg.App.Domain,
-			AccountPrincipalARN:    cfg.RootUserARN,
-			RootDomainHostedZoneId: cfg.App.DomainHostedZoneID,
-			AppDomainHostedZoneId:  cfg.AppHostedZoneID,
+			Name:                cfg.App.Name,
+			Domain:              cfg.App.Domain,
+			AccountPrincipalARN: cfg.RootUserARN,
 		}
 	}
 	return &StaticSite{
@@ -69,6 +67,7 @@ func NewStaticSite(cfg *StaticSiteConfig) (*StaticSite, error) {
 			app:                cfg.App.Name,
 			permBound:          cfg.App.PermissionsBoundary,
 			artifactBucketName: cfg.ArtifactBucketName,
+			artifactKey:        cfg.ArtifactKey,
 			rc:                 cfg.RuntimeConfig,
 			rawManifest:        cfg.RawManifest,
 			parser:             fs,
@@ -136,7 +135,6 @@ func (s *StaticSite) Template() (string, error) {
 
 		AppDNSName:             dnsName,
 		AppDNSDelegationRole:   dnsDelegationRole,
-		HostedZones:            convertHostedZones(s.appInfo),
 		AssetMappingFileBucket: bucket,
 		AssetMappingFilePath:   path,
 		StaticSiteAlias:        staticSiteAlias,
@@ -166,6 +164,10 @@ func (s *StaticSite) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+			ParameterValue: aws.String(s.wkld.artifactKey),
 		},
 	}, nil
 }

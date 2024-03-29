@@ -269,6 +269,10 @@ func TestStaticSite_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 					ParameterValue: aws.String("mockURL"),
 				},
+				{
+					ParameterKey:   aws.String(WorkloadArtifactKeyARNParamKey),
+					ParameterValue: aws.String("arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"),
+				},
 			},
 		},
 	}
@@ -291,7 +295,8 @@ func TestStaticSite_Parameters(t *testing.T) {
 						Name: aws.String(testEnvName),
 					},
 				},
-				Manifest: testManifest,
+				Manifest:    testManifest,
+				ArtifactKey: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 			})
 			require.NoError(t, err)
 
@@ -328,6 +333,7 @@ func TestStaticSite_SerializedParameters(t *testing.T) {
 				"owner": "copilot",
 			},
 		},
+		ArtifactKey: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 	})
 	params, err := c.SerializedParameters()
 	require.NoError(t, err)
@@ -335,6 +341,7 @@ func TestStaticSite_SerializedParameters(t *testing.T) {
   "Parameters": {
     "AddonsTemplateURL": "",
     "AppName": "phonetool",
+    "ArtifactKeyARN": "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
     "EnvName": "test",
     "WorkloadName": "frontend"
   },

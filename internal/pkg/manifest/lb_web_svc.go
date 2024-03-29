@@ -182,6 +182,11 @@ func (s *LoadBalancedWebService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *LoadBalancedWebService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Port returns the exposed port in the manifest.
 // A LoadBalancedWebService always has a port exposed therefore the boolean is always true.
 func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
@@ -212,6 +217,12 @@ func (s *LoadBalancedWebService) BuildArgs(contextDir string) (map[string]*Docke
 // and the values are either env file paths or empty strings.
 func (s *LoadBalancedWebService) EnvFiles() map[string]string {
 	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
+}
+
+// ContainerDependencies returns a map of ContainerDependency objects for the LoadBalancedWebService
+// including dependencies for its main container, any logging sidecar, and additional sidecars.
+func (s *LoadBalancedWebService) ContainerDependencies() map[string]ContainerDependency {
+	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)
 }
 
 func (s *LoadBalancedWebService) subnets() *SubnetListOrArgs {

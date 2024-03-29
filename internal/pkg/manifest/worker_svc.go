@@ -34,6 +34,11 @@ type WorkerService struct {
 	parser       template.Parser
 }
 
+// Dockerfile returns the relative path of the Dockerfile in the manifest.
+func (s *WorkerService) Dockerfile() string {
+	return s.ImageConfig.Image.dockerfilePath()
+}
+
 // Publish returns the list of topics where notifications can be published.
 func (s *WorkerService) Publish() []Topic {
 	return s.WorkerServiceConfig.PublishConfig.publishedTopics()
@@ -291,6 +296,12 @@ func (s *WorkerService) BuildArgs(contextDir string) (map[string]*DockerBuildArg
 // and the values are either env file paths or empty strings.
 func (s *WorkerService) EnvFiles() map[string]string {
 	return envFiles(s.Name, s.TaskConfig, s.Logging, s.Sidecars)
+}
+
+// ContainerDependencies returns a map of ContainerDependency objects for the WorkerService
+// including dependencies for its main container, any logging sidecar, and additional sidecars.
+func (s *WorkerService) ContainerDependencies() map[string]ContainerDependency {
+	return containerDependencies(aws.StringValue(s.Name), s.ImageConfig.Image, s.Logging, s.Sidecars)
 }
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service

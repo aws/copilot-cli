@@ -353,6 +353,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					opts.mftReader = ws
 					opts.wsAppName = initAppCmd.name
 					opts.wsRoot = ws.ProjectRoot()
+					sourceSel, err := selector.NewLocalFileSelector(prompt, fs, ws)
+					if err != nil {
+						return fmt.Errorf("init a new local file selector: %w", err)
+					}
+					opts.sourceSel = sourceSel
 					opts.wsPendingCreation = false
 				}
 				o.initWlCmd = &opts

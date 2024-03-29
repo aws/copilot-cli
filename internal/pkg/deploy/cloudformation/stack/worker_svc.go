@@ -32,6 +32,7 @@ type WorkerServiceConfig struct {
 	Env                string
 	Manifest           *manifest.WorkerService
 	ArtifactBucketName string
+	ArtifactKey        string
 	RawManifest        string
 	RuntimeConfig      RuntimeConfig
 	Addons             NestedStackConfigurer
@@ -53,6 +54,7 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 				app:                cfg.App.Name,
 				permBound:          cfg.App.PermissionsBoundary,
 				artifactBucketName: cfg.ArtifactBucketName,
+				artifactKey:        cfg.ArtifactKey,
 				rc:                 cfg.RuntimeConfig,
 				image:              cfg.Manifest.ImageConfig.Image,
 				rawManifest:        cfg.RawManifest,

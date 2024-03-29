@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 "use strict";
-
-const aws = require("aws-sdk");
+const { ECS,DescribeServicesCommand } = require("@aws-sdk/client-ecs");
+const { SQS,GetQueueUrlCommand, GetQueueAttributesCommand} = require("@aws-sdk/client-sqs");
 
 // AWS Clients that are overriden in tests.
 let ecs, sqs;
@@ -79,9 +79,9 @@ const emitBacklogPerTaskMetric = (namespace, timestamp, queueName, backlogPerTas
  * @returns string The URL of the queue.
  */
 const getQueueURL = async (queueName) => {
-  const out = await sqs.getQueueUrl({
+  const out = await sqs.send(new GetQueueUrlCommand({
     QueueName: queueName,
-  }).promise();
+  }));
   return out.QueueUrl;
 }
 
@@ -91,10 +91,10 @@ const getQueueURL = async (queueName) => {
  * @return int The ApproximateNumberOfMessages in the queue.
  */
 const getQueueDepth = async (queueUrl) => {
-  const out = await sqs.getQueueAttributes({
+  const out = await sqs.send(new GetQueueAttributesCommand({
     QueueUrl: queueUrl,
     AttributeNames: ['ApproximateNumberOfMessages'],
-  }).promise();
+  }));
   return out.Attributes.ApproximateNumberOfMessages;
 }
 
@@ -105,10 +105,10 @@ const getQueueDepth = async (queueUrl) => {
  * @returns int The number of tasks running part of the service.
  */
 const getRunningTaskCount = async (clusterId, serviceName) => {
-  const out = await ecs.describeServices({
+  const out = await ecs.send(new DescribeServicesCommand({
     cluster: clusterId,
     services: [serviceName],
-  }).promise();
+  }));
   if (out.services.length === 0) {
     throw new Error(`service ${serviceName} of cluster ${clusterId} does not exist`);
   }
@@ -119,8 +119,8 @@ const getRunningTaskCount = async (clusterId, serviceName) => {
  * Create new clients.
  */
 const setupClients = () => {
-  ecs = new aws.ECS();
-  sqs = new aws.SQS();
+  ecs = new ECS();
+  sqs = new SQS();
 }
 
 // convertQueueNames takes a comma separated string of SQS queue names and returns it as an array of strings.

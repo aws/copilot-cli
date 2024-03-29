@@ -937,7 +937,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   
   CustomDomainFunction:
     Condition: ManagedAliases
@@ -947,7 +947,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   
   DNSDelegationFunction:
     Type: AWS::Lambda::Function
@@ -957,7 +957,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs16.x
+      Runtime: nodejs20.x
   DelegateDNSAction:
     Metadata:
       'aws:copilot:description': 'Delegate DNS for environment subdomain'
@@ -972,7 +972,6 @@ Resources:
       SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
       NameServers: !GetAtt EnvironmentHostedZone.NameServers
       RootDNSRole: !Ref AppDNSDelegationRole
-      EnvHostedZoneId: !Ref EnvironmentHostedZone
   
   HTTPSCert:
     Metadata:
@@ -1005,7 +1004,6 @@ Resources:
       Aliases: !Ref Aliases
       AppDNSRole: !Ref AppDNSDelegationRole
       DomainName: !Ref AppDNSName
-      EnvHostedZoneId: !Ref EnvironmentHostedZone
       PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
   AppRunnerVpcEndpointSecurityGroup:

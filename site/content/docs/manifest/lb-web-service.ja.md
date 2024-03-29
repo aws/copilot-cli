@@ -26,7 +26,7 @@
         secrets:
           GITHUB_TOKEN: GITHUB_TOKEN
           DB_SECRET:
-            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+            secretsmanager: 'mysql'
         ```
 
     === "With a domain"
@@ -281,6 +281,9 @@ Application Load Balancer を無効化する場合は、 `http: false` と指定
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 このパスに到着したリクエストが、Service に転送されます。各リスナールールは一意のパスでリクエストを受け付ける必要があります。
+
+<span class="parent-field">http.</span><a id="http-alb" href="#http-alb" class="field">`alb`</a> <span class="type">String</span> <span class="version">[v1.32.0](../../blogs/release-v132.ja.md#imported-albs) にて追加</span>  
+インポートする既存のインターネット向け ALB の ARN または ALB 名。リスナーにリスナールールが追加されます。Copilot は証明書などの DNS 関連リソースを管理しません。
 
 {% include 'http-healthcheck.ja.md' %}
 

@@ -5,16 +5,22 @@
 /* jshint node: true */
 /*jshint esversion: 8 */
 
-const AWS = require("aws-sdk-mock");
+const r53 = require("@aws-sdk/client-route-53");
+const appRunner = require("@aws-sdk/client-apprunner");
+const { mockClient } = require('aws-sdk-client-mock');
 const LambdaTester = require("lambda-tester").noVersionCheck();
-const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainStatusActiveAttempts, waitForDomainToBeDisassociatedAttempts, withSleep, reset, withDeadlineExpired} = require("../lib/custom-domain-app-runner");
+const {handler, domainStatusPendingVerification, waitForDomainStatusPendingAttempts, waitForDomainToBeDisassociatedAttempts, withSleep, reset, withDeadlineExpired } = require("../lib/custom-domain-app-runner");
+const customDomainAppRunner = require('../lib/custom-domain-app-runner');
 const sinon = require("sinon");
 const nock = require("nock");
 let origLog = console.log;
+const r53Mock = mockClient(r53.Route53Client);
+const appRunnerMock = mockClient(appRunner.AppRunnerClient);
 
+  
 describe("Custom Domain for App Runner Service", () => {
-    const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID, mockTarget, mockAppDNSName,mockAppHostedZoneID] =
-        ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", "mockTarget", "mockAppDNSName","Z00ABC" ];
+    const [mockServiceARN, mockCustomDomain, mockHostedZoneID, mockResponseURL, mockPhysicalResourceID, mockLogicalResourceID, mockTarget, mockAppDNSName] =
+        ["mockService", "mockDomain", "mockHostedZoneID", "https://mock.com/", "mockPhysicalResourceID", "mockLogicalResourceID", "mockTarget", "mockAppDNSName", ];
 
     beforeEach(() => {
         // Prevent logging.
@@ -25,12 +31,14 @@ describe("Custom Domain for App Runner Service", () => {
         withDeadlineExpired(_ => {
             return new Promise(function (resolve, reject) {});
         });
+        customDomainAppRunner.waitForRecordSetChange = async function () { };
     });
 
     afterEach(() => {
         // Restore logger
         console.log = origLog;
-        AWS.restore();
+        r53Mock.reset();
+        appRunnerMock.reset();
         reset();
     });
 
@@ -43,7 +51,7 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                 ],
             }); // Able to retrieve the hosted zone ID.
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const request = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -67,7 +75,7 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("fail to retrieve hosted zone ID", () => {
             const mockListHostedZonesByName = sinon.fake.rejects(new Error("some error")); // Able to retrieve the hosted zone ID.
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const request = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -103,7 +111,7 @@ describe("Custom Domain for App Runner Service", () => {
             const mockListHostedZonesByName = sinon.fake.resolves({
                 HostedZones: [],
             }); // Able to retrieve the hosted zone ID.
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const request = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -139,9 +147,8 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
 
@@ -188,10 +195,10 @@ describe("Custom Domain for App Runner Service", () => {
             const mockDescribeCustomDomains = sinon.fake(async () => {
                 await new Promise(function (resolve, reject) {});
             });
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -251,15 +258,15 @@ describe("Custom Domain for App Runner Service", () => {
             const mockTarget = "mockTarget";
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
-            const mockWaitFor = sinon.fake.rejects(new Error("some error"));
             const mockDescribeCustomDomains = sinon.fake(async () => {
                 await new Promise(function (resolve, reject) {});
             });
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            const waitForRecordSetChangeFake = sinon.stub(customDomainAppRunner, 'waitForRecordSetChange');
+            waitForRecordSetChangeFake.rejects(new Error("some error"));
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -319,13 +326,11 @@ describe("Custom Domain for App Runner Service", () => {
             }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
             const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
-            const mockWaitFor = sinon.fake.resolves();
             const mockDescribeCustomDomains = sinon.fake.rejects(new Error("some error"));
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -364,7 +369,6 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
-            const mockWaitFor = sinon.fake.resolves();
             const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
 
             // Try to find domain information until all pages are searched through.
@@ -377,11 +381,10 @@ describe("Custom Domain for App Runner Service", () => {
                 CustomDomains: [{DomainName: "some-other-domain",},],
             });
 
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -427,7 +430,6 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
-            const mockWaitFor = sinon.fake.resolves();
             const mockChangeResourceRecordSets = sinon.fake.resolves({ChangeInfo: {Id: "mockID",},});
             const mockDescribeCustomDomains = sinon.stub();
 
@@ -449,11 +451,10 @@ describe("Custom Domain for App Runner Service", () => {
                     NextToken: "token",
                 });
             }
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -491,7 +492,6 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
-            const mockWaitFor = sinon.fake.resolves();
 
             const mockDescribeCustomDomains = sinon.stub();
             // Mock response such that the domain we are looking for locates at the third page.
@@ -535,11 +535,10 @@ describe("Custom Domain for App Runner Service", () => {
             mockChangeResourceRecordSets.onCall(1).resolves({ChangeInfo: {Id: "mockID",},});
             mockChangeResourceRecordSets.onCall(2).rejects(new Error("some error"));
 
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -616,8 +615,8 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
             return LambdaTester(handler)
                 .event({
                     ResponseURL: "super weird URL",
@@ -635,8 +634,14 @@ describe("Custom Domain for App Runner Service", () => {
 
         test("success", () => {
             const mockTarget = "mockTarget";
+            const mockListHostedZonesByName = sinon.fake.resolves({
+                HostedZones: [
+                    {
+                        Id: "/hostedzone/mockHostedZoneID",
+                    },
+                ],
+            }); // Able to retrieve the hosted zone ID.
             const mockAssociateCustomDomain = sinon.fake.resolves({DNSTarget: mockTarget,});
-            const mockWaitFor = sinon.fake.resolves();
             const mockDescribeCustomDomains = sinon.stub();
             // Successfully wait for custom domain's status to be "pending" after several waits.
             for (let i = 0; i < waitForDomainStatusPendingAttempts - 1; i++) {
@@ -678,10 +683,11 @@ describe("Custom Domain for App Runner Service", () => {
             const mockChangeResourceRecordSets = sinon.stub();
             mockChangeResourceRecordSets.resolves({ChangeInfo: {Id: "mockID",},});
 
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -697,7 +703,6 @@ describe("Custom Domain for App Runner Service", () => {
                         ServiceARN: mockServiceARN,
                         AppDNSRole: "",
                         CustomDomain: mockCustomDomain,
-                        RootHostedZoneId: mockAppHostedZoneID,
                     },
                     PhysicalResourceId: mockPhysicalResourceID,
                     LogicalResourceId: mockLogicalResourceID,
@@ -750,14 +755,12 @@ describe("Custom Domain for App Runner Service", () => {
             });
 
             const mockChangeResourceRecordSets = sinon.stub();
-            const mockWaitFor = sinon.fake.resolves();
             mockChangeResourceRecordSets.resolves({ChangeInfo: {Id: "mockID",},});
 
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -799,8 +802,8 @@ describe("Custom Domain for App Runner Service", () => {
             const mockAssociateCustomDomain = sinon.fake(async () => {
                 await new Promise(function (resolve, reject) {});
             });
-            AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.AssociateCustomDomainCommand).callsFake(mockAssociateCustomDomain);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -838,8 +841,8 @@ describe("Custom Domain for App Runner Service", () => {
                 ],
             }); // Able to retrieve the hosted zone ID.
             const mockDisassociateCustomDomain = sinon.fake.rejects(new Error("some error"));
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -882,9 +885,9 @@ describe("Custom Domain for App Runner Service", () => {
             }); // Able to retrieve the hosted zone ID.
             const mockDisassociateCustomDomain = sinon.fake.rejects(new Error("No custom domain mockDomain found for the provided service"));
             const mockDescribeCustomDomains = sinon.fake.rejects(new Error("domain mockDomain is not associated"));
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -935,10 +938,11 @@ describe("Custom Domain for App Runner Service", () => {
             });
             const mockChangeResourceRecordSets = sinon.fake.rejects(new Error("Tried to delete resource record set [name='mock-record-name-1', type='CNAME'] but it was not found"),);
             const mockDescribeCustomDomains = sinon.fake.rejects(new Error("domain mockDomain is not associated"));
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
+
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1014,9 +1018,9 @@ describe("Custom Domain for App Runner Service", () => {
             ).rejects(new Error("some error")); // Rejects for the call for the domain.
             mockChangeResourceRecordSets.resolves(); // Resolves for other calls.
 
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1109,26 +1113,24 @@ describe("Custom Domain for App Runner Service", () => {
                 }
             ).resolves({ ChangeInfo: {Id: "mockDomainID", }, }); // Resolves with "mockDomainID" for the call for the domain.
             mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockValidationRecordID", }, }); // Resolves "mockValidationRecordID" for other calls.
-            const mockWaitFor = sinon.stub();
-            mockWaitFor.withArgs('resourceRecordSetsChanged', {
-                $waiter: {
-                    delay: 30,
-                    maxAttempts: 10,
-                },
-                Id: "mockDomainID",
-            }).rejects(new Error("some error")); // Rejects for the call that update the domain record.
-            mockWaitFor.withArgs('resourceRecordSetsChanged', {
-                $waiter: {
-                    delay: 30,
-                    maxAttempts: 10,
-                },
-                Id: "mockValidationRecordID",
-            }).resolves(); // Resolves for the other calls.
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            const waitForRecordSetChangeFake = sinon.stub(customDomainAppRunner, 'waitForRecordSetChange');
+            // Resolve when changeId is mockValidationRecordID
+            waitForRecordSetChangeFake
+            .withArgs(sinon.match.any, "mockValidationRecordID")
+            .resolves();
 
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
+            // Reject when changeId is mockDomainID
+            waitForRecordSetChangeFake
+            .withArgs(sinon.match.any, "mockDomainID")
+            .rejects(new Error("some error"));
+
+            waitForRecordSetChangeFake
+                .withArgs(sinon.match.has('Id', 'mockValidationRecordID'))
+                .resolves(); // Resolves for the other calls.
+
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1240,12 +1242,9 @@ describe("Custom Domain for App Runner Service", () => {
                 },
                 HostedZoneId: mockHostedZoneID,
             }).rejects(new Error("some error")); // Rejects the other calls.
-            const mockWaitFor = sinon.fake.resolves();
-
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1312,7 +1311,6 @@ describe("Custom Domain for App Runner Service", () => {
                 },
             });
             const mockChangeResourceRecordSets = sinon.stub().resolves({ ChangeInfo: {Id: "mockChangeID", }, });
-            const mockWaitFor = sinon.fake.resolves();
 
             // Attempts to wait for custom domain to become disassociated max out.
             const mockDescribeCustomDomains = sinon.stub();
@@ -1326,11 +1324,11 @@ describe("Custom Domain for App Runner Service", () => {
                     ],
                 });
             }
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1377,7 +1375,6 @@ describe("Custom Domain for App Runner Service", () => {
                 },
             });
             const mockChangeResourceRecordSets = sinon.stub().resolves({ ChangeInfo: {Id: "mockChangeID", }, });
-            const mockWaitFor = sinon.fake.resolves();
 
             // Domain status becomes delete_failed at the last attempt;
             const mockDescribeCustomDomains = sinon.stub();
@@ -1399,11 +1396,10 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                 ],
             });
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1449,7 +1445,6 @@ describe("Custom Domain for App Runner Service", () => {
                 },
             });
             const mockChangeResourceRecordSets = sinon.stub().resolves({ ChangeInfo: {Id: "mockChangeID", }, });
-            const mockWaitFor = sinon.fake.resolves();
 
             // Domain is successfully disassociated at the last attempt.
             const mockDescribeCustomDomains = sinon.stub();
@@ -1475,11 +1470,10 @@ describe("Custom Domain for App Runner Service", () => {
                     },
                 ],
             });
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
-            AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-            AWS.mock("Route53", "waitFor", mockWaitFor);
-            AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
+            r53Mock.on(r53.ChangeResourceRecordSetsCommand).callsFake(mockChangeResourceRecordSets);
+            appRunnerMock.on(appRunner.DescribeCustomDomainsCommand).callsFake(mockDescribeCustomDomains);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {
@@ -1521,8 +1515,8 @@ describe("Custom Domain for App Runner Service", () => {
             const mockDisassociateCustomDomain = sinon.fake(async () => {
                 await new Promise(_ => {});
             });
-            AWS.mock("Route53", "listHostedZonesByName", mockListHostedZonesByName);
-            AWS.mock("AppRunner", "disassociateCustomDomain", mockDisassociateCustomDomain);
+            r53Mock.on(r53.ListHostedZonesByNameCommand).callsFake(mockListHostedZonesByName);
+            appRunnerMock.on(appRunner.DisassociateCustomDomainCommand).callsFake(mockDisassociateCustomDomain);
 
             const expectedResponse = nock(mockResponseURL)
                 .put("/", (body) => {

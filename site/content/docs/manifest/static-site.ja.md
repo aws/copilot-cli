@@ -43,6 +43,16 @@ Service のアーキテクチャタイプ。[Static Site](../concepts/services.j
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
 Service の HTTPS ドメインエイリアス。
 
+<span class="parent-field">http.</span><a id="http-certificate" href="#http-certificate" class="field">`certificate`</a> <span class="type">String</span>  
+HTTPS トラフィックに利用する証明書の ARN。
+CloudFront で ACM 証明書を利用するには `us-east-1` リージョンの証明書をインポートする必要があります。以下は、Manifest の一部の例です。
+
+```yaml
+http:
+  alias: example.com
+  certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
+```
+
 <div class="separator"></div>
 
 <a id="files" href="#files" class="field">`files`</a> <span class="type">Array of Maps</span>  

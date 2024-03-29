@@ -27,12 +27,14 @@ type: Load Balanced Web Service
 
 image:
   # Path to your service's Dockerfile.
-  build: hello/Dockerfile
+  location: %s
   # Port exposed through your container to route traffic to it.
   port: 3000
   depends_on:
     nginx: start
 env_file: ./magic.env
+
+platform: linux/x86_64
 
 http:
   # Requests to this path will be forwarded to your service. 
@@ -48,13 +50,14 @@ cpu: 256
 memory: 512
 # Number of tasks that should be running in your service.
 count: 1
-
 sidecars:
   nginx:
     port: 80
-    image: %s    # Image URL for sidecar container.
+    image:
+      build: nginx/Dockerfile
+      context: ./nginx
     variables:
-      NGINX_PORT: %s
+      NGINX_PORT: 80
     env_file: ./magic.env
 logging:
   env_file: ./magic.env
@@ -65,9 +68,30 @@ logging:
     log_stream_prefix: copilot/
 `
 
-const nginxPort = "80"
+var mainImageURI string
 
 var _ = Describe("sidecars flow", func() {
+	Context("build and push main image to ECR repo", func() {
+		var uri string
+		var err error
+		It("create new ECR repo for main container", func() {
+			uri, err = aws.CreateECRRepo(mainRepoName)
+			Expect(err).NotTo(HaveOccurred(), "create ECR repo for main container")
+			mainImageURI = fmt.Sprintf("%s:mytag", uri)
+		})
+		It("push main container image", func() {
+			var password string
+			password, err = aws.ECRLoginPassword()
+			Expect(err).NotTo(HaveOccurred(), "get ecr login password")
+			err = docker.Login(uri, password)
+			Expect(err).NotTo(HaveOccurred(), "docker login")
+			err = docker.Build(mainImageURI, "./hello")
+			Expect(err).NotTo(HaveOccurred(), "build main container image")
+			err = docker.Push(mainImageURI)
+			Expect(err).NotTo(HaveOccurred(), "push to ECR repo")
+		})
+	})
+
 	Context("when creating a new app", Ordered, func() {
 		var (
 			initErr error
@@ -135,10 +159,10 @@ var _ = Describe("sidecars flow", func() {
 		)
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:       svcName,
-				SvcType:    "Load Balanced Web Service",
-				Dockerfile: "./hello/Dockerfile",
-				SvcPort:    "3000",
+				Name:    svcName,
+				SvcType: "Load Balanced Web Service",
+				Image:   mainImageURI,
+				SvcPort: "3000",
 			})
 		})
 
@@ -167,33 +191,11 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("build and push sidecar image to ECR repo", func() {
-		var uri string
-		var err error
-		tag := "vortexstreet"
-		It("create new ECR repo for sidecar", func() {
-			uri, err = aws.CreateECRRepo(sidecarRepoName)
-			Expect(err).NotTo(HaveOccurred(), "create ECR repo for sidecar")
-			sidecarImageURI = fmt.Sprintf("%s:%s", uri, tag)
-		})
-		It("push sidecar image", func() {
-			var password string
-			password, err = aws.ECRLoginPassword()
-			Expect(err).NotTo(HaveOccurred(), "get ecr login password")
-			err = docker.Login(uri, password)
-			Expect(err).NotTo(HaveOccurred(), "docker login")
-			err = docker.Build(sidecarImageURI, "./nginx")
-			Expect(err).NotTo(HaveOccurred(), "build sidecar image")
-			err = docker.Push(sidecarImageURI)
-			Expect(err).NotTo(HaveOccurred(), "push to ECR repo")
-		})
-	})
-
 	Context("write local manifest and addon files", func() {
 		var newManifest string
 		It("overwrite existing manifest", func() {
 			logGroupName := fmt.Sprintf("%s-test-%s", appName, svcName)
-			newManifest = fmt.Sprintf(manifest, sidecarImageURI, nginxPort, logGroupName)
+			newManifest = fmt.Sprintf(manifest, mainImageURI, logGroupName)
 			err := os.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
 			Expect(err).NotTo(HaveOccurred(), "overwrite manifest")
 		})

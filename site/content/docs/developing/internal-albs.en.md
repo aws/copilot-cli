@@ -28,6 +28,12 @@ network:
   vpc:
     placement: private
 ```
+If you have an existing internal ALB in the VPC to which your service will be deployed, you may import it per Backend Service by specifying it in your manifest before deployment:
+```yaml
+http:
+  path: '/'
+  alb: [name or ARN]
+```
 
 ## Advanced Configuration
 

@@ -71,6 +71,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 			},
 		},
 		ArtifactBucketName: "bucket",
+		ArtifactKey:        "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 		Manifest:           v,
 		RuntimeConfig: stack.RuntimeConfig{
 			AccountID:                "123456789123",

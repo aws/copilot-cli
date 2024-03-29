@@ -37,15 +37,13 @@ platform: {{.Platform.PlatformString}}  # See https://aws.github.io/copilot-cli/
 count: {{.Count.Value}}       # Number of tasks that should be running in your service.
 {{- if not .TaskConfig.IsWindows}}
 exec: true     # Enable running commands in your container.
-{{- end}}
 network:
   connect: true # Enable Service Connect for intra-environment traffic between services.
-{{- if not .TaskConfig.IsWindows}}
 
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
-{{- end}}
- 
+{{- end}}{{/* end if not .TaskConfig.IsWindows */}}
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

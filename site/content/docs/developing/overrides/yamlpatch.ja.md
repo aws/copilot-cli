@@ -14,7 +14,7 @@
 
 `copilot [noun] override` コマンドを実行すると、YAML パッチを使って CloudFormation テンプレートを拡張できます。
 例えば、`copilot svc override` コマンドにより、 Load Balanced Web Service のテンプレートを更新します。
-コマンドは、以下の様な構造で、`copilot/[name]/override` ディレクトリ配下にサンプルの `cfn.patches.yml` ファイルを作成します。
+コマンドは、以下の様な構造で、`copilot/[name]/overrides` ディレクトリ配下にサンプルの `cfn.patches.yml` ファイルを作成します。
 
 ## どの様な仕組みでしょうか？
 

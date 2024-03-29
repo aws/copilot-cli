@@ -6,9 +6,10 @@
 package file_test
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -21,49 +22,49 @@ func TestRecursiveWatcher(t *testing.T) {
 	var (
 		watcher        *file.RecursiveWatcher
 		tmp            string
-		eventsExpected map[fsnotify.Event]struct{}
-		eventsActual   map[fsnotify.Event]struct{}
+		eventsExpected []fsnotify.Event
+		eventsActual   []fsnotify.Event
 	)
 
 	tmp = os.TempDir()
-	eventsActual = make(map[fsnotify.Event]struct{})
-	eventsExpected = map[fsnotify.Event]struct{}{
+	eventsActual = []fsnotify.Event{}
+	eventsExpected = []fsnotify.Event{
 		{
-			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
 			Op:   fsnotify.Create,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
 			Op:   fsnotify.Chmod,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir/testfile", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir/testfile")),
 			Op:   fsnotify.Write,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir")),
 			Op:   fsnotify.Rename,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir2", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir2")),
 			Op:   fsnotify.Create,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir2/testfile", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir2/testfile")),
 			Op:   fsnotify.Rename,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir2/testfile2", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir2/testfile2")),
 			Op:   fsnotify.Create,
-		}: {},
+		},
 		{
-			Name: fmt.Sprintf("%s/watch/subdir2/testfile2", tmp),
+			Name: filepath.ToSlash(filepath.Join(tmp, "watch/subdir2/testfile2")),
 			Op:   fsnotify.Remove,
-		}: {},
+		},
 	}
 
 	t.Run("Setup Watcher", func(t *testing.T) {
-		err := os.MkdirAll(fmt.Sprintf("%s/watch/subdir", tmp), 0755)
+		err := os.MkdirAll(filepath.ToSlash(filepath.Join(tmp, "watch/subdir")), 0755)
 		require.NoError(t, err)
 
 		watcher, err = file.NewRecursiveWatcher(uint(len(eventsExpected)))
@@ -72,60 +73,71 @@ func TestRecursiveWatcher(t *testing.T) {
 
 	t.Run("Watch", func(t *testing.T) {
 		// SETUP
-		err := watcher.Add(fmt.Sprintf("%s/watch", tmp))
+		err := watcher.Add(filepath.ToSlash(filepath.Join(tmp, "watch")))
 		require.NoError(t, err)
 
 		eventsCh := watcher.Events()
 		errorsCh := watcher.Errors()
 
-		expectAndPopulateEvents := func(t *testing.T, n int, events map[fsnotify.Event]struct{}) {
-			for i := 0; i < n; i++ {
+		// expectNextEvents consumes the watcher's event channel to retrieve the next n events in expectedEvents in no particular order.
+		expectNextEvents := func(n int) {
+			for {
+				var e fsnotify.Event
 				select {
-				case e := <-eventsCh:
-					events[e] = struct{}{}
+				case e = <-eventsCh:
 				case <-time.After(time.Second):
+					return
+				}
+
+				if slices.Contains(eventsExpected, e) && !slices.Contains(eventsActual, e) {
+					eventsActual = append(eventsActual, e)
+					n -= 1
+				}
+
+				if n == 0 {
+					return
 				}
 			}
 		}
 
 		// WATCH
-		file, err := os.Create(fmt.Sprintf("%s/watch/subdir/testfile", tmp))
+		file, err := os.Create(filepath.Join(tmp, "watch/subdir/testfile"))
 		require.NoError(t, err)
-		expectAndPopulateEvents(t, 1, eventsActual)
+		expectNextEvents(1)
 
-		err = os.Chmod(fmt.Sprintf("%s/watch/subdir/testfile", tmp), 0755)
+		err = os.Chmod(filepath.Join(tmp, "watch/subdir/testfile"), 0755)
 		require.NoError(t, err)
-		expectAndPopulateEvents(t, 1, eventsActual)
+		expectNextEvents(1)
 
-		err = os.WriteFile(fmt.Sprintf("%s/watch/subdir/testfile", tmp), []byte("write to file"), fs.ModeAppend)
+		err = os.WriteFile(filepath.Join(tmp, "watch/subdir/testfile"), []byte("write to file"), fs.ModeAppend)
 		require.NoError(t, err)
-		expectAndPopulateEvents(t, 2, eventsActual)
+		expectNextEvents(1)
 
 		err = file.Close()
 		require.NoError(t, err)
 
-		err = os.Rename(fmt.Sprintf("%s/watch/subdir", tmp), fmt.Sprintf("%s/watch/subdir2", tmp))
+		err = os.Rename(filepath.Join(tmp, "watch/subdir"), filepath.Join(tmp, "watch/subdir2"))
 		require.NoError(t, err)
-		expectAndPopulateEvents(t, 3, eventsActual)
+		expectNextEvents(2)
 
-		err = os.Rename(fmt.Sprintf("%s/watch/subdir2/testfile", tmp), fmt.Sprintf("%s/watch/subdir2/testfile2", tmp))
+		err = os.Rename(filepath.Join(tmp, "watch/subdir2/testfile"), filepath.Join(tmp, "watch/subdir2/testfile2"))
 		require.NoError(t, err)
-		expectAndPopulateEvents(t, 2, eventsActual)
+		expectNextEvents(2)
 
-		err = os.Remove(fmt.Sprintf("%s/watch/subdir2/testfile2", tmp))
+		err = os.Remove(filepath.Join(tmp, "watch/subdir2/testfile2"))
 		require.NoError(t, err)
-		expectAndPopulateEvents(t, 1, eventsActual)
+		expectNextEvents(1)
 
 		// CLOSE
 		err = watcher.Close()
 		require.NoError(t, err)
 		require.Empty(t, errorsCh)
 
-		require.Equal(t, eventsExpected, eventsActual)
+		require.ElementsMatch(t, eventsExpected, eventsActual)
 	})
 
 	t.Run("Clean", func(t *testing.T) {
-		err := os.RemoveAll(fmt.Sprintf("%s/watch", tmp))
+		err := os.RemoveAll(filepath.Join(tmp, "watch"))
 		require.NoError(t, err)
 	})
 }

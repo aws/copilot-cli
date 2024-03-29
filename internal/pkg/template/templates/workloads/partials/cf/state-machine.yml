@@ -20,9 +20,11 @@ StateMachine:
       Partition: !Ref AWS::Partition
       Subnets:
       {{- if .Network.SubnetIDs}}
-        {{- range $id := .Network.SubnetIDs}}
-        - {{$id}}
-        {{- end}}
+        Fn::Join:
+          - '","'
+          - {{- range $id := .Network.SubnetIDs}}
+            - {{$id}}
+            {{- end}}
       {{- else}}
         Fn::Join:
           - '","'

@@ -34,7 +34,7 @@ UniqueJSONValuesFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'UniqueJSONValuesFunctionRole.Arn'
-    Runtime: nodejs16.x
+    Runtime: nodejs20.x
 
 UniqueAliasesAction:
   Metadata:
@@ -139,7 +139,7 @@ CertificateReplicatorFunction:
     Timeout: 900
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
-    Runtime: nodejs16.x
+    Runtime: nodejs20.x
     
 CertificateReplicator:
   Metadata:

@@ -362,7 +362,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
-		"error if fail to validate windows": {
+		"error if fail to validate windows with volumes": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{Name: aws.String("mockName")},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
@@ -391,6 +391,30 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if Windows is used with service connect": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{Name: aws.String("mockName")},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+					},
+					HTTPOrBool: HTTPOrBool{
+						HTTP: HTTP{
+							Main: RoutingRule{
+								Path: stringP("/"),
+							},
+						},
+					},
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							EnableServiceConnect: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "validate Windows: service connect (`network.connect`) is not supported for Window",
 		},
 		"error if fail to validate ARM": {
 			lbConfig: LoadBalancedWebService{
@@ -665,7 +689,7 @@ func TestBackendService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
 		},
-		"error if fail to validate Windows": {
+		"error if fail to validate Windows with volumes": {
 			config: BackendService{
 				Workload: Workload{Name: aws.String("mockName")},
 				BackendServiceConfig: BackendServiceConfig{
@@ -687,6 +711,23 @@ func TestBackendService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
+		},
+		"error if Windows is used with service connect": {
+			config: BackendService{
+				Workload: Workload{Name: aws.String("mockName")},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+					},
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							EnableServiceConnect: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "validate Windows: service connect (`network.connect`) is not supported for Window",
 		},
 		"error if fail to validate ARM": {
 			config: BackendService{
@@ -4196,7 +4237,25 @@ func TestValidateExposedPorts(t *testing.T) {
 			},
 			wanted: nil,
 		},
-		"should not error out when nlb target_port is same as that of sidecar container port but sidecar uses non default protocol": {
+		"should not error out when tls is terminated exposing a tcp port": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80/tcp"),
+					},
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Listener: NetworkLoadBalancerListener{
+						Port:       aws.String("8080/tls"),
+						TargetPort: aws.Int(80),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"should return an error when nlb target_port is same as that of sidecar container port but sidecar uses non default protocol": {
 			in: validateExposedPortsOpts{
 				mainContainerName: "mockMainContainer",
 				mainContainerPort: aws.Uint16(8080),
@@ -4212,7 +4271,7 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`validate "nlb": container "foo" is exposing the same port 80 with protocol TCP and udp`),
+			wanted: fmt.Errorf(`validate "nlb": container "foo" is exposing the same port 80 with protocol TCP and UDP`),
 		},
 		"should return an error if alb target_port points to one sidecar container port and target_container points to another sidecar container": {
 			in: validateExposedPortsOpts{

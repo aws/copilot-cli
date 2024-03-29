@@ -16,7 +16,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: addons
           APP_REGION: us-west-2
@@ -28,7 +28,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: customized-env
           APP_REGION: us-west-1
@@ -44,7 +44,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: init
           APP_REGION: us-east-1
@@ -54,7 +54,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: multi-env-app
           APP_REGION: us-east-2
@@ -68,7 +68,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: multi-svc-app
           APP_REGION: us-west-2
@@ -80,7 +80,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: root
           APP_REGION: us-west-1
@@ -89,7 +89,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: sidecars
           APP_REGION: us-east-1
@@ -101,7 +101,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: task
           APP_REGION: us-east-2
@@ -113,7 +113,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
@@ -127,7 +127,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: import-certs
           APP_REGION: us-west-2
@@ -139,7 +139,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: isolated
           APP_REGION: us-west-2
@@ -151,7 +151,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: exec
           APP_REGION: ap-northeast-1
@@ -163,7 +163,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: apprunner
           APP_REGION: ap-northeast-1
@@ -173,7 +173,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: pipeline
           APP_REGION: eu-west-1
@@ -187,7 +187,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: multi-pipeline
           APP_REGION: ap-northeast-1
@@ -201,7 +201,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: worker
           APP_REGION: eu-central-1
@@ -213,7 +213,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: cloudfront
           APP_REGION: eu-central-1
@@ -225,7 +225,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:6.0
+        image: aws/codebuild/standard:7.0
         variables:
           TEST_SUITE: static-site
           APP_REGION: eu-central-1
@@ -235,8 +235,6 @@ batch:
 
 phases:
   install:
-    runtime-versions:
-      nodejs: 16
     commands:
       - "cd $HOME/.goenv && git pull --ff-only && cd -"
       - "goenv install 1.21.1"

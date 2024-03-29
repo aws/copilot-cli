@@ -53,3 +53,15 @@ Copilot will substitute `${COPILOT_APPLICATION_NAME}` and `${COPILOT_ENVIRONMENT
 $ copilot svc deploy --app my-app --env test
 ```
 to deploy the service to the `test` environment in your `my-app` application, Copilot will resolve `/copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/db_password` to `/copilot/my-app/test/secrets/db_password`. (For more information of secret injection, see [here](../developing/secrets.en.md)).
+
+## Escaping
+If variable substitution is undesired, add a leading backslash:
+
+```yaml
+command: echo hello \${name}
+# or command: "echo \\${name}"
+variable:
+  name: world
+```
+
+In this case Copilot will not attempt to substitute `${name}` with the value of the environment variable `name`.

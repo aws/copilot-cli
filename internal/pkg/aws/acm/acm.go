@@ -100,6 +100,9 @@ func filterValidAliases(domains []string, aliases []string) []string {
 	var validAliases []string
 	for _, alias := range aliases {
 		// See https://docs.aws.amazon.com/acm/latest/userguide/acm-certificate.html
+		if !strings.Contains(alias, ".") { // If there is no "." in the alias, then it can't be a valid alias.
+			continue
+		}
 		wildCardMatchedAlias := "*" + alias[strings.Index(alias, "."):]
 		if domainSet[alias] || domainSet[wildCardMatchedAlias] {
 			validAliases = append(validAliases, alias)

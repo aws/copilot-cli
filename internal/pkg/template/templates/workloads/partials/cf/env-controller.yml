@@ -5,7 +5,7 @@ EnvControllerAction:
   Properties:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
-{{- if and (and .ALBListener .ALBListener.Aliases) (not .ImportedALB) }}
+{{- if and (and .ALBListener .ALBListener.Aliases) (not .ImportedALB) (eq $.WorkloadType "Load Balanced Web Service")}}
     Aliases: {{ fmtSlice (quoteSlice .ALBListener.Aliases) }}
 {{- end}}
     EnvStack: !Sub '${AppName}-${EnvName}'
@@ -24,7 +24,7 @@ EnvControllerFunction:
     Timeout: 900
     MemorySize: 512
     Role: !GetAtt 'EnvControllerRole.Arn'
-    Runtime: nodejs16.x
+    Runtime: nodejs20.x
 
 EnvControllerRole:
   Metadata:

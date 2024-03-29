@@ -233,6 +233,7 @@ func (o *packageSvcOpts) Execute() error {
 				parentErr: err,
 			}
 		}
+		return nil
 	}
 	if err := o.writeAndClose(o.templateWriter, stack.template); err != nil {
 		return err

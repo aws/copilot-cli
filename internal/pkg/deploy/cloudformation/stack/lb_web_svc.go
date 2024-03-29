@@ -5,9 +5,10 @@ package stack
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"strconv"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -30,26 +31,17 @@ const (
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
 	*ecsWkld
-	manifest               *manifest.LoadBalancedWebService
-	httpsEnabled           bool
-	dnsDelegationEnabled   bool
-	publicSubnetCIDRBlocks []string
-	importedALB            *elbv2.LoadBalancer
-	appInfo                deploy.AppInformation
+	manifest             *manifest.LoadBalancedWebService
+	httpsEnabled         bool
+	dnsDelegationEnabled bool
+	importedALB          *elbv2.LoadBalancer
+	appInfo              deploy.AppInformation
 
 	parser loadBalancedWebSvcReadParser
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
 type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
-
-// WithNLB enables Network Load Balancer in a LoadBalancedWebService.
-// TODO(Aiden): remove when NetworkLoadBalancer is forcibly updated
-func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
-	return func(s *LoadBalancedWebService) {
-		s.publicSubnetCIDRBlocks = cidrBlocks
-	}
-}
 
 // WithImportedALB specifies an imported load balancer.
 func WithImportedALB(alb *elbv2.LoadBalancer) func(s *LoadBalancedWebService) {
@@ -67,8 +59,8 @@ type LoadBalancedWebServiceConfig struct {
 	RuntimeConfig      RuntimeConfig
 	RootUserARN        string
 	ArtifactBucketName string
+	ArtifactKey        string
 	Addons             NestedStackConfigurer
-	AppHostedZoneID    string
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
@@ -85,11 +77,9 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	if conf.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                   conf.App.Name,
-			Domain:                 conf.App.Domain,
-			AccountPrincipalARN:    conf.RootUserARN,
-			RootDomainHostedZoneId: conf.App.DomainHostedZoneID,
-			AppDomainHostedZoneId:  conf.AppHostedZoneID,
+			Name:                conf.App.Name,
+			Domain:              conf.App.Domain,
+			AccountPrincipalARN: conf.RootUserARN,
 		}
 		httpsEnabled = true
 	}
@@ -109,6 +99,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				app:                conf.App.Name,
 				permBound:          conf.App.PermissionsBoundary,
 				artifactBucketName: conf.ArtifactBucketName,
+				artifactKey:        conf.ArtifactKey,
 				rc:                 conf.RuntimeConfig,
 				image:              conf.Manifest.ImageConfig.Image,
 				rawManifest:        conf.RawManifest,
@@ -249,7 +240,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		// NLB configs.
 		AppDNSName:           nlbConfig.appDNSName,
 		AppDNSDelegationRole: nlbConfig.appDNSDelegationRole,
-		HostedZones:          convertHostedZones(s.appInfo),
 		NLB:                  nlbConfig.settings,
 
 		// service connect and service discovery options.
