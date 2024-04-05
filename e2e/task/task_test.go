@@ -64,6 +64,8 @@ var _ = Describe("Task", func() {
 
 				AppName: appName,
 				Env:     envName,
+
+				EnvFile: "./sesame.env",
 			})
 		})
 
