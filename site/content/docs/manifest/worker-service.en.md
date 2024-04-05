@@ -34,7 +34,7 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
         secrets:
           DB:
-            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+            secretsmanager: 'mysql'
         ```
 
     === "Spot autoscaling"

@@ -147,7 +147,7 @@ The additional policy document can be specified in a map in YAML, for example:
 build:
   additional_policy:
     PolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Action:

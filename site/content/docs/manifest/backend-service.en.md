@@ -71,7 +71,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         secrets:
           GITHUB_WEBHOOK_SECRET: GH_WEBHOOK_SECRET
           DB_PASSWORD:
-            secretsmanager: 'demo/test/mysql:password::'
+            secretsmanager: 'mysql:password::'
         ```
 
     === "With a domain"
