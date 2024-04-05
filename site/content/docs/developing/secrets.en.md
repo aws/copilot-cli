@@ -49,7 +49,7 @@ Suppose you have a Secrets Manager secret with the following configuration:
 You can modify your manifest file with:
 ```yaml
 secrets:
-  # Option 1. Referring to the secret by name, if your secret name does not contain a hyphen (e.g. mysql). If it does (e.g. mysql-db), see Option 2.
+  # Option 1. Referring to the secret by name, if your secret name does not end with a hyphen followed by 6 characters  (e.g. mysql). If it does (e.g. mysql-dbconf), see Option 2.
   DB:
     secretsmanager: 'mysql'
   # You can refer to a specific key in the JSON blob.
@@ -57,9 +57,9 @@ secrets:
     secretsmanager: 'mysql:password::'
 
   # Option 2. Refering to the secret by name, with the random 6-character suffix.
-  # If the secret name contains a hyphen (e.g. mysql-db instead of mysql), then you have to include the 6-character suffix. Otherwise, secretsmanager won't be able to find your secret.
+  # If the secret name contains a hyphen followed by 6 letters (e.g. mysql-dbconf instead of mysql), then you have to include the 6-character suffix. Otherwise, secretsmanager won't be able to find your secret.
   MYSQL_DB:
-    secretsmanager: 'demo/test/mysql-db-Yi6mvL'
+    secretsmanager: 'demo/test/mysql-dbconf-Vi3nwL'
 
   # Option 3. Alternatively, you can refer to the secret by ARN.
   DB: "'arn:aws:secretsmanager:us-west-2:111122223333:secret:demo/test/mysql-Yi6mvL'"
