@@ -153,20 +153,7 @@ Job の実行時間。この時間を超えた場合、Job は停止されて失
 
 <div class="separator"></div>
 
-<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>    
-`network` セクションは VPC 内の AWS リソースに接続するためのパラメータを持ちます。
-
-<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>  
-タスクにアタッチするサブネットとセキュリティグループ。
-
-<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>    
-`'public'` か `'private'`のいずれかである必要があります。デフォルトではタスクはパブリックサブネットで起動します。
-
-!!! info
-    Copilot が作成した VPC の `'private'` サブネットを利用してタスクを実行する場合、Copilot は Environment に NAT ゲートウェイを追加します。あるいは Copilot 外で作成した VPC を `copilot env init` コマンドにてインポートしている場合は、その VPC に NAT ゲートウェイがあり、プライベートサブネットからインターネットへの接続性があることを確認してください。
-
-<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
-タスクに関連づける追加のセキュリティグループのリスト。Copilot は常にセキュリティグループを含んでおり、環境内のコンテナは互いに通信できるようになっています。
+{% include 'network-vpc.ja.md' %}
 
 <div class="separator"></div>
 
