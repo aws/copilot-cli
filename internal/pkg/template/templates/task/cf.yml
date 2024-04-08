@@ -308,6 +308,11 @@ Resources:
             Principal:
               AWS:
                 - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+              {{- if and .App .Env }}
+              AWS:
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/{{ .App }}-{{ .Env }}-EnvManagerRole'
+              {{- end}}
+
 Outputs:
   ECRRepo:
     Description: ECR Repo used to store images of task.
