@@ -15,7 +15,7 @@ import (
 
 var cli *client.CLI
 var aws *client.AWS
-var appName, envName, taskStackName, repoName string
+var appName, envName string
 var groupNames []string
 
 /**
