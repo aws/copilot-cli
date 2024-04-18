@@ -16,7 +16,7 @@ import (
 var cli *client.CLI
 var aws *client.AWS
 var appName, envName string
-var groupNames []string
+var tasks []client.TaskRunInput
 
 /**
 The task suite runs through several tests focusing on running one-off tasks with different configurations.
@@ -37,14 +37,14 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	for _, groupName := range groupNames {
+	for _, task := range tasks {
 		_, err := cli.TaskDelete(&client.TaskDeleteInput{
-			App:     appName,
-			Env:     envName,
-			Name:    groupName,
-			Default: false,
+			App:     task.AppName,
+			Env:     task.Env,
+			Name:    task.GroupName,
+			Default: task.Default,
 		})
-		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("delete task %s", groupName))
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("delete task %s", task.GroupName))
 	}
 	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred(), "delete Copilot application")

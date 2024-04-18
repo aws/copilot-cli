@@ -60,9 +60,8 @@ var _ = Describe("Task", func() {
 	Context("when running in an environment", Ordered, func() {
 		var err error
 		BeforeAll(func() {
-			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
-			_, err = cli.TaskRun(&client.TaskRunInput{
-				GroupName: groupName,
+			task := client.TaskRunInput{
+				GroupName: fmt.Sprintf("e2e-task-%d", time.Now().Unix()),
 
 				Dockerfile: "./backend/Dockerfile",
 
@@ -70,8 +69,9 @@ var _ = Describe("Task", func() {
 				Env:     envName,
 
 				EnvFile: "./sesame.env",
-			})
-			groupNames = append(groupNames, groupName)
+			}
+			_, err = cli.TaskRun(&task)
+			tasks = append(tasks, task)
 		})
 
 		It("should succeed", func() {
@@ -83,17 +83,16 @@ var _ = Describe("Task", func() {
 		var err error
 		var taskLogs string
 		BeforeAll(func() {
-			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
-			taskLogs, err = cli.TaskRun(&client.TaskRunInput{
-
-				GroupName: groupName,
+			task := client.TaskRunInput{
+				GroupName: fmt.Sprintf("e2e-task-%d", time.Now().Unix()),
 
 				Dockerfile: "./backend/Dockerfile",
 
 				Default: true,
 				Follow:  true,
-			})
-			groupNames = append(groupNames, groupName)
+			}
+			taskLogs, err = cli.TaskRun(&task)
+			tasks = append(tasks, task)
 		})
 
 		It("should succeed", func() {
@@ -119,9 +118,8 @@ var _ = Describe("Task", func() {
 		var err error
 		var taskLogs string
 		BeforeAll(func() {
-			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
-			taskLogs, err = cli.TaskRun(&client.TaskRunInput{
-				GroupName: groupName,
+			task := client.TaskRunInput{
+				GroupName: fmt.Sprintf("e2e-task-%d", time.Now().Unix()),
 
 				Dockerfile: "./backend/Dockerfile",
 
@@ -130,8 +128,9 @@ var _ = Describe("Task", func() {
 
 				Default: true,
 				Follow:  true,
-			})
-			groupNames = append(groupNames, groupName)
+			}
+			taskLogs, err = cli.TaskRun(&task)
+			tasks = append(tasks, task)
 		})
 
 		It("should succeed", func() {
