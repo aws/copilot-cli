@@ -4,6 +4,9 @@
 package task
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -57,6 +60,7 @@ var _ = Describe("Task", func() {
 	Context("when running in an environment", Ordered, func() {
 		var err error
 		BeforeAll(func() {
+			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 			_, err = cli.TaskRun(&client.TaskRunInput{
 				GroupName: groupName,
 
@@ -67,6 +71,7 @@ var _ = Describe("Task", func() {
 
 				EnvFile: "./sesame.env",
 			})
+			groupNames = append(groupNames, groupName)
 		})
 
 		It("should succeed", func() {
@@ -78,14 +83,17 @@ var _ = Describe("Task", func() {
 		var err error
 		var taskLogs string
 		BeforeAll(func() {
+			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 			taskLogs, err = cli.TaskRun(&client.TaskRunInput{
-				GroupName: groupName,
+
+				GroupName: fmt.Sprintf(groupName + "-default"),
 
 				Dockerfile: "./backend/Dockerfile",
 
 				Default: true,
 				Follow:  true,
 			})
+			groupNames = append(groupNames, groupName)
 		})
 
 		It("should succeed", func() {
@@ -111,8 +119,9 @@ var _ = Describe("Task", func() {
 		var err error
 		var taskLogs string
 		BeforeAll(func() {
+			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 			taskLogs, err = cli.TaskRun(&client.TaskRunInput{
-				GroupName: groupName,
+				GroupName: fmt.Sprintf(groupName + "env-vars"),
 
 				Dockerfile: "./backend/Dockerfile",
 
@@ -122,7 +131,7 @@ var _ = Describe("Task", func() {
 				Default: true,
 				Follow:  true,
 			})
-
+			groupNames = append(groupNames, groupName)
 		})
 
 		It("should succeed", func() {
