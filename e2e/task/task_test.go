@@ -86,7 +86,7 @@ var _ = Describe("Task", func() {
 			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 			taskLogs, err = cli.TaskRun(&client.TaskRunInput{
 
-				GroupName: fmt.Sprintf(groupName + "-default"),
+				GroupName: groupName,
 
 				Dockerfile: "./backend/Dockerfile",
 
@@ -121,7 +121,7 @@ var _ = Describe("Task", func() {
 		BeforeAll(func() {
 			groupName := fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 			taskLogs, err = cli.TaskRun(&client.TaskRunInput{
-				GroupName: fmt.Sprintf(groupName + "env-vars"),
+				GroupName: fmt.Sprintf(groupName),
 
 				Dockerfile: "./backend/Dockerfile",
 
