@@ -57,7 +57,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
