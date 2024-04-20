@@ -409,8 +409,10 @@ func (u *accessURI) strings() []string {
 			protocol = "https://"
 		}
 		path := ""
-		if !strings.HasPrefix(Path, "/") {
+		if !strings.HasPrefix(u.Path, "/") {
 			path = fmt.Sprintf("/%s", u.Path)
+		} else if u.Path != "/" {
+			path = u.Path
 		}
 		uris = append(uris, color.HighlightResource(protocol+dnsName+path))
 	}

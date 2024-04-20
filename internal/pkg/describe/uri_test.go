@@ -680,6 +680,18 @@ func TestLBWebServiceURI_String(t *testing.T) {
 
 			wanted: "http://jobs.test.phonetool.com",
 		},
+		"http with /v2 path": {
+			accessDNSNames: []string{"jobs.test.phonetool.com"},
+			accessPath:     "/v2",
+
+			wanted: "http://jobs.test.phonetool.com/v2",
+		},
+		"http with non-root path": {
+			accessDNSNames: []string{"jobs.test.phonetool.com"},
+			accessPath:     "v2",
+
+			wanted: "http://jobs.test.phonetool.com/v2",
+		},
 		"cloudfront": {
 			accessDNSNames: []string{"abc.cloudfront.net"},
 			accessPath:     "svc",
@@ -706,6 +718,20 @@ func TestLBWebServiceURI_String(t *testing.T) {
 			accessHTTPS:    true,
 
 			wanted: "https://jobs.test.phonetool.com",
+		},
+		"https with /v2 path": {
+			accessDNSNames: []string{"jobs.test.phonetool.com"},
+			accessPath:     "/v2",
+			accessHTTPS:    true,
+
+			wanted: "https://jobs.test.phonetool.com/v2",
+		},
+		"https with non-root path": {
+			accessDNSNames: []string{"jobs.test.phonetool.com"},
+			accessPath:     "v2",
+			accessHTTPS:    true,
+
+			wanted: "https://jobs.test.phonetool.com/v2",
 		},
 	}
 
