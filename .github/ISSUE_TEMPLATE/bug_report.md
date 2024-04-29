@@ -21,7 +21,7 @@ If you do find an existing Issue, re-open or add a comment to that Issue instead
 
 
 ### Observed result:
-<!-- Please provide command output with `--debug` flag set. -->
+<!-- Please provide command output. -->
 
 
 

@@ -15,7 +15,8 @@ import (
 
 var cli *client.CLI
 var aws *client.AWS
-var appName, envName, groupName, taskStackName, repoName string
+var appName, envName string
+var tasks []client.TaskRunInput
 
 /**
 The task suite runs through several tests focusing on running one-off tasks with different configurations.
@@ -33,23 +34,18 @@ var _ = BeforeSuite(func() {
 
 	appName = fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 	envName = "test"
-	groupName = fmt.Sprintf("e2e-task-%d", time.Now().Unix())
-	// We name task stack in format of "task-${groupName}".
-	// See https://github.com/aws/copilot-cli/blob/e9e3114561e740c367fb83b5e075750f232ad639/internal/pkg/deploy/cloudformation/stack/name.go#L26.
-	taskStackName = fmt.Sprintf("task-%s", groupName)
-	// We name ECR repo name in format of "copilot-${groupName}".
-	// See https://github.com/aws/copilot-cli/blob/e9e3114561e740c367fb83b5e075750f232ad639/templates/task/cf.yml#L75.
-	repoName = fmt.Sprintf("copilot-%s", groupName)
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.TaskDelete(&client.TaskDeleteInput{
-		App:     appName,
-		Env:     envName,
-		Name:    groupName,
-		Default: false,
-	})
-	Expect(err).NotTo(HaveOccurred(), "delete task")
-	_, err = cli.AppDelete()
+	for _, task := range tasks {
+		_, err := cli.TaskDelete(&client.TaskDeleteInput{
+			App:     task.AppName,
+			Env:     task.Env,
+			Name:    task.GroupName,
+			Default: task.Default,
+		})
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("delete task %s", task.GroupName))
+	}
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred(), "delete Copilot application")
 })
