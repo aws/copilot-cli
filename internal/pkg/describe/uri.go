@@ -5,6 +5,7 @@ package describe
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -403,6 +404,7 @@ func (u *LBWebServiceURI) String() string {
 
 func (u *accessURI) strings() []string {
 	var uris []string
+	re := regexp.MustCompile("/+")
 	for _, dnsName := range u.DNSNames {
 		protocol := "http://"
 		if u.HTTPS {
@@ -412,7 +414,7 @@ func (u *accessURI) strings() []string {
 		if !strings.HasPrefix(u.Path, "/") {
 			path = fmt.Sprintf("/%s", u.Path)
 		} else if u.Path != "/" {
-			path = u.Path
+			path = re.ReplaceAllString(u.Path, "/")
 		}
 		uris = append(uris, color.HighlightResource(protocol+dnsName+path))
 	}
