@@ -176,6 +176,7 @@ type TaskRunInput struct {
 
 	Image      string
 	Dockerfile string
+	EnvFile    string
 
 	Subnets        []string
 	SecurityGroups []string
@@ -892,6 +893,9 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 	commands := []string{"task", "run", "-n", input.GroupName, "--dockerfile", input.Dockerfile}
 	if input.Image != "" {
 		commands = append(commands, "--image", input.Image)
+	}
+	if input.EnvFile != "" {
+		commands = append(commands, "--env-file", input.EnvFile)
 	}
 	if input.AppName != "" {
 		commands = append(commands, "--app", input.AppName)

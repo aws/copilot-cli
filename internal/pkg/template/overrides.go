@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	cdkVersion              = "2.56.0"
+	cdkVersion              = "2.137.0"
 	cdkConstructsMinVersion = "10.0.0"
 	cdkTemplatesPath        = "overrides/cdk"
 

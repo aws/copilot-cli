@@ -4,7 +4,7 @@
 'use strict';
 
 const express = require('express');
-const AWS = require('aws-sdk');
+const { S3 } = require('@aws-sdk/client-s3');
 
 // Constants
 const PORT = 80;
@@ -22,7 +22,7 @@ const pool = new Pool({
 })
 
 // Get bucket name from environment variable.
-const s3 = new AWS.S3({apiVersion: '2006-03-01'});
+const s3 = new S3();
 const bucketName = process.env.MYBUCKET_NAME
 
 // App

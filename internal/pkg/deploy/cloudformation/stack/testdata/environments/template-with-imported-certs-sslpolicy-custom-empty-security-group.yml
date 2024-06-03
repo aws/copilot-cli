@@ -898,6 +898,11 @@ Resources:
                   - 'cloudformation:DeleteStack'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+              - Sid: ListStacks
+                Effect: Allow
+                Action:
+                  - 'cloudformation:ListStacks'
+                Resource: "*"
               - Sid: RDS
                 Effect: Allow
                 Action:

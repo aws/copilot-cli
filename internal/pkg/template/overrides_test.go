@@ -195,12 +195,12 @@ transform{{$resource.LogicalID}}() {
 			walked["package.json"] = true
 			require.Equal(t, `{
  "devDependencies": {
-   "aws-cdk": "2.56.0",
+   "aws-cdk": "2.137.0",
    "ts-node": "^10.9.1",
    "typescript": "~4.9.4"
  },
  "dependencies": {
-   "aws-cdk-lib": "2.56.0",
+   "aws-cdk-lib": "2.137.0",
    "constructs": "^10.0.0",
    "source-map-support": "^0.5.21"
  }

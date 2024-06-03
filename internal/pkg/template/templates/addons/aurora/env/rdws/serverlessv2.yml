@@ -101,7 +101,7 @@ Resources:
       DatabaseName: !Ref {{logicalIDSafe .ClusterName}}DBName
       {{- if eq .Engine "MySQL"}}
       Engine: 'aurora-mysql'
-      EngineVersion: '8.0.mysql_aurora.3.02.0'
+      EngineVersion: '8.0.mysql_aurora.3.06.0'
       {{- else}}
       Engine: 'aurora-postgresql'
       EngineVersion: '14.4'

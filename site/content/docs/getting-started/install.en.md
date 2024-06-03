@@ -45,5 +45,5 @@ Copy and paste the command into your terminal.
 !!! info
     To download a specific version, replace "latest" with the specific version. For example, to download v0.6.0 on macOS, type:
     ```
-    curl -Lo copilot https://github.com/aws/copilot-cli/releases/download/v0.6.0/copilot-darwin && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot &&  copilot --help
+    curl -Lo copilot https://github.com/aws/copilot-cli/releases/download/v0.6.0/copilot-darwin && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot && copilot --help
     ```

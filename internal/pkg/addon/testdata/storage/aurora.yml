@@ -106,7 +106,7 @@ Resources:
         ]
       DatabaseName: !Ref auroraDBName
       Engine: "aurora-mysql"
-      EngineVersion: "8.0.mysql_aurora.3.02.0"
+      EngineVersion: "8.0.mysql_aurora.3.06.0"
       DBClusterParameterGroupName: !Ref auroraDBClusterParameterGroup
       DBSubnetGroupName: !Ref auroraDBSubnetGroup
       VpcSecurityGroupIds:

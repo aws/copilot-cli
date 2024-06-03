@@ -28,7 +28,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
         secrets:
           GITHUB_TOKEN: GITHUB_TOKEN
           DB_SECRET:
-            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+            secretsmanager: 'mysql'
 
         environments:
           test:
