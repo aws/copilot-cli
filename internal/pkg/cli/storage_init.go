@@ -1101,11 +1101,11 @@ func (o *initStorageOpts) actionsForWorkloadStorage() []string {
 		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
 		if o.workloadType == manifestinfo.RequestDrivenWebServiceType {
 			newVar = fmt.Sprintf("%s_ARN", newVar)
-			retrieveEnvVarCode = fmt.Sprintf(`const AWS = require('aws-sdk');
-const client = new AWS.SecretsManager({
+			retrieveEnvVarCode = fmt.Sprintf(`const {SecretsManager} = require('@aws-sdk/client-secrets-manager');
+const client = new SecretsManager({
     region: process.env.AWS_DEFAULT_REGION,
 });
-const dbSecret = await client.getSecretValue({SecretId: process.env.%s}).promise();
+const dbSecret = await client.getSecretValue({SecretId: process.env.%s});
 const {username, host, dbname, password, port} = JSON.parse(dbSecret.SecretString);`, newVar)
 		}
 	}

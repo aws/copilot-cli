@@ -17,7 +17,7 @@ $ copilot svc delete [flags]
 ```
 
 ## Examples
-Force delete the application with environments "test" and "prod".
+Force delete a service from environment "test".
 ```console
-$ copilot svc delete --name test --yes
+$ copilot svc delete --env test --yes
 ```

@@ -123,7 +123,7 @@ This architecture could be useful if you have a service that needs to minimize l
 4. Write your lambda function:
   ```js title="lambdas/record-processor/index.js"
   "use strict";
-  const AWS = require('aws-sdk');
+  const { unmarshall } = require('@aws-sdk/util-dynamodb');
 
   exports.handler = async function (event, context) {
     for (const record of event?.Records) {
@@ -132,7 +132,7 @@ This architecture could be useful if you have a service that needs to minimize l
       }
 
       // process new records
-      const item = AWS.DynamoDB.Converter.unmarshall(record?.dynamodb?.NewImage);
+      const item = unmarshall(record?.dynamodb?.NewImage);
       console.log("processing item", item);
     }
   };

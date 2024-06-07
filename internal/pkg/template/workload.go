@@ -1050,7 +1050,7 @@ func envControllerParameters(o WorkloadOpts) []string {
 		}
 	}
 	if o.WorkloadType == "Backend Service" {
-		if o.ALBEnabled {
+		if o.ALBEnabled && o.ImportedALB == nil {
 			parameters = append(parameters, "InternalALBWorkloads,")
 		}
 	}

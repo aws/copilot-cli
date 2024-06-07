@@ -596,7 +596,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	case describe.URIAccessTypeServiceDiscovery:
 		network = "with service discovery."
 	case describe.URIAccessTypeServiceConnect:
-		network = "with service connect."
+		network = "with Service Connect."
 	case describe.URIAccessTypeNone:
 		return []string{}, nil
 	}
