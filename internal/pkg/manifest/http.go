@@ -75,7 +75,7 @@ func (cfg HTTP) RoutingRules() []RoutingRule {
 
 // IsEmpty returns true if HTTP has empty configuration.
 func (r *HTTP) IsEmpty() bool {
-	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0
+	return r.Main.IsEmpty() && r.TargetContainerCamelCase == nil && len(r.AdditionalRoutingRules) == 0 && r.ImportedALB == nil
 }
 
 // RoutingRule holds listener rule configuration for ALB.
