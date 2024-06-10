@@ -141,6 +141,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 					"  build:\n" +
 					"    dockerfile: ./Dockerfile\n" +
 					"    context: context/dir\n" +
+					"    options: [\"--pull\", \"--cache-from\", \"foo/bar:cache\"]\n" +
 					"    target: build-stage\n" +
 					"    cache_from:\n" +
 					"      - image:tag\n" +
@@ -158,6 +159,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 									BuildArgs: DockerBuildArgs{
 										Context:    aws.String("context/dir"),
 										Dockerfile: aws.String("./Dockerfile"),
+										Options:    []string{"--pull", "--cache-from", "foo/bar:cache"},
 										Target:     aws.String("build-stage"),
 										CacheFrom:  []string{"image:tag"},
 										Args:       map[string]string{"a": "1", "b": "2"},

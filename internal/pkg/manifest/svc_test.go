@@ -67,6 +67,7 @@ sidecars:
       build:
         dockerfile: "web/Dockerfile"
         context: "pathto/Dockerfile"
+        options: ["--pull", "--cache-from", "foo/bar:cache"]
         target: "build-stage"
         cache_from:
           - foo/bar:latest
@@ -173,6 +174,7 @@ environments:
 											BuildArgs: DockerBuildArgs{
 												Dockerfile: aws.String("web/Dockerfile"),
 												Context:    aws.String("pathto/Dockerfile"),
+												Options:    []string{"--pull", "--cache-from", "foo/bar:cache"},
 												Target:     aws.String("build-stage"),
 												CacheFrom:  []string{"foo/bar:latest"},
 												Args: map[string]string{

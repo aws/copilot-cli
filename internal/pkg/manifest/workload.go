@@ -176,8 +176,7 @@ func (i *ImageLocationOrBuild) BuildConfig(rootDirectory string) *DockerBuildArg
 		Dockerfile: aws.String(filepath.Join(rootDirectory, i.dockerfilePath())),
 		Context:    aws.String(filepath.Join(rootDirectory, i.contextPath())),
 		Args:       i.args(),
-		Target:     i.target(),
-		CacheFrom:  i.cacheFrom(),
+		Options:    i.options(),
 	}
 }
 
@@ -227,15 +226,23 @@ func (i *ImageLocationOrBuild) args() map[string]string {
 	return i.Build.BuildArgs.Args
 }
 
-// target returns the build target stage if it exists, otherwise nil.
-func (i *ImageLocationOrBuild) target() *string {
-	return i.Build.BuildArgs.Target
-}
+// options returns the additional options from build section, if some are manually defined. Otherwise, it returns an empty array.
+func (i *ImageLocationOrBuild) options() []string {
+	options := i.Build.BuildArgs.Options
 
-// cacheFrom returns the cache from build section, if it exists.
-// Otherwise it returns nil.
-func (i *ImageLocationOrBuild) cacheFrom() []string {
-	return i.Build.BuildArgs.CacheFrom
+	// Add the deprecated target value
+	if i.Build.BuildArgs.Target != nil {
+		options = append(options, dockerengine.BuildOptionTarget, *i.Build.BuildArgs.Target)
+	}
+
+	// Add the deprecated cacheFrom values
+	if i.Build.BuildArgs.CacheFrom != nil {
+		for _, cacheFrom := range i.Build.BuildArgs.CacheFrom {
+			options = append(options, dockerengine.BuildOptionCacheFrom, cacheFrom)
+		}
+	}
+
+	return options
 }
 
 // ImageOverride holds fields that override Dockerfile image defaults.
@@ -396,12 +403,13 @@ type DockerBuildArgs struct {
 	Context    *string           `yaml:"context,omitempty"`
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
-	Target     *string           `yaml:"target,omitempty"`
-	CacheFrom  []string          `yaml:"cache_from,omitempty"`
+	Options    []string          `yaml:"options,omitempty"`
+	Target     *string           `yaml:"target,omitempty"`     // Deprecated. Use options with [--target, VALUE] instead.
+	CacheFrom  []string          `yaml:"cache_from,omitempty"` // Deprecated. Use options with [--cache-from, VALUE] instead.
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {
-	if b.Context == nil && b.Dockerfile == nil && b.Args == nil && b.Target == nil && b.CacheFrom == nil {
+	if b.Context == nil && b.Dockerfile == nil && b.Args == nil && b.Options == nil && b.Target == nil && b.CacheFrom == nil {
 		return true
 	}
 	return false

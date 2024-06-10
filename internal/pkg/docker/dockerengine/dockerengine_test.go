@@ -43,8 +43,7 @@ func TestDockerCommand_Build(t *testing.T) {
 		context           string
 		tags              []string
 		args              map[string]string
-		target            string
-		cacheFrom         []string
+		options           []string
 		envVars           map[string]string
 		labels            map[string]string
 		setupMocks        func(controller *gomock.Controller)
@@ -177,18 +176,17 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-		"runs with cache_from and target fields": {
-			path:      mockPath,
-			tags:      []string{"latest"},
-			target:    "foobar",
-			cacheFrom: []string{"foo/bar:latest", "foo/bar/baz:1.2.3"},
+		"success with options field": {
+			path:    mockPath,
+			tags:    []string{"latest"},
+			options: []string{"--foo", "bar", "--baz"},
 			setupMocks: func(c *gomock.Controller) {
 				mockCmd = NewMockCmd(c)
 				mockCmd.EXPECT().RunWithContext(ctx, "docker", []string{"build",
+					"--foo",
+					"bar",
+					"--baz",
 					"-t", fmt.Sprintf("%s:%s", mockURI, "latest"),
-					"--cache-from", "foo/bar:latest",
-					"--cache-from", "foo/bar/baz:1.2.3",
-					"--target", "foobar",
 					filepath.FromSlash("mockPath/to"),
 					"-f", "mockPath/to/mockDockerfile"}, gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -224,8 +222,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				DockerfileContent: tc.dockerfileContent,
 				URI:               mockURI,
 				Args:              tc.args,
-				Target:            tc.target,
-				CacheFrom:         tc.cacheFrom,
+				Options:           tc.options,
 				Tags:              tc.tags,
 				Labels:            tc.labels,
 			}

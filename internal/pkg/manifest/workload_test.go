@@ -270,7 +270,32 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				BuildString: nil,
 			},
 		},
-		"Dockerfile with cache from and target build opts": {
+		"Dockerfile with build opts": {
+			inContent: []byte(`build:
+  options:
+    - --pull
+    - --target
+    - "foobar"
+    - --cache-from
+    - foo/bar:latest
+    - --cache-from
+    - foo/bar/baz:1.2.3`),
+			wantedStruct: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Options: []string{
+						"--pull",
+						"--target",
+						"foobar",
+						"--cache-from",
+						"foo/bar:latest",
+						"--cache-from",
+						"foo/bar/baz:1.2.3",
+					},
+				},
+				BuildString: nil,
+			},
+		},
+		"Dockerfile with deprecated cache from and target build opts": {
 			inContent: []byte(`build:
   cache_from:
     - foo/bar:latest
@@ -313,6 +338,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.BuildArgs.Context, b.Build.BuildArgs.Context)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Dockerfile, b.Build.BuildArgs.Dockerfile)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
+				require.Equal(t, tc.wantedStruct.BuildArgs.Options, b.Build.BuildArgs.Options)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Target, b.Build.BuildArgs.Target)
 				require.Equal(t, tc.wantedStruct.BuildArgs.CacheFrom, b.Build.BuildArgs.CacheFrom)
 			}
@@ -817,10 +843,23 @@ func TestBuildConfig(t *testing.T) {
 				},
 			},
 		},
-		"including build options": {
+		"custom build options": {
 			inBuild: BuildArgsOrString{
 				BuildArgs: DockerBuildArgs{
-					Target: aws.String("foobar"),
+					Options: []string{"--foo"},
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
+				Context:    aws.String(mockWsRoot),
+				Options:    []string{"--foo"},
+			},
+		},
+		"deprecated build options": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Options: []string{"--foo"},
+					Target:  aws.String("foobar"),
 					CacheFrom: []string{
 						"foo/bar:latest",
 						"foo/bar/baz:1.2.3",
@@ -830,11 +869,7 @@ func TestBuildConfig(t *testing.T) {
 			wantedBuild: DockerBuildArgs{
 				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
 				Context:    aws.String(mockWsRoot),
-				Target:     aws.String("foobar"),
-				CacheFrom: []string{
-					"foo/bar:latest",
-					"foo/bar/baz:1.2.3",
-				},
+				Options:    []string{"--foo", "--target", "foobar", "--cache-from", "foo/bar:latest", "--cache-from", "foo/bar/baz:1.2.3"},
 			},
 		},
 	}

@@ -155,9 +155,7 @@ image:
   build:
     dockerfile: path/to/dockerfile
     context: context/dir
-    target: build-stage
-    cache_from:
-      - image:tag
+    option: ["--target", "build-stage", "--cache-from", "image:tag"]
     args:
       key: value
 ```
