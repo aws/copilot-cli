@@ -83,7 +83,7 @@ Resources:
       Parameters:
         character_set_client: 'utf8'
       {{- else}}
-      Family: 'aurora-postgresql14'
+      Family: 'aurora-postgresql16'
       Parameters:
         client_encoding: 'UTF8'
       {{- end}}
@@ -104,7 +104,7 @@ Resources:
       EngineVersion: '8.0.mysql_aurora.3.06.0'
       {{- else}}
       Engine: 'aurora-postgresql'
-      EngineVersion: '14.4'
+      EngineVersion: '16.2'
       {{- end}}
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}
       DBSubnetGroupName: !Ref {{logicalIDSafe .ClusterName}}DBSubnetGroup
