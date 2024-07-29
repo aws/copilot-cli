@@ -18,7 +18,7 @@ require (
 	github.com/moby/buildkit v0.13.2
 	github.com/moby/patternmatcher v0.6.0
 	github.com/onsi/ginkgo/v2 v2.19.0
-	github.com/onsi/gomega v1.33.1
+	github.com/onsi/gomega v1.34.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.1
@@ -60,6 +60,6 @@ require (
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/protobuf v1.34.1 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
 )
