@@ -432,10 +432,10 @@ The desired count at which you wish to start placing your service using Fargate 
 Cooldown scaling fields that are used as the default cooldown for all autoscaling fields specified.
 
 <span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
-The cooldown time for autoscaling fields to scale up the service.
+The cooldown time for autoscaling fields to scale down the service.
 
 <span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
-The cooldown time for autoscaling fields to scale down the service.
+The cooldown time for autoscaling fields to scale up the service.
 
 The following options `cpu_percentage`, `memory_percentage`, `requests` and `response_time` are autoscaling fields for `count` which can be defined either as the value of the field, or as a Map containing advanced information about the field's `value` and `cooldown`:
 ```yaml

@@ -431,10 +431,10 @@ Service の何個目のタスクから Fargate Spot キャパシティプロバ�
 指定されたすべてのオートスケーリングフィールドのデフォルトクールダウンとして使用されるクールダウンスケーリングフィールド。
 
 <span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
-Service をスケールアップするためのオートスケーリングのクールダウン時間。
+Service をスケールダウンさせるためのオートスケーリングクールダウン時間。
 
 <span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
-Service をスケールダウンさせるためのオートスケーリングクールダウン時間。
+Service をスケールアップするためのオートスケーリングのクールダウン時間。
 
 `cpu_percentage`、`memory_percentage`、`requests` および `response_time` のオプションは、オートスケーリングに関する `count` フィールドにて、フィールド値としてあるいはフィールド値とクールダウン設定に関する詳細情報を含むマップとして定義することができます。
 ```yaml
