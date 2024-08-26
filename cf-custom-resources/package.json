@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "ansi-regex": ">=5.0.1",
-    "axios": ">=1.6.0",
+    "axios": ">=1.7.4",
     "aws-sdk-client-mock": "^3.0.0",
     "babel-minify": "^0.5.1",
     "eslint": "^7.16.0",
