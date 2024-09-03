@@ -55,7 +55,7 @@ jobs:
     needs: download-and-archive
     steps:
       - name: Download archive files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: save tar files
       - name: Update release
@@ -72,7 +72,7 @@ jobs:
     steps:
       - name: Download archive files
         id: download
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: save tar files
       - name: Checkout bottle repo
