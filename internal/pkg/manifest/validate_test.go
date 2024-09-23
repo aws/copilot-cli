@@ -416,33 +416,6 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: "validate Windows: service connect (`network.connect`) is not supported for Window",
 		},
-		"error if fail to validate ARM": {
-			lbConfig: LoadBalancedWebService{
-				Workload: Workload{
-					Name: aws.String("mockName"),
-				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: testImageConfig,
-					TaskConfig: TaskConfig{
-						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
-						Count: Count{
-							AdvancedCount: AdvancedCount{
-								Spot:         aws.Int(123),
-								workloadType: manifestinfo.LoadBalancedWebServiceType,
-							},
-						},
-					},
-					HTTPOrBool: HTTPOrBool{
-						HTTP: HTTP{
-							Main: RoutingRule{
-								Path: stringP("/"),
-							},
-						},
-					},
-				},
-			},
-			wantedErrorMsgPrefix: `validate ARM: `,
-		},
 		"error if neither of http or nlb is enabled": {
 			lbConfig: LoadBalancedWebService{
 				Workload: Workload{
@@ -728,26 +701,6 @@ func TestBackendService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: "validate Windows: service connect (`network.connect`) is not supported for Window",
-		},
-		"error if fail to validate ARM": {
-			config: BackendService{
-				Workload: Workload{
-					Name: aws.String("mockName"),
-				},
-				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: testImageConfig,
-					TaskConfig: TaskConfig{
-						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
-						Count: Count{
-							AdvancedCount: AdvancedCount{
-								Spot:         aws.Int(123),
-								workloadType: manifestinfo.BackendServiceType,
-							},
-						},
-					},
-				},
-			},
-			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 		"error if fail to validate deployment": {
 			config: BackendService{
@@ -1176,26 +1129,6 @@ func TestWorkerService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate Windows: `,
-		},
-		"error if fail to validate ARM": {
-			config: WorkerService{
-				Workload: Workload{
-					Name: aws.String("mockName"),
-				},
-				WorkerServiceConfig: WorkerServiceConfig{
-					ImageConfig: testImageConfig,
-					TaskConfig: TaskConfig{
-						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
-						Count: Count{
-							AdvancedCount: AdvancedCount{
-								Spot:         aws.Int(123),
-								workloadType: manifestinfo.WorkerServiceType,
-							},
-						},
-					},
-				},
-			},
-			wantedErrorMsgPrefix: `validate ARM: `,
 		},
 		"error if fail to validate deployment": {
 			config: WorkerService{
@@ -3915,43 +3848,6 @@ func TestValidateWindows(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			err := validateWindows(tc.in)
-
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestValidateARM(t *testing.T) {
-	testCases := map[string]struct {
-		in          validateARMOpts
-		wantedError error
-	}{
-		"should return an error if Spot specified inline": {
-			in: validateARMOpts{
-				Spot: aws.Int(2),
-			},
-			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
-		},
-		"should return an error if Spot specified with spot_from": {
-			in: validateARMOpts{
-				SpotFrom: aws.Int(2),
-			},
-			wantedError: fmt.Errorf(`'Fargate Spot' is not supported when deploying on ARM architecture`),
-		},
-		"should return nil if Spot not specified": {
-			in: validateARMOpts{
-				Spot: nil,
-			},
-			wantedError: nil,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := validateARM(tc.in)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

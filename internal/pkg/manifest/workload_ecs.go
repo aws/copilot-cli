@@ -201,11 +201,6 @@ func (t TaskConfig) IsWindows() bool {
 	return isWindowsPlatform(t.Platform)
 }
 
-// IsARM returns whether or not the service is building with an ARM Arch.
-func (t TaskConfig) IsARM() bool {
-	return IsArmArch(t.Platform.Arch())
-}
-
 // Secret represents an identifier for sensitive data stored in either SSM or SecretsManager.
 type Secret struct {
 	from               StringOrFromCFN      // SSM Parameter name or ARN to a secret or secret ARN imported from another CloudFormation stack.
