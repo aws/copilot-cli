@@ -443,6 +443,7 @@ permissions boundary for all roles generated within the application.`
 	prodEnvFlagDescription    = "If the environment contains production services."
 	deployEnvFlagDescription  = "Deploy the target environment before deploying the workload."
 	yesInitEnvFlagDescription = "Confirm initializing the target environment if it does not exist."
+	forceAppUpgradeFlagDescription = "Optional. Force an application upgrade to the latest version."
 )
 
 type portOverride struct {
