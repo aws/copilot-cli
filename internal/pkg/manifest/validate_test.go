@@ -3166,7 +3166,7 @@ func TestObservability_validate(t *testing.T) {
 			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
-				require.NotNil(t, gotErr)
+				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else {
 				require.NoError(t, gotErr)
@@ -3895,7 +3895,7 @@ func TestDeploymentConfig_validate(t *testing.T) {
 			gotErr := tc.deployConfig.validate()
 
 			if tc.wanted != "" {
-				require.NotNil(t, gotErr)
+				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wanted)
 			} else {
 				require.NoError(t, gotErr)
@@ -3926,7 +3926,7 @@ func TestFromEnvironment_validate(t *testing.T) {
 			gotErr := tc.in.validate()
 
 			if tc.wantedError != nil {
-				require.NotNil(t, gotErr)
+				require.Error(t, gotErr)
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)

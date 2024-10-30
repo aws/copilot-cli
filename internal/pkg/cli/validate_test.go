@@ -364,7 +364,7 @@ func TestValidatePath(t *testing.T) {
 
 			// THEN
 			if tc.want == nil {
-				require.Nil(t, got)
+				require.NoError(t, got)
 			} else {
 				require.EqualError(t, tc.want, got.Error())
 			}
@@ -518,7 +518,7 @@ func TestValidateLSIs(t *testing.T) {
 			if tc.wantError != nil {
 				require.EqualError(t, got, tc.wantError.Error())
 			} else {
-				require.Nil(t, got)
+				require.NoError(t, got)
 			}
 		})
 	}
@@ -544,7 +544,7 @@ func TestValidateCIDR(t *testing.T) {
 			if tc.wantError != nil {
 				require.EqualError(t, got, tc.wantError.Error())
 			} else {
-				require.Nil(t, got)
+				require.NoError(t, got)
 			}
 		})
 	}
@@ -708,7 +708,7 @@ func TestValidateCron(t *testing.T) {
 			if tc.shouldPass {
 				require.NoError(t, got)
 			} else {
-				require.NotNil(t, got)
+				require.Error(t, got)
 			}
 		})
 	}

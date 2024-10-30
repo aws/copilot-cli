@@ -594,7 +594,7 @@ func TestEcsServiceResourceComponent_Render(t *testing.T) {
 		nl, err := c.Render(buf)
 
 		// THEN
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, 1, nl)
 		require.Equal(t, "resource\n", buf.String())
 	})
@@ -614,7 +614,7 @@ func TestEcsServiceResourceComponent_Render(t *testing.T) {
 		nl, err := c.Render(buf)
 
 		// THEN
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, 2, nl)
 		require.Equal(t, "resource\n"+
 			"deployment\t\t\n", buf.String())

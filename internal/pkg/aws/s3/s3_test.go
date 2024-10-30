@@ -72,7 +72,7 @@ func TestS3_Upload(t *testing.T) {
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())
 			} else {
-				require.Equal(t, gotErr, nil)
+				require.NoError(t, gotErr)
 				require.Equal(t, gotURL, tc.wantedURL)
 			}
 		})

@@ -888,7 +888,7 @@ func TestQueueScaling_AcceptableBacklogPerTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			actual, err := tc.in.AcceptableBacklogPerTask()
 			if tc.wantedErr != nil {
-				require.NotNil(t, err)
+				require.Error(t, err)
 			} else {
 				require.Equal(t, tc.wantedBacklog, actual)
 			}

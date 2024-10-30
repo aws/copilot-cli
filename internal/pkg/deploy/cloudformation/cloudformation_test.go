@@ -626,7 +626,7 @@ func testDeployTask_ReturnNilOnEmptyChangeSetWhileUpdatingStack(t *testing.T, wh
 	err := when(client)
 
 	// THEN
-	require.Nil(t, err, "should not fail if the changeset is empty")
+	require.NoError(t, err, "should not fail if the changeset is empty")
 }
 
 func testDeployTask_OnUpdateChangeSetFailure(t *testing.T, when func(cf CloudFormation) error) {

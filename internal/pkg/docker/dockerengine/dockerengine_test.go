@@ -235,7 +235,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, got.Error())
 			} else {
-				require.Nil(t, got)
+				require.NoError(t, got)
 			}
 		})
 	}
@@ -815,7 +815,7 @@ func TestDockerCommand_Run(t *testing.T) {
 				return
 			}
 
-			require.Nil(t, err)
+			require.NoError(t, err)
 			split := strings.Split(out.String(), "\n")
 			require.ElementsMatch(t, tc.wantedOutput, split[:len(split)-1])
 		})

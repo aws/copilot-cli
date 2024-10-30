@@ -169,7 +169,7 @@ func TestProvider_FromProfile(t *testing.T) {
 		sess, err := ImmutableProvider().FromProfile("walk-like-an-egyptian")
 
 		// THEN
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.EqualError(t, errors.New("missing region configuration"), err.Error())
 		require.Nil(t, sess)
 	})

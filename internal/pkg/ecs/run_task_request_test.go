@@ -443,7 +443,7 @@ func TestRunTaskRequest_CLIString(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, err := tc.in.CLIString()
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.Equal(t, tc.wanted, got)
 		})
 	}
@@ -475,7 +475,7 @@ func TestRunTaskRequest_fmtStringMapToString(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, err := fmtStringMapToString(tc.in)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.Equal(t, tc.wanted, got)
 		})
 	}

@@ -136,7 +136,7 @@ Outputs:
 
 			// THEN
 			if tc.wantedErr != nil {
-				require.NotNil(t, err, "expected a non-nil error to be returned")
+				require.Error(t, err, "expected a non-nil error to be returned")
 				require.True(t, strings.HasPrefix(err.Error(), tc.wantedErr.Error()), "expected the error %v to be wrapped by our prefix %v", err, tc.wantedErr)
 			} else {
 				require.NoError(t, err)

@@ -293,7 +293,7 @@ func Test_LogGroupName(t *testing.T) {
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.Equal(t, nil, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantLogGroupName, logGroupName)
 			}
 		})
@@ -327,7 +327,7 @@ func Test_SystemLogGroupName(t *testing.T) {
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.Equal(t, nil, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantLogGroupName, logGroupName)
 			}
 		})

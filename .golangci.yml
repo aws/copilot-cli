@@ -8,10 +8,19 @@ issues:
         - errcheck
     - path: internal/pkg/exec/(.+)\.go
       text: 'is unused'
+    - text: "S1009: should omit nil check" # TODO: remove this line after fixing all the issues
+      linters:
+        - gosimple
+    - text: "printf: non-constant format string in call to" # TODO: remove this line after fixing all the issues
+      linters:
+        - govet
+
+
 
 linters:
   enable:
     - revive
+    - testifylint
 
 linters-settings:
   revive:
@@ -19,3 +28,7 @@ linters-settings:
       - name: exported
         arguments:
           - disableStutteringCheck
+  testifylint:
+    disable-all: true
+    enable:
+      - error-nil

@@ -383,7 +383,6 @@ func TestOverridePipeline_Execute(t *testing.T) {
 					}
 
 					require.Error(t, err)
-					require.NotNil(t, err)
 					require.Contains(t, err.Error(), tc.wanted.Error())
 				} else {
 					if err != nil {
