@@ -2,7 +2,7 @@
 name: Bug report
 about: Create an Issue to report a bug
 title: "[Bug]: TITLE"
-labels: ['type/bug']
+labels: type/bug
 assignees: ''
 
 ---
@@ -32,4 +32,3 @@ If you do find an existing Issue, re-open or add a comment to that Issue instead
 
 ### Debugging:
 <!-- Describe the steps you have taken to debug this issue. What docs have you looked at? What else have you tried? -->
-
