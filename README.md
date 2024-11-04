@@ -4,6 +4,15 @@
 ![latest version](https://img.shields.io/github/v/release/aws/copilot-cli)
 [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+## :warning: AWS Copilot CLI is in maintenance mode
+
+We [announced](https://aws.amazon.com/blogs/developer/announcing-end-of-support-for-aws-copilot-cli-effective-february-3-2025/)
+the upcoming **end-of-support for AWS Copilot CLI**.
+
+Per that announcement, as of 11/4/2024, **the AWS Copilot CLI has entered maintenance mode and will reach end-of-support on February 3, 2025.**
+Going forward, we will limit releases to address critical bug fixes and security
+issues only. For details, please refer to the announcement.
+
 * **Documentation**: [https://aws.github.io/copilot-cli/](https://aws.github.io/copilot-cli/)
 
 The AWS Copilot CLI is a tool for developers to build, release and operate production-ready containerized applications
