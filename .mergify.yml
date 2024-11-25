@@ -1,16 +1,6 @@
 queue_rules:
-  - name: default
-    conditions:
-      - status-success=build (compile-linux)
-      - status-success=build (compile-windows)
-      - status-success=build (compile-darwin)
-      - status-success=test
-      - status-success=staticcheck
-      - status-success=license
-
-pull_request_rules:
-  - name: Merge for developers
-    conditions:
+  - name: duplicated default from Merge for bots
+    queue_conditions:
       - base~=(mainline|rename-commands)
       - "#approved-reviews-by>=2"
       - approved-reviews-by=@aws/aws-ecs-devx
@@ -26,14 +16,57 @@ pull_request_rules:
       - -merged
       - -closed
       - author!=dependabot[bot]
-    actions:
-      queue:
-        name: default
-        method: squash
-        commit_message_template: |
-          {{ title }} (#{{ number }})
+      - base=mainline
+      - "#approved-reviews-by>=1"
+      - "#changes-requested-reviews-by=0"
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
+      - status-success=license
+      - author=dependabot[bot]
+      - -title~=(WIP|wip)
+      - -label~=(WIP|do-not-merge)
+      - -merged
+      - -closed
+    merge_conditions: []
+    commit_message_template: |
+      {{ title }} (#{{ number }})
 
-          {{ body }}
+      {{ body }}
+    merge_method: squash
+  - name: default
+    queue_conditions:
+      - base~=(mainline|rename-commands)
+      - "#approved-reviews-by>=2"
+      - approved-reviews-by=@aws/aws-ecs-devx
+      - -approved-reviews-by~=author
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
+      - status-success=license
+      - -label~=(WIP|do-not-merge)
+      - -title~=(WIP|wip)
+      - -merged
+      - -closed
+      - author!=dependabot[bot]
+    merge_conditions:
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
+      - status-success=license
+    commit_message_template: |
+      {{ title }} (#{{ number }})
+
+      {{ body }}
+    merge_method: squash
+
+pull_request_rules:
   - name: Merge for bots
     conditions:
       - base=mainline
@@ -53,13 +86,6 @@ pull_request_rules:
     actions:
       review:
         type: APPROVE
-      queue:
-        name: default
-        method: squash
-        commit_message_template: |
-          {{ title }} (#{{ number }})
-
-          {{ body }}
   - name: Ask Japanese docs reviews
     conditions:
       - files~=\.ja.md$
@@ -68,3 +94,7 @@ pull_request_rules:
       request_reviews:
         users:
           - hkford
+  - name: Merge for bots + Merge for developers
+    conditions: []
+    actions:
+      queue:
