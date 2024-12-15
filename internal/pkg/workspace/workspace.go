@@ -181,7 +181,7 @@ func Create(appName string, fs afero.Fs) (*Workspace, error) {
 	ws.CopilotDirAbs = CopilotDirAbs
 	ws.summary, ws.summaryErr = ws.writeSummary(appName)
 	if ws.summaryErr != nil {
-		return nil, err
+		return nil, ws.summaryErr
 	}
 
 	return ws, nil
