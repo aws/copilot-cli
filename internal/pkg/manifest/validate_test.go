@@ -1257,7 +1257,71 @@ func TestScheduledJob_validate(t *testing.T) {
 					On:          JobTriggerConfig{},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "on": `,
+			wantedErrorMsgPrefix: `validate "on": "schedule" must be specified`,
+		},
+		"Only support IANA database timezones": {
+			config: ScheduledJob{
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+						Timezone: aws.String("some invalid timezone"),
+					},
+				},
+			},
+            wantedErrorMsgPrefix: `validate "on": invalid "timezone": only support IANA database timezones, like "UTC" or "America/New_York". given "some invalid timezone"`,
+		},
+		"UTC timezone is valid": {
+			config: ScheduledJob{
+				Workload: Workload{Name: aws.String("some workload name")},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+						Timezone: aws.String("UTC"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "",
+		},
+		"America/New_York timezone is valid": {
+			config: ScheduledJob{
+				Workload: Workload{Name: aws.String("some workload name")},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+						Timezone: aws.String("America/New_York"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "",
+		},
+		"CET timezone is valid": {
+			config: ScheduledJob{
+				Workload: Workload{Name: aws.String("some workload name")},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+						Timezone: aws.String("CET"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "",
+		},
+		"Etc/GMT+1 timezone is valid": {
+			config: ScheduledJob{
+				Workload: Workload{Name: aws.String("some workload name")},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: testImageConfig,
+					On: JobTriggerConfig{
+						Schedule: aws.String("mockSchedule"),
+						Timezone: aws.String("Etc/GMT+1"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: "",
 		},
 		"error if fail to validate publish config": {
 			config: ScheduledJob{

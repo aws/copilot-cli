@@ -66,6 +66,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					require.Equal(t, template.WorkloadOpts{
 						WorkloadType:       manifestinfo.ScheduledJobType,
 						ScheduleExpression: "cron(0 0 * * ? *)",
+						ScheduleTimezone: "UTC",
 						StateMachine: &template.StateMachineOpts{
 							Timeout: aws.Int(5400),
 							Retries: aws.Int(3),
@@ -102,6 +103,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						AddonsExtraParams: `ServiceName: !GetAtt Service.Name
 DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 						ScheduleExpression: "cron(0 0 * * ? *)",
+						ScheduleTimezone: "UTC",
 						StateMachine: &template.StateMachineOpts{
 							Timeout: aws.Int(5400),
 							Retries: aws.Int(3),
@@ -450,6 +452,7 @@ func TestScheduledJob_Parameters(t *testing.T) {
 			Dockerfile: "frontend/Dockerfile",
 		},
 		Schedule: "@daily",
+		Timezone: "GMT",
 	}
 	testScheduledJobManifest := manifest.NewScheduledJob(baseProps)
 	testScheduledJobManifest.Count = manifest.Count{
@@ -503,6 +506,10 @@ func TestScheduledJob_Parameters(t *testing.T) {
 		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String("cron(0 0 * * ? *)"),
+		},
+		{
+			ParameterKey:   aws.String(ScheduledJobScheduleTimezoneParamKey),
+			ParameterValue: aws.String("GMT"),
 		},
 	}
 	testCases := map[string]struct {
@@ -600,6 +607,7 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
     "EnvName": "test",
     "LogRetention": "30",
     "Schedule": "cron(0 0 * * ? *)",
+    "ScheduleTimezone": "UTC",
     "TaskCPU": "256",
     "TaskCount": "1",
     "TaskMemory": "512",

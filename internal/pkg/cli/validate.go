@@ -125,7 +125,7 @@ var (
 
 	domainNameRegexp = regexp.MustCompile(`\.`) // Check for at least one dot in domain name.
 
-	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Check for strings of the form rate(*) or cron(*).
+	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron|at)\(.*\)`) // Check for strings of the form rate(*) or cron(*).
 )
 
 // RDS Aurora Serverless validation expressions.
@@ -493,7 +493,7 @@ func basicNameValidation(val interface{}) error {
 }
 
 func validateCron(sched string) error {
-	// If the schedule is wrapped in aws terms `rate()` or `cron()`, don't validate it--
+	// If the schedule is wrapped in aws terms `rate()` or `cron()` or `at`, don't validate it--
 	// instead, pass it in as-is for serverside validation. AWS cron is weird (year field, nonstandard wildcards)
 	// so for edge cases we need to support it
 	awsSchedMatch := awsScheduleRegexp.FindStringSubmatch(sched)

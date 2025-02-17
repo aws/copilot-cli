@@ -55,7 +55,7 @@ You can specify a rate to periodically trigger your job. Supported rates:
 | `"@hourly"`  | `"cron(0 * * * ? *)"` | at minute 0                                   |
 
 * `"@every {duration}"` (For example, "1m", "5m")
-* `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions)
+* `"rate({duration})"` based on EventBridge Scheduler's [rate expressions](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html#rate-based)
 
 Alternatively, you can specify a cron schedule if you'd like to trigger the job at a specific time:
 
@@ -67,6 +67,11 @@ Finally, you can disable the job from triggering by setting the `schedule` field
 on:
   schedule: "none"
 ```
+
+<span class="parent-field">on.</span><a id="on-timezone" href="#on-timezone" class="field">`timezone`</a> <span class="type">String</span>  
+You can specify a time zone to trigger your job like (America/New_York) or like (CET).
+More details on the [time zone format](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html#time-zones)
+
 
 <div class="separator"></div>
 

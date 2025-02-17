@@ -46,6 +46,7 @@ type ScheduledJobConfig struct {
 // JobTriggerConfig represents the configuration for the event that triggers the job.
 type JobTriggerConfig struct {
 	Schedule *string `yaml:"schedule"`
+	Timezone *string `yaml:"timezone"`
 }
 
 // JobFailureHandlerConfig represents the error handling configuration for the job.
@@ -58,6 +59,7 @@ type JobFailureHandlerConfig struct {
 type ScheduledJobProps struct {
 	*WorkloadProps
 	Schedule    string
+	Timezone    string
 	Timeout     string
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
@@ -78,6 +80,9 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 		job.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	job.On.Schedule = stringP(props.Schedule)
+	if props.Timezone != "" {
+		job.On.Timezone = stringP(props.Timezone)
+	}
 	if props.Retries != 0 {
 		job.Retries = aws.Int(props.Retries)
 	}
@@ -178,6 +183,9 @@ func newDefaultScheduledJob() *ScheduledJob {
 		},
 		ScheduledJobConfig: ScheduledJobConfig{
 			ImageConfig: ImageWithHealthcheck{},
+			On: JobTriggerConfig{
+				Timezone: aws.String("UTC"),
+			},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),

@@ -92,7 +92,7 @@ var (
 		"sidecars",
 		"logconfig",
 		"autoscaling",
-		"eventrule",
+		"schedule",
 		"state-machine",
 		"state-machine-definition.json",
 		"efs-access-point",
@@ -835,6 +835,7 @@ type WorkloadOpts struct {
 
 	// Additional options for job templates.
 	ScheduleExpression string
+	ScheduleTimezone   string
 	StateMachine       *StateMachineOpts
 
 	// Additional options for request driven web service templates.

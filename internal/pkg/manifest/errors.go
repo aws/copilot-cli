@@ -259,3 +259,12 @@ func (e *errHealthCheckPortExposedWithInvalidProtocol) Error() string {
 		e.container, e.healthCheckPort, e.protocol, english.PluralWord(len(validHealthCheckProtocols), "is", "are"), 
 		english.WordSeries(quoteStringSlice(validHealthCheckProtocols), "or"))
 }
+
+type ErrInvalidTimezone struct {
+	Timezone string
+	Field string
+}
+
+func (e *ErrInvalidTimezone) Error() string {
+	return fmt.Sprintf(`invalid %q: only support IANA database timezones, like "UTC" or "America/New_York". given %q`, e.Field, e.Timezone)
+}

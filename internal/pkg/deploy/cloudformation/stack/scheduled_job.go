@@ -25,6 +25,7 @@ import (
 // Parameter logical IDs for a scheduled job
 const (
 	ScheduledJobScheduleParamKey = "Schedule"
+	ScheduledJobScheduleTimezoneParamKey = "ScheduleTimezone"
 )
 
 // ScheduledJob represents the configuration needed to create a Cloudformation stack from a
@@ -184,6 +185,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
 		ScheduleExpression:       schedule,
+		ScheduleTimezone:         aws.StringValue(j.manifest.On.Timezone),
 		StateMachine:             stateMachine,
 		HealthCheck:              convertContainerHealthCheck(j.manifest.ImageConfig.HealthCheck),
 		LogConfig:                convertLogging(j.manifest.Logging),
@@ -227,6 +229,10 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
 			ParameterValue: aws.String(schedule),
+		},
+		{
+			ParameterKey:   aws.String(ScheduledJobScheduleTimezoneParamKey),
+			ParameterValue: j.manifest.On.Timezone,
 		},
 	}...), nil
 }

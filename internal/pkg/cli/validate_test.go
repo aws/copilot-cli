@@ -701,6 +701,10 @@ func TestValidateCron(t *testing.T) {
 			input:      "cron(0 9 3W * ? *)",
 			shouldPass: true,
 		},
+		"bypass with at()": {
+			input:      "at(2022-11-20T13:00:00)",
+			shouldPass: true,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
