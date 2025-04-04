@@ -338,7 +338,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := slices.DeleteFunc(localWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
+			workloadsToAppend := slices.DeleteFunc(slices.Clone(localWorkloads), func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
@@ -348,7 +348,7 @@ func (o *deployOpts) getDeploymentOrder() ([][]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			workloadsToAppend := slices.DeleteFunc(initializedWorkloads, func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
+			workloadsToAppend := slices.DeleteFunc(slices.Clone(initializedWorkloads), func(s string) bool { return slices.Contains(specifiedWorkloadList, s) })
 			if len(workloadsToAppend) != 0 {
 				groupsMap[math.MaxInt] = append(groupsMap[math.MaxInt], workloadsToAppend...)
 			}
