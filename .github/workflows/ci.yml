@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: '1.23'
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: '1.23'
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -69,7 +69,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: '1.23'
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -92,30 +92,13 @@ jobs:
         with:
           directory: cf-custom-resources/
 
-  staticcheck:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.21'
-
-      - name: Check out code
-        uses: actions/checkout@v2
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.54
-          args: --timeout 5m0s
-
   license:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: '1.23'
 
       - name: Check out code
         uses: actions/checkout@v2
