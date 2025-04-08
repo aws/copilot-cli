@@ -10,13 +10,13 @@ ENV GOBIN /go/bin
 # Install Go, Git and other dependencies so we can run ginkgo
 RUN apk update && apk add bash gcc musl-dev openssl go git aws-cli jq
 
-# Upgrade go to $GOLANG_VERSION. The version that's available in the base image is "go1.13.15 linux/amd64" by default.
-RUN wget https://dl.google.com/go/go$GOLANG_VERSION.src.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.src.tar.gz
-RUN cd /usr/local/go/src && ./make.bash
+# Upgrade go to $GOLANG_VERSION. The version that's available in the base image is older than what we need.
+RUN wget https://dl.google.com/go/go$GOLANG_VERSION.linux-arm64.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.linux-arm64.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
-RUN rm go$GOLANG_VERSION.src.tar.gz
+RUN rm go$GOLANG_VERSION.linux-arm64.tar.gz
 RUN apk del go
 
+ENV GOPROXY=direct
 RUN go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
 # Copy the binary
