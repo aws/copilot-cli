@@ -11,9 +11,9 @@ ENV GOBIN /go/bin
 RUN apk update && apk add bash gcc musl-dev openssl go git aws-cli jq
 
 # Upgrade go to $GOLANG_VERSION. The version that's available in the base image is older than what we need.
-RUN wget https://dl.google.com/go/go$GOLANG_VERSION.linux-arm64.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.linux-arm64.tar.gz
+RUN wget https://dl.google.com/go/go$GOLANG_VERSION.linux-amd64.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.linux-amd64.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
-RUN rm go$GOLANG_VERSION.linux-arm64.tar.gz
+RUN rm go$GOLANG_VERSION.linux-amd64.tar.gz
 RUN apk del go
 
 ENV GOPROXY=direct
