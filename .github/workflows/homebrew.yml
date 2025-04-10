@@ -55,7 +55,6 @@ jobs:
       - name: Update release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: 'v1.34.1'
           files: '*.tar.gz'
 
   create-pr:
