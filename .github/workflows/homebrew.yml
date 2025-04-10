@@ -44,7 +44,7 @@ jobs:
           chmod +x copilot
           tar czf copilot_${semvar}_linux_arm64.tar.gz copilot
       - name: Save archive files
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: save tar files
           path: '*.tar.gz'
