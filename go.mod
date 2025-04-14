@@ -1,6 +1,7 @@
 module github.com/aws/copilot-cli
 
 go 1.23
+toolchain go1.24.1
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
@@ -26,7 +27,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/mod v0.20.0
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.13.0
 	golang.org/x/term v0.25.0
 	golang.org/x/text v0.19.0
 	gopkg.in/ini.v1 v1.67.0
