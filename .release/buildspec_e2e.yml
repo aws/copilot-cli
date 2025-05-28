@@ -11,18 +11,6 @@ env:
 batch:
   fast-fail: false
   build-graph:
-    - identifier: addons
-      env:
-        privileged-mode: true
-        type: LINUX_CONTAINER
-        compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:7.0
-        variables:
-          TEST_SUITE: addons
-          APP_REGION: us-west-2
-          APP_ACCOUNT: e2e/account/addons
-          TESTENV_REGION: us-west-2
-          TESTENV_ACCOUNT: e2e/account/addons
     - identifier: customized_env
       env:
         privileged-mode: true
@@ -196,18 +184,6 @@ batch:
           TESTENV_ACCOUNT: e2e/account/multi_pipeline/test
           PRODENV_REGION: ap-southeast-1
           PRODENV_ACCOUNT: e2e/account/multi_pipeline/prod
-    - identifier: worker
-      env:
-        privileged-mode: true
-        type: LINUX_CONTAINER
-        compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:7.0
-        variables:
-          TEST_SUITE: worker
-          APP_REGION: eu-central-1
-          APP_ACCOUNT: e2e/account/worker
-          TESTENV_REGION: eu-central-1
-          TESTENV_ACCOUNT: e2e/account/worker
     - identifier: cloudfront
       env:
         privileged-mode: true
@@ -237,8 +213,8 @@ phases:
   install:
     commands:
       - "cd $HOME/.goenv && git pull --ff-only && cd -"
-      - "goenv install 1.21.1"
-      - "goenv global 1.21.1"
+      - "goenv install 1.23.7"
+      - "goenv global 1.23.7"
   pre_build:
     commands:
       - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin

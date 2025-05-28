@@ -13,8 +13,8 @@ phases:
   install:
     commands:
       - "cd $HOME/.goenv && git pull --ff-only && cd -"
-      - "goenv install 1.21.1"
-      - "goenv global 1.21.1"
+      - "goenv install 1.23.7"
+      - "goenv global 1.23.7"
       - "go install github.com/onsi/ginkgo/v2/ginkgo@latest"
   pre_build:
     commands:
