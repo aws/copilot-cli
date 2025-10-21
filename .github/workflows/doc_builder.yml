@@ -5,6 +5,10 @@ on:
   # Allow the workflow to be triggered also manually.
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+
 jobs:
   build:
     name: Deploy docs
