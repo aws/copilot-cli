@@ -6,6 +6,10 @@ on:
     types:
       - completed
 
+permissions:
+  pull-requests: write
+  issues: write
+
 jobs:
   comment_bin_size:
     runs-on: ubuntu-latest
