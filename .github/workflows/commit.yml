@@ -5,6 +5,9 @@ on:
     branches:
       - mainline
 
+permissions:
+  contents: read
+
 jobs:
   test: # same as ci/test
     runs-on: ubuntu-latest
