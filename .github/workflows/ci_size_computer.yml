@@ -91,7 +91,7 @@ jobs:
           echo ${{ github.event.number }} > artifacts/pr_number
           echo ${sizes_json} > artifacts/sizes.json
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: pr_number_and_bin_sizes
           path: artifacts/
