@@ -27,6 +27,12 @@ To install with homebrew:
 ```sh
 $ brew install aws/tap/copilot-cli
 ```
+
+To install using [mise](https://github.com/jdx/mise), a polyglot tool version manager:
+```sh
+$ mise use -g aws-copilot@latest
+```
+
 To install manually, we're distributing binaries from our GitHub releases:
 
 <details>
