@@ -73,7 +73,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
 
   EnvControllerRole:
     Metadata:
