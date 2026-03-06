@@ -1,3 +1,8 @@
+## :warning: Upcoming end-of-support :warning:
+
+AWS Copilot CLI will reach end-of-support on June 12, 2026. After this date, the tool will no longer receive updates, security patches, or technical support. We recommend migrating to alternative solutions as soon as possible to ensure continued support and access to the latest features.
+For more information, refer to our [blogpost](https://aws.amazon.com/blogs/containers/announcing-the-end-of-support-for-the-aws-copilot-cli/).
+
 ##  <img align="left" alt="AWS Copilot CLI" src="./site/content/assets/images/copilot-logo-48-light.svg" width="85" /> AWS Copilot CLI
 ###### _Build, Release and Operate Containerized Applications on AWS._ 
 
