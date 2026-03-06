@@ -38,12 +38,12 @@ span.faint {
   color: #8792a2;
 }
 
-.md-banner.md-announce {
+.md-banner, .md-announce__inner {
   background-color: #fff8e1;
   color: #333;
 }
 
-.md-banner.md-announce a {
+.md-banner a, .md-announce__inner a {
   color: #1a73e8;
   text-decoration: underline;
 }
