@@ -37,3 +37,13 @@ span.version {
 span.faint {
   color: #8792a2;
 }
+
+.md-banner {
+  background-color: #fff8e1;
+  color: #333;
+}
+
+.md-banner a {
+  color: #1a73e8;
+  text-decoration: underline;
+}
