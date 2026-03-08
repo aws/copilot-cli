@@ -100,7 +100,7 @@ generate-coverage: test
 	go tool cover -html=${COVERAGE}
 
 .PHONY: integ-test
-integ-test: package-custom-resources run-integ-test package-custom-resources-clean 
+integ-test: package-custom-resources run-integ-test package-custom-resources-clean
 
 .PHONY: run-integ-test
 run-integ-test:
@@ -155,7 +155,7 @@ tools:
 .PHONY: site-local
 site-local:
 	docker build . -f Dockerfile.site -t site:latest
-	docker run -p 8000:8000 -v `pwd`/site:/website/site -it site:latest
+	docker run --rm --init -it -p 8000:8000 -v `pwd`/site:/website/site site:latest
 
 .PHONY: gen-mocks
 gen-mocks: tools

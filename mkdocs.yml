@@ -20,6 +20,9 @@ extra:
     - name: 日本語
       link: ./ja/
       lang: ja
+    - name: Українська
+      link: ./uk/
+      lang: uk
 
 nav:
   - Home: index.en.md
@@ -216,6 +219,11 @@ theme:
 markdown_extensions:
   - admonition
   - meta
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:
@@ -238,10 +246,79 @@ plugins:
         'docs/developing/service-discovery.md': 'docs/developing/svc-to-svc-communication.en.md'
         'docs/developing/taskdef-overrides.md': 'docs/developing/overrides/taskdef-overrides.md'
   - i18n:
+      docs_structure: suffix
       default_language: en
       languages:
         en: english
         ja: japanese
+        uk: ukrainian
+      nav_translations:
+        uk:
+          Home: Головна
+          Documentation: Документація
+          Blogs: Блог
+          Community: Спільнота
+          Get Involved: Приєднуйтесь
+          Guides and Resources: Посібники та ресурси
+
+          Overview: Огляд
+
+          Getting Started: Початок роботи
+          Install Copilot: Встановлення Copilot
+          (Optional) Verify the installation: Перевірка встановлення (опціонально)
+          Deploy your first application: Розгортання першого застосунку
+
+          Concepts: Концепції
+          Applications: Застосунки
+          Environments: Середовища
+          Services: Сервіси
+          Jobs: Завдання
+          Pipelines: Конвеєри
+
+          Credentials: Облікові дані
+          Manifest: Маніфест
+          # Backend Service: Сервіс Backend
+          Load Balanced Web Service: Вебсервіс з балансуванням навантаження
+          Request-Driven Web Service: Вебсервіс на основі запитів
+          Scheduled Job: Заплановане завдання
+          Static Site: Статичний сайт
+          Worker Service: Сервіс робочих навантажень
+          # Environment: Середовище
+          Pipeline: Конвеєр
+
+          Developing: Розробка
+          Additional AWS Resources: Додаткові ресурси AWS
+          Additional Workload Resources: Додаткові ресурси робочого навантаження
+          Additional Environment Resources: Додаткові ресурси середовища
+          Uploading Local Artifacts: Надсилання локальних артефактів
+
+          Container Environment Variables: Змінні середовища
+          Content Delivery: Доставка контенту
+          Custom Environment Resources: Власні ресурси середовища
+          Domain: Домен
+
+          Extend Copilot with Overrides: Розширення Copilot за допомогою перевизначень
+          YAML Patch Overrides: Перевизначення YAML Patch
+          CDK Overrides: Перевизначення CDK
+          Task Definition Overrides: Перевизначення завдання
+
+          Internal Load Balancers: Внутрішні балансувальники навантаження
+          Manifest Environment Variables: Змінні середовища в маніфесті
+          Observability: Спостережуваність
+          Publish/Subscribe: Публікація/Підписка
+          Secrets: Секрети
+          Service-to-Service Communication: Комунікація між сервісами
+          # Sidecars: Sidecars
+          Storage: Зберігання
+
+          Commands: Команди
+          Build: Збірка
+          Release: Реліз
+          Operate: Робота
+          Extend: Розширення
+          Settings: Налаштування
+          All: Всі
+
       material_alternate: false
   - macros:
       include_dir: site/content/docs/include
