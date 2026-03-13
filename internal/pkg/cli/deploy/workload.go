@@ -593,6 +593,7 @@ func buildArgsPerContainer(name, workspacePath string, img ContainerImageIdentif
 			CacheFrom:  buildArgs.CacheFrom,
 			Target:     aws.StringValue(buildArgs.Target),
 			Platform:   mf.ContainerPlatform(),
+			Engine:     aws.StringValue(buildArgs.Engine),
 			Tags:       tags,
 			Labels:     labels,
 		}

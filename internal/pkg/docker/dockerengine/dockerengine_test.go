@@ -45,6 +45,7 @@ func TestDockerCommand_Build(t *testing.T) {
 		args              map[string]string
 		target            string
 		cacheFrom         []string
+		engine            string
 		envVars           map[string]string
 		labels            map[string]string
 		setupMocks        func(controller *gomock.Controller)
@@ -313,7 +314,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			lookupEnv: emptyLookupEnv,
 		}
 		buf := new(strings.Builder)
-		digest, err := cmd.Push(ctx, "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", buf, "latest", "g123bfc")
+		digest, err := cmd.Push(ctx, "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "docker", buf, "latest", "g123bfc")
 
 		// THEN
 		require.NoError(t, err)
@@ -343,7 +344,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			},
 		}
 		buf := new(strings.Builder)
-		digest, err := cmd.Push(context.Background(), "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", buf, "latest")
+		digest, err := cmd.Push(context.Background(), "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "docker", buf, "latest")
 
 		// THEN
 		require.NoError(t, err)
@@ -362,7 +363,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			lookupEnv: emptyLookupEnv,
 		}
 		buf := new(strings.Builder)
-		_, err := cmd.Push(ctx, "uri", buf, "latest")
+		_, err := cmd.Push(ctx, "uri", "docker", buf, "latest")
 
 		// THEN
 		require.EqualError(t, err, "docker push uri:latest: some error")
@@ -381,7 +382,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			lookupEnv: emptyLookupEnv,
 		}
 		buf := new(strings.Builder)
-		_, err := cmd.Push(ctx, "uri", buf, "latest")
+		_, err := cmd.Push(ctx, "uri", "docker", buf, "latest")
 
 		// THEN
 		require.EqualError(t, err, "inspect image digest for uri: some error")
@@ -406,7 +407,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			lookupEnv: emptyLookupEnv,
 		}
 		buf := new(strings.Builder)
-		_, err := cmd.Push(ctx, "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", buf, "latest", "g123bfc")
+		_, err := cmd.Push(ctx, "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "docker", buf, "latest", "g123bfc")
 
 		// THEN
 		require.EqualError(t, err, "parse the digest from the repo digest ''")
