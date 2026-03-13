@@ -5,7 +5,7 @@ Port of the container to expose (optional).
 <a id="image" href="#image" class="field">`image`</a> <span class="type">String or Map</span>  
 Image URL for the sidecar container (required).
 
-{% include 'image-config.en.md' %}
+{% include 'image-config-for-sidecar.en.md' %}
 
 <a id="essential" href="#essential" class="field">`essential`</a> <span class="type">Bool</span>  
 Whether the sidecar container is an essential container (optional, default true).

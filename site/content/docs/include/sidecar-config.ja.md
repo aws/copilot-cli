@@ -5,7 +5,7 @@
 <a id="image" href="#image" class="field">`image`</a> <span class="type">String or Map</span> 
 サイドカーコンテナのイメージ URL。(必須項目)
 
-{% include 'image-config.ja.md' %}
+{% include 'image-config-for-sidecar.ja.md' %}
 
 <a id="essential" href="#essential" class="field">`essential`</a> <span class="type">Bool</span>
 サイドカーコンテナが必須のコンテナかどうか。(任意項目。デフォルトでは true)

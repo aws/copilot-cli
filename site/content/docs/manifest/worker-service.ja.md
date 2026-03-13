@@ -236,7 +236,7 @@ filter_policy:
 
 {% include 'image.ja.md' %}
 
-{% include 'image-config.ja.md' %}
+{% include 'image-config-for-main-container.ja.md' %}
 
 {% include 'task-size.ja.md' %}
 

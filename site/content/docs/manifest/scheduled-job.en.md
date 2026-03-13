@@ -72,7 +72,7 @@ on:
 
 {% include 'image.md' %}
 
-{% include 'image-config.en.md' %}
+{% include 'image-config-for-main-container.en.md' %}
 
 <div class="separator"></div>  
 

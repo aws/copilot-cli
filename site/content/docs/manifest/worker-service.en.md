@@ -238,7 +238,7 @@ Specify this field as a map for customization of certain attributes for this top
 
 {% include 'image.md' %}
 
-{% include 'image-config.en.md' %}
+{% include 'image-config-for-main-container.en.md' %}
 
 {% include 'image-healthcheck.en.md' %}
 
