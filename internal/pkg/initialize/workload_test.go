@@ -17,6 +17,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const ACCOUNT_ID = "1234"
+
+func givenStoreWithAppAndWithoutJob(t *testing.T, m *mocks.MockStore, appName string, jobName string) {
+	m.EXPECT().CreateJob(gomock.Any()).
+		Do(func(app *config.Workload) {
+			require.Equal(t, &config.Workload{
+				Name: jobName,
+				App:  appName,
+				Type: manifestinfo.ScheduledJobType,
+			}, app)
+		}).
+		Return(nil)
+	m.EXPECT().GetApplication(appName).Return(&config.Application{
+		Name:      appName,
+		AccountID: ACCOUNT_ID,
+	}, nil)
+}
+
+func willAddJobToApp(m *mocks.MockWorkloadAdder, jobName string, appName string) {
+	m.EXPECT().AddJobToApp(&config.Application{
+		Name:      appName,
+		AccountID: ACCOUNT_ID,
+	}, jobName)
+}
+
 func TestWorkloadInitializer_Job(t *testing.T) {
 	testCases := map[string]struct {
 		inJobType        string
@@ -27,6 +52,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		inPlatform       manifest.PlatformArgsOrString
 
 		inSchedule string
+		inTimezone string
 		inRetries  int
 		inTimeout  string
 
@@ -52,25 +78,10 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/copilot/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
-				m.EXPECT().CreateJob(gomock.Any()).
-					Do(func(app *config.Workload) {
-						require.Equal(t, &config.Workload{
-							Name: "resizer",
-							App:  "app",
-							Type: manifestinfo.ScheduledJobType,
-						}, app)
-					}).
-					Return(nil)
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
+				givenStoreWithAppAndWithoutJob(t, m, "app", "resizer")
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddJobToApp(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, "resizer")
+				willAddJobToApp(m, "resizer", "app")
 			},
 		},
 		"using existing image": {
@@ -89,25 +100,33 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				}).Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
-				m.EXPECT().CreateJob(gomock.Any()).
-					Do(func(app *config.Workload) {
-						require.Equal(t, &config.Workload{
-							Name: "resizer",
-							App:  "app",
-							Type: manifestinfo.ScheduledJobType,
-						}, app)
-					}).
-					Return(nil)
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
+				givenStoreWithAppAndWithoutJob(t, m, "app", "resizer")
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
-				m.EXPECT().AddJobToApp(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, "resizer")
+				willAddJobToApp(m, "resizer", "app")
+			},
+		},
+		"configure schedule": {
+			inJobType: manifestinfo.ScheduledJobType,
+			inAppName: "app",
+			inJobName: "resizer",
+			inImage:   "mockImage",
+
+			inSchedule: "@daily",
+			inTimezone: "GMT",
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Rel("/resizer/manifest.yml").Return("manifest.yml", nil)
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
+					require.Equal(t, *m.On.Schedule, "@daily")
+					require.Equal(t, *m.On.Timezone, "GMT")
+				}).Return("/resizer/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				givenStoreWithAppAndWithoutJob(t, m, "app", "resizer")
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				willAddJobToApp(m, "resizer", "app")
 			},
 		},
 		"write manifest error": {
@@ -157,7 +176,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
@@ -223,6 +242,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					Platform:       tc.inPlatform,
 				},
 				Schedule: tc.inSchedule,
+				Timezone: tc.inTimezone,
 				Retries:  tc.inRetries,
 				Timeout:  tc.inTimeout,
 			}
@@ -481,13 +501,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Return(nil)
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "frontend")
 			},
 		},
@@ -514,13 +534,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Return(nil)
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "static", gomock.Any())
 			},
 		},
@@ -556,7 +576,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().ListServices("app")
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			wantedErr: errors.New("write service manifest: some error"),
@@ -577,7 +597,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
@@ -637,13 +657,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "backend")
 			},
 		},
@@ -678,13 +698,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "backend")
 			},
 		},
@@ -730,13 +750,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Return(nil)
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "backend")
 			},
 		},
@@ -777,13 +797,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "worker")
 			},
 		},
@@ -825,13 +845,13 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, nil)
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(&config.Application{
 					Name:      "app",
-					AccountID: "1234",
+					AccountID: ACCOUNT_ID,
 				}, "worker")
 			},
 		},

@@ -13,6 +13,8 @@ Parameters:
     Type: String
   Schedule:
     Type: String
+  ScheduleTimezone:
+    Type: String
   ContainerImage:
     Type: String
   TaskCPU:
@@ -392,18 +394,20 @@ Resources:
                 Resource:
                   - !Ref mytopicfifoSNSTopic
 
-  Rule:
+  ScheduleTrigger:
     Metadata:
-      'aws:copilot:description': "A CloudWatch event rule to trigger the job's state machine"
-    Type: AWS::Events::Rule
+      'aws:copilot:description': "An EventBridge Schedule to trigger the job's state machine"
+    Type: AWS::Scheduler::Schedule
     Properties:
       ScheduleExpression: !Ref Schedule
       State: ENABLED
-      Targets:
-      - Arn: !Ref StateMachine
-        Id: statemachine
-        RoleArn: !GetAtt RuleRole.Arn
-  RuleRole:
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      ScheduleExpressionTimezone: !Ref ScheduleTimezone
+      Target:
+        Arn: !Ref StateMachine
+        RoleArn: !GetAtt ScheduleTriggerRole.Arn
+  ScheduleTriggerRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -411,10 +415,10 @@ Resources:
         Statement:
         - Effect: Allow
           Principal:
-            Service: events.amazonaws.com
+            Service: scheduler.amazonaws.com
           Action: sts:AssumeRole
       Policies:
-      - PolicyName: EventRulePolicy
+      - PolicyName: SchedulePolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:

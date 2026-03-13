@@ -48,7 +48,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/logconfig.yml", []byte("logconfig"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/autoscaling.yml", []byte("autoscaling"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/state-machine-definition.json.yml", []byte("state-machine-definition"), 0644)
-				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/eventrule.yml", []byte("eventrule"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/schedule.yml", []byte("schedule"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/state-machine.yml", []byte("state-machine"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/efs-access-point.yml", []byte("efs-access-point"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/https-listener.yml", []byte("https-listener"), 0644)
@@ -84,7 +84,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   sidecars
   logconfig
   autoscaling
-  eventrule
+  schedule
   state-machine
   state-machine-definition
   efs-access-point

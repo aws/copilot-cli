@@ -72,6 +72,7 @@ type WorkloadProps struct {
 type JobProps struct {
 	WorkloadProps
 	Schedule    string
+	Timezone    string
 	HealthCheck manifest.ContainerHealthCheck
 	Timeout     string
 	Retries     int
@@ -299,6 +300,7 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 			HealthCheck: i.HealthCheck,
 			Platform:    i.Platform,
 			Schedule:    i.Schedule,
+			Timezone:    i.Timezone,
 			Timeout:     i.Timeout,
 			Retries:     i.Retries,
 		}), nil

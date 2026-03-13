@@ -246,6 +246,7 @@ func TestScheduledJob_InitialManifestIntegration(t *testing.T) {
 					PlatformArgs:   PlatformArgs{},
 				},
 				Schedule: "@weekly",
+				Timezone: "CET",
 			},
 			wantedTestData: "scheduled-job-no-timeout-or-retries.yml",
 		},

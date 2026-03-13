@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -1754,6 +1755,16 @@ func (c JobTriggerConfig) validate() error {
 	if c.Schedule == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "schedule",
+		}
+	}
+	if c.Timezone != nil {
+		_, err := time.LoadLocation(aws.StringValue(c.Timezone))
+
+		if err != nil {
+			return &ErrInvalidTimezone{
+				Timezone: aws.StringValue(c.Timezone),
+				Field: "timezone",
+			}
 		}
 	}
 	return nil

@@ -9,6 +9,7 @@
     "EnvName": "test",
     "LogRetention": "30",
     "Schedule": "cron(0 12 ? * MON *)",
+    "ScheduleTimezone": "UTC",
     "TaskCPU": "256",
     "TaskCount": "1",
     "TaskMemory": "512",
