@@ -37,7 +37,9 @@ const (
 
 // appUpgradeVars holds flag values.
 type appUpgradeVars struct {
-	name string
+	name                string
+	forceUpdate         bool
+	permissionsBoundary string
 }
 
 // appUpgradeOpts represents the app upgrade command and holds the necessary data
@@ -152,6 +154,13 @@ func (o *appUpgradeOpts) shouldUpgradeApp(appVersion string) bool {
 		return true
 	}
 
+	if o.forceUpdate {
+		msg := fmt.Sprintf("Application %s is already on the latest version %s, forcing upgrade.", o.name, o.templateVersion)
+		log.Debugln(msg)
+
+		return true
+	}
+
 	msg := fmt.Sprintf("Application %s is already on the latest version %s, skip upgrade.", o.name, o.templateVersion)
 	if diff > 0 {
 		// It's possible that a teammate used a different version of the CLI to upgrade the application
@@ -175,11 +184,12 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 	}
 	// Upgrade app CloudFormation resources.
 	if err := o.upgrader.UpgradeApplication(&deploy.CreateAppInput{
-		Name:               o.name,
-		AccountID:          caller.Account,
-		DomainName:         app.Domain,
-		DomainHostedZoneID: app.DomainHostedZoneID,
-		Version:            toVersion,
+		Name:                o.name,
+		AccountID:           caller.Account,
+		DomainName:          app.Domain,
+		DomainHostedZoneID:  app.DomainHostedZoneID,
+		PermissionsBoundary: app.PermissionsBoundary,
+		Version:             toVersion,
 	}); err != nil {
 		return fmt.Errorf("upgrade application %s from version %s to version %s: %v", app.Name, fromVersion, toVersion, err)
 	}
@@ -193,6 +203,9 @@ func (o *appUpgradeOpts) upgradeAppSSMStore(app *config.Application) error {
 			return fmt.Errorf("get hosted zone ID for domain %s: %w", app.Domain, err)
 		}
 		app.DomainHostedZoneID = hostedZoneID
+	}
+	if app.PermissionsBoundary == "" && o.permissionsBoundary != "" {
+		app.PermissionsBoundary = o.permissionsBoundary
 	}
 	if err := o.store.UpdateApplication(app); err != nil {
 		return fmt.Errorf("update application %s: %w", app.Name, err)
@@ -208,7 +221,9 @@ func buildAppUpgradeCmd() *cobra.Command {
 		Short: "Upgrades the template of an application to the latest version.",
 		Example: `
     Upgrade the application "my-app" to the latest version
-    /code $ copilot app upgrade -n my-app`,
+    /code $ copilot app upgrade -n my-app
+    Upgrade the application and add an existing IAM policy as the permissions boundary for roles.
+    /code $ copilot app upgrade --permissions-boundary myPermissionsBoundaryPolicy`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newAppUpgradeOpts(vars)
 			if err != nil {
@@ -218,5 +233,7 @@ func buildAppUpgradeCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVar(&vars.permissionsBoundary, permissionsBoundaryFlag, "", permissionsBoundaryFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceUpdate, forceFlag, false, forceAppUpgradeFlagDescription)
 	return cmd
 }
