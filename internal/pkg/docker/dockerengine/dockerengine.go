@@ -60,6 +60,12 @@ const (
 	containerStatusExited  = "exited"
 )
 
+// Deprecated predefined options to pass to `docker build`. The `options: [...]` config should be used instead.
+const (
+	BuildOptionCacheFrom = "--cache-from"
+	BuildOptionTarget    = "--target"
+)
+
 // DockerCmdClient represents the docker client to interact with the server via external commands.
 type DockerCmdClient struct {
 	runner Cmd
@@ -85,8 +91,7 @@ type BuildArguments struct {
 	Dockerfile        string            // Optional. One of Dockerfile or DockerfileContent is required. Dockerfile to pass to `docker build` via --file flag.
 	DockerfileContent string            // Optional. One of Dockerfile or DockerfileContent is required. Dockerfile content to pass to `docker build` via stdin.
 	Context           string            // Optional. Build context directory to pass to `docker build`.
-	Target            string            // Optional. The target build stage to pass to `docker build`.
-	CacheFrom         []string          // Optional. Images to consider as cache sources to pass to `docker build`
+	Options           []string          // Optional. Additional build options and flags to pass to `docker build`. See https://docs.docker.com/reference/cli/docker/image/build/#options
 	Platform          string            // Optional. OS/Arch to pass to `docker build`.
 	Args              map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 	Labels            map[string]string // Required. Set metadata for an image.
@@ -130,19 +135,12 @@ func (in *BuildArguments) GenerateDockerBuildArgs(c DockerCmdClient) ([]string, 
 
 	args := []string{"build"}
 
+	// Add all custom options first.
+	args = append(args, in.Options...)
+
 	// Add additional image tags to the docker build call.
 	for _, tag := range in.Tags {
 		args = append(args, "-t", imageName(in.URI, tag))
-	}
-
-	// Add cache from options.
-	for _, imageFrom := range in.CacheFrom {
-		args = append(args, "--cache-from", imageFrom)
-	}
-
-	// Add target option.
-	if in.Target != "" {
-		args = append(args, "--target", in.Target)
 	}
 
 	// Add platform option.
