@@ -33,6 +33,6 @@ $ sudo mv copilot.sh /etc/bash_completion.d/copilot
 ```
 Install fish completion on linux
 ```console
-$ source <(copilot completion fish)
+$ source (copilot completion fish | psub)
 $ copilot completion fish > ~/.config/fish/completions/copilot.fish
 ```
