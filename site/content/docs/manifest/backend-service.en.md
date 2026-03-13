@@ -126,7 +126,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         ```yaml
         # See http://localhost:8000/copilot-cli/docs/developing/storage/#file-systems
         name: sync
-        type: Backend Serivce
+        type: Backend Service
 
         image:
           build: Dockerfile
