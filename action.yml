@@ -1,0 +1,32 @@
+name: Setup Copilot CLI
+description: Download and install the Tourlane copilot-cli binary
+
+inputs:
+  version:
+    description: Release tag to download (e.g. v1.35.0). Defaults to latest.
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Download copilot-cli
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        args=(--repo "${{ github.action_repository }}" --pattern "copilot-linux-amd64" --output copilot-cli)
+
+        if [ "${{ inputs.version }}" != "latest" ]; then
+          args+=(--dir . "${{ inputs.version }}")
+        fi
+
+        gh release download "${args[@]}"
+
+    - name: Install copilot-cli
+      shell: bash
+      run: |
+        chmod +x copilot-cli
+        mkdir -p ~/.local/bin
+        mv copilot-cli ~/.local/bin/copilot
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
