@@ -20,7 +20,7 @@ Copilot は、Addon テンプレートから参照されるローカルファイ
               Timeout: 900
               MemorySize: 512
               Role: !GetAtt "ExampleFunctionRole.Arn"
-              Runtime: nodejs20.x
+              Runtime: nodejs22.x
         ```
     
     === "lambdas/example/index.js"
@@ -84,7 +84,7 @@ zip が必要な一部のリソース (`AWS::Serverless::Function` など) で�
         Timeout: 60
         MemorySize: 512
         Role: !GetAtt "recordProcessorRole.Arn"
-        Runtime: nodejs20.x
+        Runtime: nodejs22.x
 
     recordProcessorRole:
       Type: AWS::IAM::Role
