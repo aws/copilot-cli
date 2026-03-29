@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block announce %}
+<strong>⚠️ Upcoming end-of-support:</strong> AWS Copilot CLI will reach end-of-support on June 12, 2026. After this date, the tool will no longer receive updates, security patches, or technical support. We recommend migrating to alternative solutions as soon as possible. <a href="https://aws.amazon.com/blogs/containers/announcing-the-end-of-support-for-the-aws-copilot-cli/">Learn more</a>.
+{% endblock %}
+
 {% block extrahead %}
 {% if page and page.meta and page.meta.title %}
 <meta property="og:title" content="{{ page.meta.title }}" />
