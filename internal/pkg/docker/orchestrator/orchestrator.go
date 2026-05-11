@@ -361,7 +361,7 @@ func ipv4Increment(ip net.IP, network *net.IPNet) (net.IP, error) {
 		}
 
 		ipv4[idx]++
-		if ipv4[idx] == 0 { // overflow occured
+		if ipv4[idx] == 0 { // overflow occurred
 			return inc(idx - 1)
 		}
 		return nil
