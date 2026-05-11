@@ -1,6 +1,6 @@
 queue_rules:
   - name: default
-    conditions:
+    merge_conditions:
       - status-success=build (compile-linux)
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
