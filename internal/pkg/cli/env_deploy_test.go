@@ -159,6 +159,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		inShowDiff        bool
 		inSkipDiffPrompt  bool
 		inAllowDowngrade  bool
+		inResourceTags    map[string]string
 		unmarshalManifest func(in []byte) (*manifest.Environment, error)
 		setUpMocks        func(m *deployEnvExecuteMocks)
 		wantedDiff        string
@@ -385,6 +386,10 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("deploy environment mockEnv: some error"),
 		},
 		"success": {
+			inResourceTags: map[string]string{
+				"environment": "test",
+				"owner":       "platform",
+			},
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.envVersionGetter.EXPECT().Version().Return(version.EnvTemplateBootstrap, nil)
 				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
@@ -405,6 +410,10 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 					require.Equal(t, in.CustomResourcesURLs, map[string]string{
 						"mockResource": "mockURL",
 					})
+					require.Equal(t, map[string]string{
+						"environment": "test",
+						"owner":       "platform",
+					}, in.Tags)
 					require.Equal(t, in.Manifest, &manifest.Environment{
 						Workload: manifest.Workload{
 							Name: aws.String("mockEnv"),
@@ -435,6 +444,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 					showDiff:          tc.inShowDiff,
 					skipDiffPrompt:    tc.inSkipDiffPrompt,
 					allowEnvDowngrade: tc.inAllowDowngrade,
+					resourceTags:      tc.inResourceTags,
 				},
 				ws:       m.ws,
 				identity: m.identity,
