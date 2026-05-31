@@ -22,6 +22,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/patch"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -262,6 +263,7 @@ type DeployEnvironmentInput struct {
 	DisableRollback     bool
 	Version             string
 	Detach              bool
+	Tags                map[string]string
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -405,7 +407,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 			Domain:              d.app.Domain,
 			AccountPrincipalARN: in.RootUserARN,
 		},
-		AdditionalTags:       d.app.Tags,
+		AdditionalTags:       tags.Merge(d.app.Tags, in.Tags),
 		Addons:               addons,
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    awss3.FormatARN(partition.ID(), resources.S3Bucket),

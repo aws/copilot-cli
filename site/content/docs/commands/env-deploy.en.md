@@ -10,22 +10,29 @@ $ copilot env deploy
 ## What are the flags?
 
 ```
-      --allow-downgrade   Optional. Allow using an older version of Copilot to update Copilot components
-                          updated by a newer version of Copilot.
-  -a, --app string        Name of the application.
-      --detach            Optional. Skip displaying CloudFormation deployment progress.
-      --diff              Compares the generated CloudFormation template to the deployed stack.
-      --diff-yes          Skip interactive approval of diff before deploying.
-      --force             Optional. Force update the environment stack template.
-  -h, --help              help for deploy
-  -n, --name string       Name of the environment.
-      --no-rollback       Optional. Disable automatic stack
-                          rollback in case of deployment failure.
-                          We do not recommend using this flag for a
-                          production environment.
+      --allow-downgrade                Optional. Allow using an older version of Copilot to update Copilot components
+                                       updated by a newer version of Copilot.
+  -a, --app string                     Name of the application.
+      --detach                         Optional. Skip displaying CloudFormation deployment progress.
+      --diff                           Compares the generated CloudFormation template to the deployed stack.
+      --diff-yes                       Skip interactive approval of diff before deploying.
+      --force                          Optional. Force update the environment stack template.
+  -h, --help                           help for deploy
+  -n, --name string                    Name of the environment.
+      --no-rollback                    Optional. Disable automatic stack
+                                       rollback in case of deployment failure.
+                                       We do not recommend using this flag for a
+                                       production environment.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
+                                       Allows you to categorize resources. (default [])
 ```
 
 ## Examples
+Deploy an environment with additional resource tags.
+```console
+$ copilot env deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual
+```
+
 Use `--diff` to see what will be changed before making a deployment.
 
 ```console

@@ -573,12 +573,18 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 	)
 	mockApp := &config.Application{
 		Name: mockAppName,
+		Tags: map[string]string{
+			"team":        "copilot",
+			"environment": "default",
+		},
 	}
 	testCases := map[string]struct {
-		setUpMocks        func(m *envDeployerMocks)
-		inManifest        *manifest.Environment
-		inDisableRollback bool
-		wantedError       error
+		setUpMocks           func(m *envDeployerMocks)
+		inManifest           *manifest.Environment
+		inDisableRollback    bool
+		inTags               map[string]string
+		wantedAdditionalTags map[string]string
+		wantedError          error
 	}{
 		"fail to get app resources by region": {
 			setUpMocks: func(m *envDeployerMocks) {
@@ -670,6 +676,27 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
+		"successful environment deployment with additional tags": {
+			inTags: map[string]string{
+				"environment": "test",
+				"owner":       "platform",
+			},
+			wantedAdditionalTags: map[string]string{
+				"team":        "copilot",
+				"environment": "test",
+				"owner":       "platform",
+			},
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
+				m.parseAddons = func() (stackBuilder, error) { return nil, &addon.ErrAddonsNotFound{} }
+				m.envDeployer.EXPECT().DeployedEnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
 		"successful environment deployment, no rollback": {
 			inDisableRollback: true,
 			setUpMocks: func(m *envDeployerMocks) {
@@ -707,7 +734,10 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				envDeployer:      m.envDeployer,
 				prefixListGetter: m.prefixListGetter,
 				parseAddons:      m.parseAddons,
-				newStack: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) (cloudformation.StackConfiguration, error) {
+				newStack: func(in *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) (cloudformation.StackConfiguration, error) {
+					if tc.wantedAdditionalTags != nil {
+						require.Equal(t, tc.wantedAdditionalTags, in.AdditionalTags)
+					}
 					return m.stackSerializer, nil
 				},
 			}
@@ -718,6 +748,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				},
 				Manifest:        tc.inManifest,
 				DisableRollback: tc.inDisableRollback,
+				Tags:            tc.inTags,
 			}
 			gotErr := d.DeployEnvironment(mockIn)
 			if tc.wantedError != nil {

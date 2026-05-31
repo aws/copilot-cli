@@ -42,6 +42,7 @@ type deployEnvVars struct {
 	skipDiffPrompt    bool
 	allowEnvDowngrade bool
 	detach            bool
+	resourceTags      map[string]string
 }
 
 type deployEnvOpts struct {
@@ -211,6 +212,7 @@ func (o *deployEnvOpts) Execute() error {
 		DisableRollback:     o.disableRollback,
 		Version:             o.templateVersion,
 		Detach:              o.detach,
+		Tags:                o.resourceTags,
 	}
 	if o.showDiff {
 		contd, err := o.showDiffAndConfirmDeployment(deployer, deployInput)
@@ -385,7 +387,9 @@ func buildEnvDeployCmd() *cobra.Command {
 		Long:  "Deploys an environment to an application.",
 		Example: `
 Deploy an environment named "test".
-/code $copilot env deploy --name test`,
+/code $ copilot env deploy --name test
+Deploy an environment with additional resource tags.
+/code $ copilot env deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newEnvDeployOpts(vars)
 			if err != nil {
@@ -402,5 +406,6 @@ Deploy an environment named "test".
 	cmd.Flags().BoolVar(&vars.skipDiffPrompt, diffAutoApproveFlag, false, diffAutoApproveFlagDescription)
 	cmd.Flags().BoolVar(&vars.allowEnvDowngrade, allowDowngradeFlag, false, allowDowngradeFlagDescription)
 	cmd.Flags().BoolVar(&vars.detach, detachFlag, false, detachFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }
