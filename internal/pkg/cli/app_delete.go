@@ -398,9 +398,10 @@ func buildAppDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete all resources associated with the application.",
+		Args:  cobra.NoArgs,
 		Example: `
   Force delete the application with environments "test" and "prod".
-  /code $ copilot app delete --yes`,
+  /code $ copilot app delete --name phonetool --yes`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeleteAppOpts(vars)
 			if err != nil {

@@ -10,12 +10,16 @@ $ copilot app delete [flags]
 ## What are the flags?
 
 ```
--h, --help                          help for delete
-    --yes                           Skips confirmation prompt.
+-h, --help          help for delete
+-n, --name string   Name of the application.
+    --yes           Skips confirmation prompt.
 ```
 
 ## Examples
-Force delete the application.
+!!!warning "Use `--name` for application names"
+    `copilot app delete` does not accept a positional application name. To delete a specific application, pass the name with `--name`.
+
+Force delete an application named "phonetool".
 ```console
-$ copilot app delete --yes 
+$ copilot app delete --name phonetool --yes
 ```
