@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -20,6 +21,17 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAppDeleteCommandRejectsPositionalAppName(t *testing.T) {
+	cmd := buildAppDeleteCommand()
+	cmd.SetArgs([]string{"phonetool"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	err := cmd.Execute()
+
+	require.EqualError(t, err, `unknown command "phonetool" for "delete"`)
+}
 
 type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
