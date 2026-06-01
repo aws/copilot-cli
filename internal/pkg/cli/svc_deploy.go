@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,10 +14,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	sdkssm "github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	awssecretsmanager "github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
+	awsssm "github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -71,6 +74,8 @@ type deploySvcOpts struct {
 	newSvcDeployer       func() (workloadDeployer, error)
 	svcVersionGetter     versionGetter
 	envFeaturesDescriber versionCompatibilityChecker
+	ssmParamGetter       secretGetter
+	secretsmanager       secretDeleter
 	diffWriter           io.Writer
 
 	spinner        progress
@@ -105,7 +110,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		return nil, err
 	}
 
-	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+	store := config.NewSSMStore(identity.New(defaultSession), sdkssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 
 	opts := &deploySvcOpts{
@@ -238,6 +243,7 @@ func (o *deploySvcOpts) Execute() error {
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
+	o.warnMissingSecrets(context.Background(), mft.Manifest())
 	deployer, err := o.newSvcDeployer()
 	if err != nil {
 		return err
@@ -451,6 +457,8 @@ func (o *deploySvcOpts) configureClients() error {
 		return err
 	}
 	o.envSess = envSess
+	o.ssmParamGetter = awsssm.New(envSess)
+	o.secretsmanager = awssecretsmanager.New(envSess)
 
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()

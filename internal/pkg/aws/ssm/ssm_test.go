@@ -377,6 +377,16 @@ func TestSSM_GetSecretValue(t *testing.T) {
 			},
 			wantError: `get parameter "asdf" from SSM: some error`,
 		},
+		"parameter not found": {
+			secretName: "missing",
+			setupMock: func(m *mocks.Mockapi) {
+				m.EXPECT().GetParameterWithContext(gomock.Any(), &ssm.GetParameterInput{
+					Name:           aws.String("missing"),
+					WithDecryption: aws.Bool(true),
+				}).Return(nil, awserr.New(ssm.ErrCodeParameterNotFound, "parameter not found", nil))
+			},
+			wantError: `parameter missing does not exist`,
+		},
 		"success": {
 			secretName: "asdf",
 			setupMock: func(m *mocks.Mockapi) {
