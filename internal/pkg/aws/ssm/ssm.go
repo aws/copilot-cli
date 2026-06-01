@@ -72,6 +72,9 @@ func (s *SSM) GetSecretValue(ctx context.Context, name string) (string, error) {
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == ssm.ErrCodeParameterNotFound {
+			return "", &ErrParameterNotFound{name: name, parentErr: err}
+		}
 		return "", fmt.Errorf("get parameter %q from SSM: %w", name, err)
 	}
 	return aws.StringValue(resp.Parameter.Value), nil
