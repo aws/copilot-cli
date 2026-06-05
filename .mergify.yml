@@ -1,5 +1,9 @@
 queue_rules:
   - name: default
+    merge_method: squash
+    commit_message_format:
+      title: pr-title
+      body: pr-body
     conditions:
       - status-success=build (compile-linux)
       - status-success=build (compile-windows)
@@ -29,11 +33,6 @@ pull_request_rules:
     actions:
       queue:
         name: default
-        method: squash
-        commit_message_template: |
-          {{ title }} (#{{ number }})
-
-          {{ body }}
   - name: Merge for bots
     conditions:
       - base=mainline
@@ -55,11 +54,6 @@ pull_request_rules:
         type: APPROVE
       queue:
         name: default
-        method: squash
-        commit_message_template: |
-          {{ title }} (#{{ number }})
-
-          {{ body }}
   - name: Ask Japanese docs reviews
     conditions:
       - files~=\.ja.md$
